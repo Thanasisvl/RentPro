@@ -1,5 +1,34 @@
-# MacOS
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.pyc
+
+# Virtual environments
+venv/
+.venv/
+
+# Environment variables
+.env
+.env.*
+
+# SQLite database files
+*.db
+*.sqlite3
+
+# OS files
 .DS_Store
+Thumbs.db
 
 #VS Code
 .vscode/
+
+# Pytest cache
+.pytest_cache/
+
+# Migrations (if using Alembic, adjust as needed)
+alembic/versions/
+
+# Logs
+*.log

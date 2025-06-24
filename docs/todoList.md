@@ -5,14 +5,14 @@
 ### 1.1 Ρύθμιση Περιβάλλοντος
 
 #### 🗂 Git & Δομή Έργου
-- [ ] Δημιουργία αποθετηρίου Git
-- [ ] Ρύθμιση `.gitignore`
-- [ ] Δημιουργία φακέλων `backend/`, `frontend/`, `docs/`
+- [X] Δημιουργία αποθετηρίου Git
+- [X] Ρύθμιση `.gitignore`
+- [X] Δημιουργία φακέλων `backend/`, `frontend/`, `docs/`
 
 #### ⚙️ Backend (FastAPI/Flask)
-- [ ] Ρύθμιση virtualenv / poetry
-- [ ] Εγκατάσταση βιβλιοθηκών (`fastapi`, `uvicorn`, `sqlalchemy`)
-- [ ] Δημιουργία βασικής δομής φακέλων (`routers/`, `models/`, `schemas/`, `db/`)
+- [X] Ρύθμιση virtualenv / poetry
+- [X] Εγκατάσταση βιβλιοθηκών (`fastapi`, `uvicorn`, `sqlalchemy`)
+- [X] Δημιουργία βασικής δομής φακέλων (`routers/`, `models/`, `schemas/`, `db/`)
 
 #### 🎨 Frontend (React)
 - [ ] Δημιουργία React app
