@@ -34,9 +34,9 @@
 
 ### 1.2 Authentication
 
-- [ ] Μοντέλο χρήστη (User) με ρόλο `Ιδιοκτήτης`
-- [ ] Endpoint εγγραφής `/register` (με hash password)
-- [ ] Endpoint σύνδεσης `/login` (JWT)
+- [X] Μοντέλο χρήστη (User) με ρόλο `Ιδιοκτήτης`
+- [X] Endpoint εγγραφής `/register` (με hash password)
+- [X] Endpoint σύνδεσης `/login` (JWT)
 - [ ] Middleware για JWT έλεγχο
 - [ ] React φόρμα `RegisterForm`
 - [ ] React φόρμα `LoginForm`
@@ -47,9 +47,9 @@
 
 ### 1.3 CRUD Ακινήτων
 
-- [ ] Μοντέλο `Property` με πεδία: τίτλος, περιγραφή, τιμή, φωτογραφίες
-- [ ] Σχέση `owner_id` (ForeignKey)
-- [ ] Endpoints: `GET`, `POST`, `PUT`, `DELETE`, `GET /{id}`
+- [X] Μοντέλο `Property` με πεδία: τίτλος, περιγραφή, τιμή, φωτογραφίες
+- [X] Σχέση `owner_id` (ForeignKey)
+- [X] Endpoints: `GET`, `POST`, `PUT`, `DELETE`, `GET /{id}`
 - [ ] React component: `PropertyList`
 - [ ] React component: `PropertyForm`
 - [ ] React component: `PropertyDetails`
@@ -59,8 +59,8 @@
 
 ### 1.4 CRUD Συμβολαίων
 
-- [ ] Μοντέλο `Contract` (ημερομηνία, ποσό, property_id, tenant_id)
-- [ ] CRUD Endpoints
+- [X] Μοντέλο `Contract` (ημερομηνία, ποσό, property_id, tenant_id)
+- [X] CRUD Endpoints
 - [ ] React: `ContractForm`
 - [ ] Επιλογή από dropdown για ακίνητο και ενοικιαστή
 
@@ -68,8 +68,8 @@
 
 ### 1.5 CRUD Ενοικιαστών
 
-- [ ] Μοντέλο `Tenant` (όνομα, ΑΦΜ, τηλέφωνο)
-- [ ] CRUD Endpoints
+- [X] Μοντέλο `Tenant` (όνομα, ΑΦΜ, τηλέφωνο)
+- [X] CRUD Endpoints
 - [ ] React: `TenantForm`, `TenantList`
 - [ ] Προβολή ιστορικού μισθώσεων
 

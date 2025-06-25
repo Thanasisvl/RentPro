@@ -20,8 +20,6 @@ def create_property(
         raise HTTPException(status_code=401, detail="User not found")
     return crud_property.create_property(db=db, property=property, owner_id=user.id)
 
-    return crud_property.create_property(db=db, property=property, owner_id=user.id)
-
 @router.get("/", response_model=List[PropertyOut])
 def list_properties(
     skip: int = 0, 

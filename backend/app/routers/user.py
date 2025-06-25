@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 from app.schemas.user import UserCreate, UserOut, UserUpdate
 from app.crud import user as crud_user
@@ -7,6 +7,9 @@ from app.core.jwt import get_current_user
 from typing import List
 
 router = APIRouter()
+
+def is_admin(request):
+    return request.state.user.get("role") == "ADMIN"
 
 @router.post("/", response_model=UserOut)
 def create_user(user: UserCreate, db: Session = Depends(get_db)):
@@ -24,52 +27,53 @@ def register_user(user: UserCreate, db: Session = Depends(get_db)):
 
 @router.get("/", response_model=List[UserOut])
 def list_users(
+    request: Request,
     skip: int = 0,
     limit: int = 100,
-    db: Session = Depends(get_db),
-    current_user: dict = Depends(get_current_user)
+    db: Session = Depends(get_db)
     ):
-    # Optionally, check for admin role here
+    if not is_admin(request):
+        raise HTTPException(status_code=403, detail="Not authorized")
     return crud_user.get_users(db=db, skip=skip, limit=limit)
 
 @router.get("/{user_id}", response_model=UserOut)
 def get_user(
+    request: Request,
     user_id: int,
-    db: Session = Depends(get_db),
-    current_user: dict = Depends(get_current_user)
+    db: Session = Depends(get_db)
     ):
     db_user = crud_user.get_user(db, user_id)
     if not db_user:
         raise HTTPException(status_code=404, detail="User not found")
-    if db_user.username != current_user["sub"]:
+    if db_user.username != request.state.user["sub"] and not is_admin(request):
         raise HTTPException(status_code=403, detail="Not authorized to view this user")
     return db_user
 
 @router.put("/{user_id}", response_model=UserOut)
 def update_user(
+    request: Request,
     user_id: int,
     user: UserUpdate,
-    db: Session = Depends(get_db),
-    current_user: dict = Depends(get_current_user)
+    db: Session = Depends(get_db)
     ):
     db_user = crud_user.get_user(db, user_id)
     if not db_user:
         raise HTTPException(status_code=404, detail="User not found")
-    if db_user.username != current_user["sub"]:
+    if db_user.username != request.state.user["sub"] and not is_admin(request):
         raise HTTPException(status_code=403, detail="Not authorized to update this user")
     db_user = crud_user.update_user(db, user_id, user)
     return db_user
 
 @router.delete("/{user_id}", response_model=UserOut)
 def delete_user(
+    request: Request,
     user_id: int,
-    db: Session = Depends(get_db),
-    current_user: dict = Depends(get_current_user)
+    db: Session = Depends(get_db)
     ):
     db_user = crud_user.get_user(db, user_id)
     if not db_user:
         raise HTTPException(status_code=404, detail="User not found")
-    if db_user.username != current_user["sub"]:
+    if db_user.username != request.state.user["sub"] and not is_admin(request):
         raise HTTPException(status_code=403, detail="Not authorized to delete this user")
     db_user = crud_user.delete_user(db, user_id)
     return db_user
