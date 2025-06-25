@@ -13,3 +13,4 @@ class User(Base):
     role = Column(String)
 
     properties = relationship("Property", back_populates="owner")
+    tenant_profile = relationship("Tenant", back_populates="user", uselist=False)

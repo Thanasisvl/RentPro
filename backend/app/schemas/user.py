@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict, EmailStr
 
 class UserCreate(BaseModel):
     username: str
@@ -7,6 +7,12 @@ class UserCreate(BaseModel):
     password: str
     role: str
 
+class UserUpdate(BaseModel):
+    username: str | None = None
+    email: EmailStr | None = None
+    full_name: str | None = None
+    role: str | None = None
+
 class UserOut(BaseModel):
     id: int
     username: str
@@ -14,5 +20,12 @@ class UserOut(BaseModel):
     full_name: str
     role: str
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
+
+class UserLogin(BaseModel):
+    username: str
+    password: str
+
+class Token(BaseModel):
+    access_token: str
+    token_type: str
