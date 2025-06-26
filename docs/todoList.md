@@ -37,7 +37,7 @@
 - [X] Μοντέλο χρήστη (User) με ρόλο `Ιδιοκτήτης`
 - [X] Endpoint εγγραφής `/register` (με hash password)
 - [X] Endpoint σύνδεσης `/login` (JWT)
-- [ ] Middleware για JWT έλεγχο
+- [X] Middleware για JWT έλεγχο
 - [ ] React φόρμα `RegisterForm`
 - [ ] React φόρμα `LoginForm`
 - [ ] Αποθήκευση token στο `localStorage`

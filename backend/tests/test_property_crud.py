@@ -1,5 +1,7 @@
 import os
 os.environ["RENTPRO_DATABASE_URL"] = "sqlite:///./backend/test_test.db"
+from dotenv import load_dotenv
+load_dotenv()
 
 import pytest
 from fastapi.testclient import TestClient

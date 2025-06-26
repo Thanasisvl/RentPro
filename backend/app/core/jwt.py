@@ -1,11 +1,12 @@
+import os
 from datetime import datetime, timedelta
 from jose import JWTError, jwt
 from fastapi.security import OAuth2PasswordBearer
 from fastapi import Depends, HTTPException, status
 
 # Secret key for encoding/decoding JWTs (use a strong, random value in production)
-SECRET_KEY = "your-secret-key"
-ALGORITHM = "HS256"
+SECRET_KEY = os.getenv("RENTPRO_SECRET_KEY", "your-secret-key")
+ALGORITHM = os.getenv("RENTPRO_JWT_ALGORITHM", "HS256")
 ACCESS_TOKEN_EXPIRE_MINUTES = 60
 
 def create_access_token(data: dict, expires_delta: timedelta = None):

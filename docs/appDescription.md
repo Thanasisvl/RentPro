@@ -21,7 +21,7 @@
 ## Τεχνολογίες που θα χρησιμοποιηθούν:
 
 - **Frontend**: React.js
-- **Backend**: Python (FastAPI ή Flask)
+- **Backend**: Python (FastAPI)
 - **Database**: PostgreSQL
 - **IDE**: Visual Studio Code
 - **Containerization**: Docker & Docker Compose

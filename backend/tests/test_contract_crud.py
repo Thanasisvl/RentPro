@@ -1,5 +1,7 @@
 import os
 os.environ["RENTPRO_DATABASE_URL"] = "sqlite:///./backend/test_test.db"
+from dotenv import load_dotenv
+load_dotenv()
 
 import pytest
 from fastapi.testclient import TestClient
@@ -26,12 +28,14 @@ def register_and_login(username, password, email, role):
             "role": role
         }
     )
+    print("REGISTER RESPONSE:", resp.status_code, resp.json())
     assert resp.status_code == 200
     # Login user
     login_resp = client.post(
         "/login",
         json={"username": username, "password": password}
     )
+    print("LOGIN RESPONSE:", login_resp.status_code, login_resp.json())
     assert login_resp.status_code == 200
     token = login_resp.json()["access_token"]
     headers = {"Authorization": f"Bearer {token}"}
@@ -74,6 +78,7 @@ def property_id(owner_headers):
         },
         headers=owner_headers
     )
+    print("PROPERTY RESPONSE:", resp.status_code, resp.json())
     assert resp.status_code == 200
     return resp.json()["id"]
 

@@ -1,5 +1,7 @@
 import os
 os.environ["RENTPRO_DATABASE_URL"] = "sqlite:///./backend/test_test.db"
+from dotenv import load_dotenv
+load_dotenv()
 
 import pytest
 from fastapi.testclient import TestClient
@@ -52,19 +54,26 @@ def test_get_user():
     assert data["email"] == "test@example.com"
 
 def test_get_users():
-    user1, headers1 = register_and_login()
-    user2, headers2 = register_and_login(
+    admin_user, admin_headers = register_and_login(
+        username="adminuser",
+        password="adminpassword",
+        email="admin@example.com",
+        role="ADMIN"
+    )
+    # Create another user
+    user2, _ = register_and_login(
         username="testuser2",
         password="testpassword2",
-        email="test2@example.com"
+        email="test2@example.com",
+        role="OWNER"
     )
-    # Only admin should see all users, but if not, just check for 200 and own user
-    response = client.get("/users/", headers=headers1)
+    response = client.get("/users/", headers=admin_headers)
     assert response.status_code == 200
     data = response.json()
     assert isinstance(data, list)
     usernames = [user["username"] for user in data]
-    assert "testuser" in usernames
+    assert "adminuser" in usernames
+    assert "testuser2" in usernames
 
 def test_update_user():
     user, headers = register_and_login()
