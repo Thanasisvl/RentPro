@@ -9,9 +9,6 @@ def create_tenant(db: Session, tenant: TenantCreate):
     user = db.query(User).filter(User.id == tenant.user_id).first()
     if not user:
         raise HTTPException(status_code=400, detail="User does not exist")
-    # Optionally check role
-    if user.role != "TENANT":
-        raise HTTPException(status_code=400, detail="User is not a tenant")
     db_tenant = Tenant(**tenant.model_dump())
     db.add(db_tenant)
     db.commit()

@@ -7,6 +7,7 @@ import pytest
 from fastapi.testclient import TestClient
 from app.main import app
 from app.db.session import Base, engine
+from app.models.user import UserRole
 
 @pytest.fixture(autouse=True)
 def clean_db():
@@ -15,7 +16,7 @@ def clean_db():
 
 client = TestClient(app)
 
-def register_and_login(username="tenant1", password="testpassword", email="tenant1@example.com", role="TENANT"):
+def register_and_login(username="tenant1", password="testpassword", email="tenant1@example.com", role=UserRole.USER.value):
     resp = client.post(
         "/users/register",
         json={

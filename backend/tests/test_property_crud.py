@@ -7,6 +7,7 @@ import pytest
 from fastapi.testclient import TestClient
 from app.main import app
 from app.db.session import Base, engine
+from app.models.user import UserRole
 
 @pytest.fixture(autouse=True)
 def clean_db():
@@ -24,7 +25,7 @@ def register_and_login(username="owner1", password="testpassword", email="owner1
             "email": email,
             "full_name": "Owner One",
             "password": password,
-            "role": "OWNER"
+            "role": UserRole.OWNER.value
         }
     )
     assert resp.status_code == 200

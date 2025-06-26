@@ -7,6 +7,7 @@ import pytest
 from fastapi.testclient import TestClient
 from app.main import app
 from app.db.session import Base, engine
+from app.models.user import UserRole
 
 @pytest.fixture(autouse=True)
 def clean_db():
@@ -15,7 +16,7 @@ def clean_db():
 
 client = TestClient(app)
 
-def register_and_login(username="testuser", password="testpassword", email="test@example.com", role="OWNER"):
+def register_and_login(username="testuser", password="testpassword", email="test@example.com", role=UserRole.OWNER.value):
     # Register user
     response = client.post(
         "/users/register",
@@ -58,14 +59,14 @@ def test_get_users():
         username="adminuser",
         password="adminpassword",
         email="admin@example.com",
-        role="ADMIN"
+        role=UserRole.ADMIN.value
     )
     # Create another user
     user2, _ = register_and_login(
         username="testuser2",
         password="testpassword2",
         email="test2@example.com",
-        role="OWNER"
+        role=UserRole.OWNER.value
     )
     response = client.get("/users/", headers=admin_headers)
     assert response.status_code == 200
@@ -84,7 +85,7 @@ def test_update_user():
             "username": "testuser",
             "email": "updated@example.com",
             "full_name": "Updated User",
-            "role": "OWNER"
+            "role": UserRole.OWNER.value
         },
         headers=headers
     )
@@ -111,7 +112,7 @@ def test_register_with_existing_username():
             "email": "unique2@example.com",
             "full_name": "Test User",
             "password": "testpassword",
-            "role": "OWNER"
+            "role": UserRole.OWNER.value
         }
     )
     assert response.status_code in (400, 409)
@@ -125,7 +126,7 @@ def test_register_with_existing_email():
             "email": "duplicate@example.com",
             "full_name": "Test User",
             "password": "testpassword",
-            "role": "OWNER"
+            "role": UserRole.OWNER.value
         }
     )
     assert response.status_code in (400, 409)
@@ -153,7 +154,7 @@ def test_update_user_unauthenticated():
             "username": "unauthupdate",
             "email": "new@example.com",
             "full_name": "New Name",
-            "role": "OWNER"
+            "role": UserRole.OWNER.value
         }
     )
     assert response.status_code == 401
@@ -177,7 +178,7 @@ def test_update_nonexistent_user():
             "username": "doesnotexist",
             "email": "doesnotexist@example.com",
             "full_name": "No User",
-            "role": "OWNER"
+            "role": UserRole.OWNER.value
         },
         headers=headers
     )
@@ -197,7 +198,7 @@ def test_update_user_invalid_email():
             "username": "invalidemail",
             "email": "not-an-email",
             "full_name": "Invalid Email",
-            "role": "OWNER"
+            "role": UserRole.OWNER.value
         },
         headers=headers
     )
@@ -221,7 +222,7 @@ def test_update_another_user_forbidden():
             "username": "user1",
             "email": "hacked@example.com",
             "full_name": "Hacker",
-            "role": "OWNER"
+            "role": UserRole.OWNER.value
         },
         headers=headers2
     )

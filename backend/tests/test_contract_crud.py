@@ -8,6 +8,7 @@ from fastapi.testclient import TestClient
 from app.main import app
 from app.db.session import Base, engine
 from datetime import date, timedelta
+from app.models.user import UserRole
 
 @pytest.fixture(autouse=True)
 def clean_db():
@@ -43,12 +44,12 @@ def register_and_login(username, password, email, role):
 
 @pytest.fixture
 def owner_headers():
-    _, headers = register_and_login("owner1", "testpassword", "owner1@example.com", "OWNER")
+    _, headers = register_and_login("owner1", "testpassword", "owner1@example.com", UserRole.OWNER.value)
     return headers
 
 @pytest.fixture
 def tenant_headers():
-    user, headers = register_and_login("tenant1", "testpassword", "tenant1@example.com", "TENANT")
+    user, headers = register_and_login("tenant1", "testpassword", "tenant1@example.com", UserRole.USER.value)
     # Create tenant profile
     resp = client.post(
         "/tenants/",

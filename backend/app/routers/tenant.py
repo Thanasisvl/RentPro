@@ -4,6 +4,7 @@ from app.schemas.tenant import TenantCreate, TenantUpdate, TenantOut
 from app.crud import tenant as crud_tenant
 from app.core.utils import is_admin, get_current_user_payload
 from app.models.user import User
+from app.models.tenant import Tenant
 from app.db.session import get_db
 from typing import List
 
@@ -17,8 +18,11 @@ def create_tenant(
     ):
     user_payload = get_current_user_payload(request)
     user = db.query(User).filter(User.username == user_payload["sub"]).first()
-    if not user or user.role != "TENANT":
-        raise HTTPException(status_code=403, detail="Only users with TENANT role can create a tenant profile")
+    if not user:
+        raise HTTPException(status_code=403, detail="Authentication required")
+    existing = db.query(Tenant).filter(Tenant.user_id == user.id).first()
+    if existing:
+        raise HTTPException(status_code=400, detail="Tenant profile already exists for this user")
     tenant_data = tenant.model_dump()
     tenant_data["user_id"] = user.id
     return crud_tenant.create_tenant(db=db, tenant=TenantCreate(**tenant_data))

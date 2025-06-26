@@ -7,6 +7,7 @@ import pytest
 from fastapi.testclient import TestClient
 from app.main import app
 from app.db.session import Base, engine
+from app.models.user import UserRole
 
 @pytest.fixture(autouse=True)
 def clean_db():
@@ -23,7 +24,7 @@ def test_register_user_success():
             "email": "newuser@example.com",
             "full_name": "New User",
             "password": "securepassword",
-            "role": "TENANT"
+            "role": UserRole.USER.value
         }
     )
     assert resp.status_code == 200
@@ -39,7 +40,7 @@ def test_register_user_existing_username():
             "email": "dupeuser1@example.com",
             "full_name": "Dupe User",
             "password": "password",
-            "role": "TENANT"
+            "role": UserRole.USER.value
         }
     )
     resp = client.post(
@@ -49,7 +50,7 @@ def test_register_user_existing_username():
             "email": "dupeuser2@example.com",
             "full_name": "Dupe User",
             "password": "password",
-            "role": "TENANT"
+            "role": UserRole.USER.value
         }
     )
     assert resp.status_code in (400, 409)
@@ -62,7 +63,7 @@ def test_register_user_existing_email():
             "email": "dupeemail@example.com",
             "full_name": "Dupe Email",
             "password": "password",
-            "role": "TENANT"
+            "role": UserRole.USER.value
         }
     )
     resp = client.post(
@@ -72,7 +73,7 @@ def test_register_user_existing_email():
             "email": "dupeemail@example.com",
             "full_name": "Dupe Email",
             "password": "password",
-            "role": "TENANT"
+            "role": UserRole.USER.value
         }
     )
     assert resp.status_code in (400, 409)
@@ -95,7 +96,7 @@ def test_login_success():
             "email": "loginuser@example.com",
             "full_name": "Login User",
             "password": "mypassword",
-            "role": "TENANT"
+            "role": UserRole.USER.value
         }
     )
     resp = client.post(
@@ -117,7 +118,7 @@ def test_login_wrong_password():
             "email": "wrongpass@example.com",
             "full_name": "Wrong Pass",
             "password": "rightpassword",
-            "role": "TENANT"
+            "role": UserRole.USER.value
         }
     )
     resp = client.post(

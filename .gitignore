@@ -32,3 +32,6 @@ alembic/versions/
 
 # Logs
 *.log
+
+#Uploads
+uploads/contracts/*

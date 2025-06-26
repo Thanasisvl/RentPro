@@ -1,4 +1,6 @@
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Request, UploadFile, File
+import os
+from uuid import uuid4
 from sqlalchemy.orm import Session
 from app.schemas.contract import ContractCreate, ContractUpdate, ContractOut
 from app.models.user import User
@@ -9,6 +11,9 @@ from app.db.session import get_db
 from typing import List
 
 router = APIRouter()
+
+UPLOAD_DIR = "./uploads/contracts"
+os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 @router.post("/", response_model=ContractOut)
 def create_contract(
@@ -82,3 +87,30 @@ def delete_contract(
         raise HTTPException(status_code=403, detail="Not authorized to delete this contract")
     db_contract = crud_contract.delete_contract(db, contract_id)
     return db_contract
+
+@router.post("/contracts/{contract_id}/upload")
+async def upload_contract_pdf(
+    request: Request,
+    contract_id: int,
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db)
+    ):
+    user_payload = get_current_user_payload(request)
+    user = db.query(User).filter(User.username == user_payload["sub"]).first()
+    db_contract = crud_contract.get_contract(db, contract_id)
+    if not db_contract:
+        raise HTTPException(status_code=404, detail="Contract not found")
+    if db_contract.property.owner_id != user.id and not is_admin(request):
+        raise HTTPException(status_code=403, detail="Not authorized to upload for this contract")
+    if not file.filename.lower().endswith(".pdf"):
+        raise HTTPException(status_code=400, detail="Only PDF files allowed")
+    filename = f"{contract_id}_{uuid4().hex}.pdf"
+    file_path = os.path.join(UPLOAD_DIR, filename)
+    with open(file_path, "wb") as f:
+        content = await file.read()
+        f.write(content)
+    # Update the contract's pdf_file field
+    db_contract.pdf_file = f"/uploads/contracts/{filename}"
+    db.commit()
+    db.refresh(db_contract)
+    return {"filename": filename, "url": db_contract.pdf_file}

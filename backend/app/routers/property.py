@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 from app.schemas.property import PropertyCreate, PropertyOut, PropertyUpdate
 from app.models.user import User
+from app.models.role import UserRole
 from app.crud import property as crud_property
 from app.core.utils import is_admin, get_current_user_payload
 from app.db.session import get_db
@@ -17,7 +18,7 @@ def create_property(
     ):
     user_payload = get_current_user_payload(request)
     user = db.query(User).filter(User.username == user_payload["sub"]).first()
-    if not user or user.role != "OWNER":
+    if not user or user.role != UserRole.OWNER:
         raise HTTPException(status_code=401, detail="User not found")
     return crud_property.create_property(db=db, property=property, owner_id=user.id)
 
