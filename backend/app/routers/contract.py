@@ -88,7 +88,7 @@ def delete_contract(
     db_contract = crud_contract.delete_contract(db, contract_id)
     return db_contract
 
-@router.post("/contracts/{contract_id}/upload")
+@router.post("/{contract_id}/upload")
 async def upload_contract_pdf(
     request: Request,
     contract_id: int,
