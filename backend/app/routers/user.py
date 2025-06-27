@@ -23,6 +23,7 @@ def register_user(user: UserCreate, db: Session = Depends(get_db)):
     if existing_user:
         raise HTTPException(status_code=400, detail="Username or email already registered")
     user_data = user.model_dump()
+    # Set default role to USER
     user_data['role'] = UserRole.USER
     return crud_user.create_user(db=db, user=UserCreate(**user_data))
 

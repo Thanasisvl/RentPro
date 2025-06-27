@@ -206,3 +206,60 @@ def test_cross_user_contract_access(owner_and_property, tenant_and_profile):
         "pdf_file": "admin_updated_contract.pdf"
     }, headers=admin_headers).status_code == 200
     assert client.delete(f"/contracts/{contract_id}", headers=admin_headers).status_code == 200
+
+def test_contract_negative_zero_rent(owner_and_property, tenant_and_profile):
+    _, owner_headers, property_id = owner_and_property
+    _, _, tenant_id = tenant_and_profile
+    today = str(date.today())
+    end_date = str(date.today() + timedelta(days=365))
+
+    # Test zero rent amount
+    resp_zero = client.post(
+        "/contracts/",
+        json={
+            "property_id": property_id,
+            "tenant_id": tenant_id,
+            "start_date": today,
+            "end_date": end_date,
+            "rent_amount": 0.0,
+            "pdf_file": "contract_zero.pdf"
+        },
+        headers=owner_headers
+    )
+    assert resp_zero.status_code == 422 or resp_zero.status_code == 400
+
+    # Test negative rent amount
+    resp_negative = client.post(
+        "/contracts/",
+        json={
+            "property_id": property_id,
+            "tenant_id": tenant_id,
+            "start_date": today,
+            "end_date": end_date,
+            "rent_amount": -100.0,
+            "pdf_file": "contract_negative.pdf"
+        },
+        headers=owner_headers
+    )
+    assert resp_negative.status_code == 422 or resp_negative.status_code == 400
+
+def test_contract_invalid_dates(owner_and_property, tenant_and_profile):
+    _, owner_headers, property_id = owner_and_property
+    _, _, tenant_id = tenant_and_profile
+    today = str(date.today())
+    yesterday = str(date.today() - timedelta(days=1))
+
+    # Try to create a contract with end_date before start_date
+    resp = client.post(
+        "/contracts/",
+        json={
+            "property_id": property_id,
+            "tenant_id": tenant_id,
+            "start_date": today,
+            "end_date": yesterday,
+            "rent_amount": 1200.0,
+            "pdf_file": "invalid_dates.pdf"
+        },
+        headers=owner_headers
+    )
+    assert resp.status_code == 422 or resp.status_code == 400

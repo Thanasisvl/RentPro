@@ -104,6 +104,10 @@ async def upload_contract_pdf(
         raise HTTPException(status_code=403, detail="Not authorized to upload for this contract")
     if not file.filename.lower().endswith(".pdf"):
         raise HTTPException(status_code=400, detail="Only PDF files allowed")
+    content = await file.read()
+    MAX_FILE_SIZE = 5 * 1024 * 1024  # 5 MB
+    if len(content) > MAX_FILE_SIZE:
+        raise HTTPException(status_code=413, detail="File too large")
     filename = f"{contract_id}_{uuid4().hex}.pdf"
     file_path = os.path.join(UPLOAD_DIR, filename)
     with open(file_path, "wb") as f:

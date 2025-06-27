@@ -48,7 +48,7 @@ def test_upload_contract_pdf():
             "start_date": "2025-06-26",
             "end_date": "2026-06-26",
             "rent_amount": 1200.0,
-            "pdf_file": None
+            "pdf_file": ""
         },
         headers=owner_headers
     )
@@ -67,3 +67,64 @@ def test_upload_contract_pdf():
     data = upload_resp.json()
     assert data["filename"].endswith(".pdf")
     assert os.path.exists(f"./uploads/contracts/{data['filename']}")
+
+def test_contract_pdf_upload_edge_cases():
+    # Register owner and get property
+    owner, owner_headers, property_id = register_and_login(client, "owner2", "pw", "owner2@example.com", is_owner=True)
+    tenant, tenant_headers, _ = register_and_login(client, "tenant2", "pw", "tenant2@example.com", is_owner=False)
+    tenant_profile_resp = client.post(
+        "/tenants/",
+        json={
+            "name": "Tenant Two",
+            "afm": "987654321",
+            "phone": "0987654321",
+            "email": "tenant2@example.com",
+            "user_id": tenant["id"]
+        },
+        headers=tenant_headers
+    )
+    assert tenant_profile_resp.status_code == 200
+    tenant_id = tenant_profile_resp.json()["id"]
+
+    # Create contract
+    contract_resp = client.post(
+        "/contracts/",
+        json={
+            "property_id": property_id,
+            "tenant_id": tenant_id,
+            "start_date": "2025-06-26",
+            "end_date": "2026-06-26",
+            "rent_amount": 1200.0,
+            "pdf_file": ""
+        },
+        headers=owner_headers
+    )
+    assert contract_resp.status_code == 200
+    contract_id = contract_resp.json()["id"]
+
+    # 1. Missing file
+    resp_missing = client.post(
+        f"/contracts/{contract_id}/upload",
+        files={},
+        headers=owner_headers
+    )
+    assert resp_missing.status_code in (400, 422)
+
+    # 2. Wrong file type
+    files_wrong_type = {"file": ("test.txt", io.BytesIO(b"not a pdf"), "text/plain")}
+    resp_wrong_type = client.post(
+        f"/contracts/{contract_id}/upload",
+        files=files_wrong_type,
+        headers=owner_headers
+    )
+    assert resp_wrong_type.status_code in (400, 422)
+
+    # 3. Oversized file (assuming 5MB limit, adjust if needed)
+    big_content = b"%" + b"A" * (5 * 1024 * 1024 + 1)
+    files_big = {"file": ("big_contract.pdf", io.BytesIO(big_content), "application/pdf")}
+    resp_big = client.post(
+        f"/contracts/{contract_id}/upload",
+        files=files_big,
+        headers=owner_headers
+    )
+    assert resp_big.status_code in (400, 413, 422)

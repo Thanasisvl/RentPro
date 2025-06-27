@@ -79,8 +79,7 @@ def test_update_user():
         json={
             "username": "testuser",
             "email": "updated@example.com",
-            "full_name": "Updated User",
-            "role": UserRole.OWNER.value
+            "full_name": "Updated User"
         },
         headers=headers
     )
@@ -106,8 +105,7 @@ def test_register_with_existing_username():
             "username": "duplicateuser",
             "email": "unique2@example.com",
             "full_name": "Test User",
-            "password": "testpassword",
-            "role": UserRole.OWNER.value
+            "password": "testpassword"
         }
     )
     assert response.status_code in (400, 409)
@@ -120,8 +118,7 @@ def test_register_with_existing_email():
             "username": "anotheruser",
             "email": "duplicate@example.com",
             "full_name": "Test User",
-            "password": "testpassword",
-            "role": UserRole.OWNER.value
+            "password": "testpassword"
         }
     )
     assert response.status_code in (400, 409)
@@ -148,8 +145,7 @@ def test_update_user_unauthenticated():
         json={
             "username": "unauthupdate",
             "email": "new@example.com",
-            "full_name": "New Name",
-            "role": UserRole.OWNER.value
+            "full_name": "New Name"
         }
     )
     assert response.status_code == 401
@@ -172,8 +168,7 @@ def test_update_nonexistent_user():
         json={
             "username": "doesnotexist",
             "email": "doesnotexist@example.com",
-            "full_name": "No User",
-            "role": UserRole.OWNER.value
+            "full_name": "No User"
         },
         headers=headers
     )
@@ -192,8 +187,7 @@ def test_update_user_invalid_email():
         json={
             "username": "invalidemail",
             "email": "not-an-email",
-            "full_name": "Invalid Email",
-            "role": UserRole.OWNER.value
+            "full_name": "Invalid Email"
         },
         headers=headers
     )
@@ -216,8 +210,7 @@ def test_update_another_user_forbidden():
         json={
             "username": "user1",
             "email": "hacked@example.com",
-            "full_name": "Hacker",
-            "role": UserRole.OWNER.value
+            "full_name": "Hacker"
         },
         headers=headers2
     )

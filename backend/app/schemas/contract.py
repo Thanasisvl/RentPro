@@ -1,4 +1,4 @@
-from pydantic import BaseModel, ConfigDict, field_validator
+from pydantic import BaseModel, ConfigDict, field_validator, Field, model_validator
 from datetime import date, datetime
 
 class ContractBase(BaseModel):
@@ -6,11 +6,22 @@ class ContractBase(BaseModel):
     tenant_id: int
     start_date: date
     end_date: date
-    rent_amount: float
+    rent_amount: float = Field(..., gt=0, description="Rent amount must be greater than zero")
     pdf_file: str | None = None
 
 class ContractCreate(ContractBase):
-    pass
+    property_id: int
+    tenant_id: int
+    start_date: date
+    end_date: date
+    rent_amount: float = Field(..., gt=0)
+    pdf_file: str
+
+    @model_validator(mode="after")
+    def check_dates(cls, values):
+        if values.end_date <= values.start_date:
+            raise ValueError('end_date must be after start_date')
+        return values
 
 class ContractUpdate(ContractBase):
     start_date: date | None = None
