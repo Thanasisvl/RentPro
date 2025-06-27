@@ -22,8 +22,16 @@ function LandingPage() {
             variant="outlined"
             color="primary"
             onClick={() => navigate('/register')}
+            style={{ marginRight: 16 }}
           >
-            Register
+            Register as User/Tenant
+          </Button>
+          <Button
+            variant="outlined"
+            color="secondary"
+            onClick={() => navigate('/register-owner')}
+          >
+            Register as Owner
           </Button>
         </Box>
       </Paper>

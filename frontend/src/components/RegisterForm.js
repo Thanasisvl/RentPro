@@ -16,7 +16,6 @@ function RegisterForm() {
   const [email, setEmail] = useState('');
   const [fullName, setFullName] = useState('');
   const [password, setPassword] = useState('');
-  const [role, setRole] = useState('USER');
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const navigate = useNavigate();
@@ -31,7 +30,6 @@ function RegisterForm() {
         email,
         full_name: fullName,
         password,
-        role,
       });
       setSuccess('Registration successful! You can now log in.');
       setTimeout(() => navigate('/login'), 1500);
@@ -87,19 +85,6 @@ function RegisterForm() {
             margin="normal"
             required
           />
-          <TextField
-            select
-            label="Role"
-            value={role}
-            onChange={e => setRole(e.target.value)}
-            fullWidth
-            margin="normal"
-            required
-          >
-            <MenuItem value="OWNER">Owner</MenuItem>
-            <MenuItem value="USER">User</MenuItem>
-            <MenuItem value="ADMIN">Admin</MenuItem>
-          </TextField>
           <Button
             type="submit"
             variant="contained"

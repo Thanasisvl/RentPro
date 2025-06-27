@@ -7,7 +7,7 @@ import pytest
 from fastapi.testclient import TestClient
 from app.main import app
 from app.db.session import Base, engine
-from app.models.user import UserRole
+from tests.utils import make_admin
 
 @pytest.fixture(autouse=True)
 def clean_db():
@@ -16,19 +16,41 @@ def clean_db():
 
 client = TestClient(app)
 
-def register_and_login(username="owner1", password="testpassword", email="owner1@example.com"):
-    # Register user
-    resp = client.post(
-        "/users/register",
-        json={
-            "username": username,
-            "email": email,
-            "full_name": "Owner One",
-            "password": password,
-            "role": UserRole.OWNER.value
-        }
-    )
-    assert resp.status_code == 200
+def register_and_login(username="owner1", password="testpassword", email="owner1@example.com", is_owner=True):
+    if is_owner:
+        # Register owner with property
+        resp = client.post(
+            "/users/register-owner",
+            json={
+                "username": username,
+                "email": email,
+                "full_name": "Owner One",
+                "password": password,
+                "property": {
+                    "title": "Initial Property",
+                    "description": "Initial property for owner registration",
+                    "address": "1 Owner St",
+                    "type": "Apartment",
+                    "size": 50.0,
+                    "price": 1000.0
+                }
+            }
+        )
+        assert resp.status_code == 200
+        user = resp.json()["user"]
+    else:
+        # Register regular user
+        resp = client.post(
+            "/users/register",
+            json={
+                "username": username,
+                "email": email,
+                "full_name": "Owner One",
+                "password": password
+            }
+        )
+        assert resp.status_code == 200
+        user = resp.json()
     # Login user
     login_resp = client.post(
         "/login",
@@ -37,7 +59,7 @@ def register_and_login(username="owner1", password="testpassword", email="owner1
     assert login_resp.status_code == 200
     token = login_resp.json()["access_token"]
     headers = {"Authorization": f"Bearer {token}"}
-    return resp.json(), headers
+    return user, headers
 
 @pytest.fixture
 def owner_headers():
@@ -303,3 +325,50 @@ def test_update_property_not_owner(owner_headers):
         headers=other_headers
     )
     assert resp.status_code in (403, 404)
+
+def test_cross_user_property_access(owner_headers):
+    # Owner1 creates property
+    resp = client.post(
+        "/properties/",
+        json={
+            "title": "Owner1 Property",
+            "description": "desc",
+            "address": "addr",
+            "type": "Apartment",
+            "size": 100.0,
+            "price": 1200.0
+        },
+        headers=owner_headers
+    )
+    prop_id = resp.json()["id"]
+
+    # Register and login as another owner
+    _, other_headers = register_and_login(username="owner2", email="owner2@example.com")
+    # Try to GET/UPDATE/DELETE as owner2
+    assert client.get(f"/properties/{prop_id}", headers=other_headers).status_code in (403, 404)
+    assert client.put(f"/properties/{prop_id}", json={
+        "title": "Hacked",
+        "description": "desc",
+        "address": "addr",
+        "type": "Apartment",
+        "size": 100.0,
+        "price": 1200.0
+    }, headers=other_headers).status_code in (403, 404)
+    assert client.delete(f"/properties/{prop_id}", headers=other_headers).status_code in (403, 404)
+
+    # Admin can access
+    _, admin_headers = register_and_login(username="admin1", email="admin1@example.com")
+    make_admin("admin1")
+    login_resp = client.post("/login", json={"username": "admin1", "password": "testpassword"})
+    admin_token = login_resp.json()["access_token"]
+    admin_headers = {"Authorization": f"Bearer {admin_token}"}
+    assert client.get(f"/properties/{prop_id}", headers=admin_headers).status_code == 200
+    assert client.put(f"/properties/{prop_id}", json={
+        "title": "Admin Updated",
+        "description": "desc",
+        "address": "addr",
+        "type": "Apartment",
+        "size": 100.0,
+        "price": 1200.0
+    }, headers=admin_headers).status_code == 200
+    assert client.delete(f"/properties/{prop_id}", headers=admin_headers).status_code == 200

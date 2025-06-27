@@ -19,18 +19,45 @@ def clean_db():
 
 client = TestClient(app)
 
-def register_and_login(username, password, email, role):
-    resp = client.post(
-        "/users/register",
-        json={
-            "username": username,
-            "email": email,
-            "full_name": username.title(),
-            "password": password,
-            "role": role
-        }
-    )
-    assert resp.status_code == 200
+def register_and_login(username="owner1", password="testpassword", email="owner1@example.com", is_owner=True):
+    if is_owner:
+        # Register owner with property
+        resp = client.post(
+            "/users/register-owner",
+            json={
+                "username": username,
+                "email": email,
+                "full_name": "Owner One",
+                "password": password,
+                "property": {
+                    "title": "Initial Property",
+                    "description": "Initial property for owner registration",
+                    "address": "1 Owner St",
+                    "type": "Apartment",
+                    "size": 50.0,
+                    "price": 1000.0
+                }
+            }
+        )
+        assert resp.status_code == 200
+        data = resp.json()
+        user = data["user"]
+        property_id = data["property"]["id"]
+    else:
+        # Register regular user
+        resp = client.post(
+            "/users/register",
+            json={
+                "username": username,
+                "email": email,
+                "full_name": "Owner One",
+                "password": password
+            }
+        )
+        assert resp.status_code == 200
+        user = resp.json()
+        property_id = None
+    # Login user
     login_resp = client.post(
         "/login",
         json={"username": username, "password": password}
@@ -38,28 +65,14 @@ def register_and_login(username, password, email, role):
     assert login_resp.status_code == 200
     token = login_resp.json()["access_token"]
     headers = {"Authorization": f"Bearer {token}"}
-    return resp.json(), headers
+    return user, headers, property_id
 
 def test_upload_contract_pdf():
-    # Register owner and create property
-    owner, owner_headers = register_and_login("owner1", "testpassword", "owner1@example.com", UserRole.OWNER.value)
-    prop_resp = client.post(
-        "/properties/",
-        json={
-            "title": "Test Property",
-            "description": "A nice place",
-            "address": "123 Main St",
-            "type": "Apartment",
-            "size": 100.0,
-            "price": 1200.0
-        },
-        headers=owner_headers
-    )
-    assert prop_resp.status_code == 200
-    property_id = prop_resp.json()["id"]
+    # Register owner and get property
+    owner, owner_headers, property_id = register_and_login("owner1", "testpassword", "owner1@example.com", is_owner=True)
 
     # Register tenant and create tenant profile
-    tenant, tenant_headers = register_and_login("tenant1", "testpassword", "tenant1@example.com", UserRole.USER.value)
+    tenant, tenant_headers, _ = register_and_login("tenant1", "testpassword", "tenant1@example.com", is_owner=False)
     tenant_profile_resp = client.post(
         "/tenants/",
         json={

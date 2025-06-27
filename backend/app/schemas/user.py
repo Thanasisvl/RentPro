@@ -1,5 +1,6 @@
 from pydantic import BaseModel, ConfigDict, EmailStr
 from app.models.role import UserRole
+from app.schemas.property import PropertyCreate, PropertyOut
 
 class UserCreate(BaseModel):
     username: str
@@ -30,3 +31,14 @@ class UserLogin(BaseModel):
 class Token(BaseModel):
     access_token: str
     token_type: str
+
+class OwnerRegister(BaseModel):
+    username: str
+    email: EmailStr
+    full_name: str
+    password: str
+    property: PropertyCreate
+
+class OwnerRegisterResponse(BaseModel):
+    user: UserOut
+    property: PropertyOut

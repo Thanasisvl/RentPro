@@ -7,7 +7,7 @@ import pytest
 from fastapi.testclient import TestClient
 from app.main import app
 from app.db.session import Base, engine
-from app.models.user import UserRole
+from tests.utils import make_admin
 
 @pytest.fixture(autouse=True)
 def clean_db():
@@ -16,15 +16,14 @@ def clean_db():
 
 client = TestClient(app)
 
-def register_and_login(username="tenant1", password="testpassword", email="tenant1@example.com", role=UserRole.USER.value):
+def register_and_login(username="tenant1", password="testpassword", email="tenant1@example.com"):
     resp = client.post(
         "/users/register",
         json={
             "username": username,
             "email": email,
             "full_name": "Tenant One",
-            "password": password,
-            "role": role
+            "password": password
         }
     )
     assert resp.status_code == 200
@@ -188,3 +187,45 @@ def test_delete_nonexistent_tenant(tenant_headers):
     headers, _ = tenant_headers
     resp = client.delete("/tenants/99999", headers=headers)
     assert resp.status_code == 404
+
+def test_cross_user_tenant_access():
+    # Tenant1 creates profile
+    user1, headers1 = register_and_login(username="tenant1", email="tenant1@example.com")
+    resp = client.post(
+        "/tenants/",
+        json={
+            "name": "Tenant One",
+            "afm": "123456789",
+            "phone": "1234567890",
+            "email": "tenant1@example.com",
+            "user_id": user1["id"]
+        },
+        headers=headers1
+    )
+    tenant_id = resp.json()["id"]
+
+    # Tenant2 tries to access
+    user2, headers2 = register_and_login(username="tenant2", email="tenant2@example.com")
+    assert client.get(f"/tenants/{tenant_id}", headers=headers2).status_code in (403, 404)
+    assert client.put(f"/tenants/{tenant_id}", json={
+        "name": "Hacked",
+        "afm": "123456789",
+        "phone": "1234567890",
+        "email": "tenant1@example.com"
+    }, headers=headers2).status_code in (403, 404)
+    assert client.delete(f"/tenants/{tenant_id}", headers=headers2).status_code in (403, 404)
+
+    # Admin can access
+    _, admin_headers = register_and_login(username="admin1", email="admin1@example.com")
+    make_admin("admin1")
+    login_resp = client.post("/login", json={"username": "admin1", "password": "testpassword"})
+    admin_token = login_resp.json()["access_token"]
+    admin_headers = {"Authorization": f"Bearer {admin_token}"}
+    assert client.get(f"/tenants/{tenant_id}", headers=admin_headers).status_code == 200
+    assert client.put(f"/tenants/{tenant_id}", json={
+        "name": "Admin Updated",
+        "afm": "123456789",
+        "phone": "1234567890",
+        "email": "tenant1@example.com"
+    }, headers=admin_headers).status_code == 200
+    assert client.delete(f"/tenants/{tenant_id}", headers=admin_headers).status_code == 200

@@ -16,19 +16,46 @@ def clean_db():
 
 client = TestClient(app)
 
-def register_and_login(username="testuser", password="testpassword", email="test@example.com", role=UserRole.OWNER.value):
-    # Register user
-    response = client.post(
-        "/users/register",
-        json={
-            "username": username,
-            "email": email,
-            "full_name": "Test User",
-            "password": password,
-            "role": role
-        }
-    )
-    assert response.status_code == 200
+def register_and_login(
+    username="testuser",
+    password="testpassword",
+    email="test@example.com",
+    is_owner=False
+    ):
+    if is_owner:
+        # Register owner with property
+        response = client.post(
+            "/users/register-owner",
+            json={
+                "username": username,
+                "email": email,
+                "full_name": "Test User",
+                "password": password,
+                "property": {
+                    "title": "Test Property",
+                    "description": "Test Property Desc",
+                    "address": "123 Main St",
+                    "type": "Apartment",
+                    "size": 100.0,
+                    "price": 1000.0
+                }
+            }
+        )
+        assert response.status_code == 200
+        user = response.json()["user"]
+    else:
+        # Register regular user (no role in payload)
+        response = client.post(
+            "/users/register",
+            json={
+                "username": username,
+                "email": email,
+                "full_name": "Test User",
+                "password": password
+            }
+        )
+        assert response.status_code == 200
+        user = response.json()
     # Login user
     login_resp = client.post(
         "/login",
@@ -37,15 +64,21 @@ def register_and_login(username="testuser", password="testpassword", email="test
     assert login_resp.status_code == 200
     token = login_resp.json()["access_token"]
     headers = {"Authorization": f"Bearer {token}"}
-    return response.json(), headers
+    return user, headers
 
-def test_create_user():
+def test_create_user(is_owner=False):
     user, _ = register_and_login()
     assert user["username"] == "testuser"
     assert user["email"] == "test@example.com"
     assert "id" in user
 
-def test_get_user():
+def test_create_owner():
+    user, _ = register_and_login(is_owner=True)
+    assert user["username"] == "testuser"
+    assert user["email"] == "test@example.com"
+    assert "id" in user
+
+def test_get_user(is_owner=False):
     user, headers = register_and_login()
     user_id = user["id"]
     response = client.get(f"/users/{user_id}", headers=headers)
@@ -55,18 +88,37 @@ def test_get_user():
     assert data["email"] == "test@example.com"
 
 def test_get_users():
-    admin_user, admin_headers = register_and_login(
+    # Register admin user (regular registration)
+    admin_user, _ = register_and_login(
         username="adminuser",
         password="adminpassword",
         email="admin@example.com",
-        role=UserRole.ADMIN.value
+        is_owner=False
     )
-    # Create another user
+    # Patch admin role directly in DB for testing
+    from app.db.session import SessionLocal
+    from app.models.user import User
+    db = SessionLocal()
+    db_user = db.query(User).filter_by(username="adminuser").first()
+    db_user.role = UserRole.ADMIN
+    db.commit()
+    db.close()
+
+    # Log in again to get a new token with ADMIN role
+    login_resp = client.post(
+        "/login",
+        json={"username": "adminuser", "password": "adminpassword"}
+    )
+    assert login_resp.status_code == 200
+    token = login_resp.json()["access_token"]
+    admin_headers = {"Authorization": f"Bearer {token}"}
+
+    # Register owner user
     user2, _ = register_and_login(
         username="testuser2",
         password="testpassword2",
         email="test2@example.com",
-        role=UserRole.OWNER.value
+        is_owner=True
     )
     response = client.get("/users/", headers=admin_headers)
     assert response.status_code == 200
@@ -77,7 +129,7 @@ def test_get_users():
     assert "testuser2" in usernames
 
 def test_update_user():
-    user, headers = register_and_login()
+    user, headers = register_and_login(is_owner=True)
     user_id = user["id"]
     response = client.put(
         f"/users/{user_id}",
@@ -95,7 +147,7 @@ def test_update_user():
     assert data["full_name"] == "Updated User"
 
 def test_delete_user():
-    user, headers = register_and_login()
+    user, headers = register_and_login(is_owner=True)
     user_id = user["id"]
     response = client.delete(f"/users/{user_id}", headers=headers)
     assert response.status_code == 200
@@ -227,3 +279,35 @@ def test_update_another_user_forbidden():
         headers=headers2
     )
     assert response.status_code in (403, 404)
+
+def test_list_users_admin_only():
+    # Register regular user
+    _, user_headers = register_and_login(username="user1", password="pw", email="user1@example.com")
+    # Register owner
+    _, owner_headers = register_and_login(username="owner1", password="pw", email="owner1@example.com", is_owner=True)
+    # Register admin and patch role
+    admin_user, _ = register_and_login(username="admin1", password="pw", email="admin1@example.com")
+    from app.db.session import SessionLocal
+    from app.models.user import User, UserRole
+    db = SessionLocal()
+    db_user = db.query(User).filter_by(username="admin1").first()
+    db_user.role = UserRole.ADMIN
+    db.commit()
+    db.close()
+    # Login as admin to get token
+    login_resp = client.post("/login", json={"username": "admin1", "password": "pw"})
+    admin_token = login_resp.json()["access_token"]
+    admin_headers = {"Authorization": f"Bearer {admin_token}"}
+
+    # Regular user forbidden
+    resp = client.get("/users/", headers=user_headers)
+    assert resp.status_code == 403
+
+    # Owner forbidden
+    resp = client.get("/users/", headers=owner_headers)
+    assert resp.status_code == 403
+
+    # Admin allowed
+    resp = client.get("/users/", headers=admin_headers)
+    assert resp.status_code == 200
+    assert isinstance(resp.json(), list)
