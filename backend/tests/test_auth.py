@@ -23,8 +23,7 @@ def test_register_user_success():
             "username": "newuser",
             "email": "newuser@example.com",
             "full_name": "New User",
-            "password": "securepassword",
-            "role": UserRole.USER.value
+            "password": "securepassword"
         }
     )
     assert resp.status_code == 200
@@ -39,8 +38,7 @@ def test_register_user_existing_username():
             "username": "dupeuser",
             "email": "dupeuser1@example.com",
             "full_name": "Dupe User",
-            "password": "password",
-            "role": UserRole.USER.value
+            "password": "password"
         }
     )
     resp = client.post(
@@ -49,8 +47,7 @@ def test_register_user_existing_username():
             "username": "dupeuser",
             "email": "dupeuser2@example.com",
             "full_name": "Dupe User",
-            "password": "password",
-            "role": UserRole.USER.value
+            "password": "password"
         }
     )
     assert resp.status_code in (400, 409)
@@ -62,8 +59,7 @@ def test_register_user_existing_email():
             "username": "uniqueuser",
             "email": "dupeemail@example.com",
             "full_name": "Dupe Email",
-            "password": "password",
-            "role": UserRole.USER.value
+            "password": "password"
         }
     )
     resp = client.post(
@@ -72,8 +68,7 @@ def test_register_user_existing_email():
             "username": "anotheruser",
             "email": "dupeemail@example.com",
             "full_name": "Dupe Email",
-            "password": "password",
-            "role": UserRole.USER.value
+            "password": "password"
         }
     )
     assert resp.status_code in (400, 409)
@@ -83,7 +78,7 @@ def test_register_user_missing_fields():
         "/users/register",
         json={
             "username": "incomplete"
-            # Missing email, full_name, password, role
+            # Missing email, full_name, password
         }
     )
     assert resp.status_code == 422
@@ -95,8 +90,7 @@ def test_login_success():
             "username": "loginuser",
             "email": "loginuser@example.com",
             "full_name": "Login User",
-            "password": "mypassword",
-            "role": UserRole.USER.value
+            "password": "mypassword"
         }
     )
     resp = client.post(
@@ -117,8 +111,7 @@ def test_login_wrong_password():
             "username": "wrongpass",
             "email": "wrongpass@example.com",
             "full_name": "Wrong Pass",
-            "password": "rightpassword",
-            "role": UserRole.USER.value
+            "password": "rightpassword"
         }
     )
     resp = client.post(

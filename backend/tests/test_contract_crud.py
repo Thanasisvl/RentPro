@@ -10,7 +10,7 @@ from app.db.session import Base, engine
 from datetime import date, timedelta
 from app.db.session import SessionLocal
 from app.models.user import User, UserRole
-from tests.utils import make_admin
+from tests.utils import make_admin, register_and_login
 
 @pytest.fixture(autouse=True)
 def clean_db():
@@ -19,60 +19,14 @@ def clean_db():
 
 client = TestClient(app)
 
-def register_and_login(username, password, email, is_owner=False):
-    if is_owner:
-        resp = client.post(
-            "/users/register-owner",
-            json={
-                "username": username,
-                "email": email,
-                "full_name": username.title(),
-                "password": password,
-                "property": {
-                    "title": "Initial Property",
-                    "description": "Initial property for owner registration",
-                    "address": "1 Owner St",
-                    "type": "Apartment",
-                    "size": 50.0,
-                    "price": 1000.0
-                }
-            }
-        )
-        assert resp.status_code == 200
-        data = resp.json()
-        user = data["user"]
-        property_id = data["property"]["id"]
-    else:
-        resp = client.post(
-            "/users/register",
-            json={
-                "username": username,
-                "email": email,
-                "full_name": username.title(),
-                "password": password
-            }
-        )
-        assert resp.status_code == 200
-        user = resp.json()
-        property_id = None
-    # Login user
-    login_resp = client.post(
-        "/login",
-        json={"username": username, "password": password}
-    )
-    assert login_resp.status_code == 200
-    token = login_resp.json()["access_token"]
-    headers = {"Authorization": f"Bearer {token}"}
-    return user, headers, property_id
-
 @pytest.fixture
 def owner_and_property():
-    user, headers, property_id = register_and_login("owner1", "testpassword", "owner1@example.com", is_owner=True)
+    user, headers, property_id = register_and_login(client, "owner1", "testpassword", "owner1@example.com", is_owner=True)
     return user, headers, property_id
 
 @pytest.fixture
 def tenant_and_profile():
-    user, headers, _ = register_and_login("tenant1", "testpassword", "tenant1@example.com", is_owner=False)
+    user, headers, _ = register_and_login(client, "tenant1", "testpassword", "tenant1@example.com", is_owner=False)
     # Create tenant profile
     resp = client.post(
         "/tenants/",
@@ -224,7 +178,7 @@ def test_cross_user_contract_access(owner_and_property, tenant_and_profile):
     contract_id = resp.json()["id"]
 
     # Owner2 tries to access
-    _, owner2_headers, _ = register_and_login("owner2", "pw", "owner2@example.com", is_owner=True)
+    _, owner2_headers, _ = register_and_login(client, "owner2", "pw", "owner2@example.com", is_owner=True)
     assert client.get(f"/contracts/{contract_id}", headers=owner2_headers).status_code in (403, 404)
     assert client.put(f"/contracts/{contract_id}", json={
         "property_id": property_id,
@@ -237,7 +191,7 @@ def test_cross_user_contract_access(owner_and_property, tenant_and_profile):
     assert client.delete(f"/contracts/{contract_id}", headers=owner2_headers).status_code in (403, 404)
 
     # Admin can access
-    _, admin_headers, _ = register_and_login("admin2", "pw", "admin2@example.com")
+    _, admin_headers, _ = register_and_login(client, "admin2", "pw", "admin2@example.com")
     make_admin("admin2")
     login_resp = client.post("/login", json={"username": "admin2", "password": "pw"})
     admin_token = login_resp.json()["access_token"]

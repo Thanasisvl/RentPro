@@ -7,7 +7,7 @@ import pytest
 from fastapi.testclient import TestClient
 from app.main import app
 from app.db.session import Base, engine
-from tests.utils import make_admin
+from tests.utils import make_admin, register_and_login
 
 @pytest.fixture(autouse=True)
 def clean_db():
@@ -16,54 +16,9 @@ def clean_db():
 
 client = TestClient(app)
 
-def register_and_login(username="owner1", password="testpassword", email="owner1@example.com", is_owner=True):
-    if is_owner:
-        # Register owner with property
-        resp = client.post(
-            "/users/register-owner",
-            json={
-                "username": username,
-                "email": email,
-                "full_name": "Owner One",
-                "password": password,
-                "property": {
-                    "title": "Initial Property",
-                    "description": "Initial property for owner registration",
-                    "address": "1 Owner St",
-                    "type": "Apartment",
-                    "size": 50.0,
-                    "price": 1000.0
-                }
-            }
-        )
-        assert resp.status_code == 200
-        user = resp.json()["user"]
-    else:
-        # Register regular user
-        resp = client.post(
-            "/users/register",
-            json={
-                "username": username,
-                "email": email,
-                "full_name": "Owner One",
-                "password": password
-            }
-        )
-        assert resp.status_code == 200
-        user = resp.json()
-    # Login user
-    login_resp = client.post(
-        "/login",
-        json={"username": username, "password": password}
-    )
-    assert login_resp.status_code == 200
-    token = login_resp.json()["access_token"]
-    headers = {"Authorization": f"Bearer {token}"}
-    return user, headers
-
 @pytest.fixture
 def owner_headers():
-    _, headers = register_and_login()
+    _, headers, _ = register_and_login(client, "owner1", "testpassword", "owner1@example.com", is_owner=True)
     return headers
 
 def test_create_property(owner_headers):
@@ -310,7 +265,8 @@ def test_update_property_not_owner(owner_headers):
     )
     prop_id = resp.json()["id"]
     # Register and login as another user
-    _, other_headers = register_and_login(username="owner2", email="owner2@example.com")
+    _, other_headers, _ = register_and_login(
+        client, username="owner2", password="testpassword", email="owner2@example.com", is_owner=True)
     # Try to update property as owner2
     resp = client.put(
         f"/properties/{prop_id}",
@@ -343,7 +299,8 @@ def test_cross_user_property_access(owner_headers):
     prop_id = resp.json()["id"]
 
     # Register and login as another owner
-    _, other_headers = register_and_login(username="owner2", email="owner2@example.com")
+    _, other_headers, _ = register_and_login(
+        client, username="owner2", password="testpassword", email="owner2@example.com", is_owner=True)
     # Try to GET/UPDATE/DELETE as owner2
     assert client.get(f"/properties/{prop_id}", headers=other_headers).status_code in (403, 404)
     assert client.put(f"/properties/{prop_id}", json={
@@ -357,7 +314,8 @@ def test_cross_user_property_access(owner_headers):
     assert client.delete(f"/properties/{prop_id}", headers=other_headers).status_code in (403, 404)
 
     # Admin can access
-    _, admin_headers = register_and_login(username="admin1", email="admin1@example.com")
+    _, admin_headers, _ = register_and_login(
+        client, username="admin1", password="testpassword", email="admin1@example.com")
     make_admin("admin1")
     login_resp = client.post("/login", json={"username": "admin1", "password": "testpassword"})
     admin_token = login_resp.json()["access_token"]
