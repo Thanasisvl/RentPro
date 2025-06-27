@@ -13,3 +13,12 @@ from the root folder:
 pytest
 pytest backend/tests/test_auth.py
 pytest -s backend/tests/test_contract_crud.py::test_create_contract
+
+## Run the frontend
+cd frontend
+npm install
+npm start
+or
+cd frontend
+yarn
+yarn start
