@@ -22,12 +22,29 @@ client = TestClient(app)
 
 @pytest.fixture
 def owner_and_property():
-    user, headers, property_id = register_and_login(client, "owner1", "testpassword", "owner1@example.com", is_owner=True)
+    user, headers = register_and_login(client, "owner1", "testpassword", "owner1@example.com", is_owner=True)
+    
+    # Create property
+    resp = client.post(
+        "/properties/",
+        json={
+            "title": "Initial Property",
+            "description": "Initial property",
+            "address": "1 Owner St",
+            "type": "Apartment",
+            "size": 50.0,
+            "price": 1000.0,
+        },
+        headers=headers,
+    )
+    assert resp.status_code == 200
+    property_id = resp.json()["id"]
+
     return user, headers, property_id
 
 @pytest.fixture
 def tenant_and_profile():
-    user, headers, _ = register_and_login(client, "tenant1", "testpassword", "tenant1@example.com", is_owner=False)
+    user, headers = register_and_login(client, "tenant1", "testpassword", "tenant1@example.com", is_owner=False)
     # Create tenant profile
     resp = client.post(
         "/tenants/",
@@ -179,7 +196,7 @@ def test_cross_user_contract_access(owner_and_property, tenant_and_profile):
     contract_id = resp.json()["id"]
 
     # Owner2 tries to access
-    _, owner2_headers, _ = register_and_login(client, "owner2", "pw", "owner2@example.com", is_owner=True)
+    _, owner2_headers = register_and_login(client, "owner2", "pw", "owner2@example.com", is_owner=True)
     assert client.get(f"/contracts/{contract_id}", headers=owner2_headers).status_code in (403, 404)
     assert client.put(f"/contracts/{contract_id}", json={
         "property_id": property_id,
@@ -192,7 +209,7 @@ def test_cross_user_contract_access(owner_and_property, tenant_and_profile):
     assert client.delete(f"/contracts/{contract_id}", headers=owner2_headers).status_code in (403, 404)
 
     # Admin can access
-    _, admin_headers, _ = register_and_login(client, "admin2", "pw", "admin2@example.com")
+    _, admin_headers = register_and_login(client, "admin2", "pw", "admin2@example.com")
     make_admin("admin2")
     login_resp = client.post("/login", json={"username": "admin2", "password": "pw"})
     admin_token = login_resp.json()["access_token"]

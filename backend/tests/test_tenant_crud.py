@@ -18,7 +18,7 @@ client = TestClient(app)
 
 @pytest.fixture
 def tenant_headers():
-    user, headers, _ = register_and_login(
+    user, headers = register_and_login(
         client, username="tenant1", password="testpassword", email="tenant1@example.com"
     )
     # Create tenant profile
@@ -38,7 +38,7 @@ def tenant_headers():
     return headers, tenant_id
 
 def test_create_tenant_authenticated():
-    user, headers, _ = register_and_login(client, username="tenant2", password="testpassword", email="tenant2@example.com")
+    user, headers = register_and_login(client, username="tenant2", password="testpassword", email="tenant2@example.com")
     resp = client.post(
         "/tenants/",
         json={
@@ -172,7 +172,7 @@ def test_delete_nonexistent_tenant(tenant_headers):
 
 def test_cross_user_tenant_access():
     # Tenant1 creates profile
-    user1, headers1, _ = register_and_login(client, username="tenant1", password="testpassword", email="tenant1@example.com")
+    user1, headers1 = register_and_login(client, username="tenant1", password="testpassword", email="tenant1@example.com")
     resp = client.post(
         "/tenants/",
         json={
@@ -187,7 +187,7 @@ def test_cross_user_tenant_access():
     tenant_id = resp.json()["id"]
 
     # Tenant2 tries to access
-    user2, headers2, _ = register_and_login(client, username="tenant2", password="testpassword", email="tenant2@example.com")
+    user2, headers2 = register_and_login(client, username="tenant2", password="testpassword", email="tenant2@example.com")
     assert client.get(f"/tenants/{tenant_id}", headers=headers2).status_code in (403, 404)
     assert client.put(f"/tenants/{tenant_id}", json={
         "name": "Hacked",
@@ -198,7 +198,7 @@ def test_cross_user_tenant_access():
     assert client.delete(f"/tenants/{tenant_id}", headers=headers2).status_code in (403, 404)
 
     # Admin can access
-    _, admin_headers, _ = register_and_login(client, username="admin1", password="testpassword", email="admin1@example.com")
+    _, admin_headers = register_and_login(client, username="admin1", password="testpassword", email="admin1@example.com")
     make_admin("admin1")
     login_resp = client.post("/login", json={"username": "admin1", "password": "testpassword"})
     admin_token = login_resp.json()["access_token"]

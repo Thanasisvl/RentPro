@@ -17,20 +17,20 @@ def clean_db():
 
 client = TestClient(app)
 
-def test_create_user(is_owner=False):
-    user, headers, _ = register_and_login(client, username="testuser", password="testpassword", email="test@example.com")
+def test_create_user():
+    user, headers = register_and_login(client, username="testuser", password="testpassword", email="test@example.com")
     assert user["username"] == "testuser"
     assert user["email"] == "test@example.com"
     assert "id" in user
 
 def test_create_owner():
-    user, headers, _ = register_and_login(client, username="testuser", password="testpassword", email="test@example.com", is_owner=True)
+    user, headers = register_and_login(client, username="testuser", password="testpassword", email="test@example.com", is_owner=True)
     assert user["username"] == "testuser"
     assert user["email"] == "test@example.com"
     assert "id" in user
 
-def test_get_user(is_owner=False):
-    user, headers, _ = register_and_login(client, username="testuser", password="testpassword", email="test@example.com")
+def test_get_user():
+    user, headers = register_and_login(client, username="testuser", password="testpassword", email="test@example.com")
     user_id = user["id"]
     response = client.get(f"/users/{user_id}", headers=headers)
     assert response.status_code == 200
@@ -40,7 +40,7 @@ def test_get_user(is_owner=False):
 
 def test_get_users():
     # Register admin user (regular registration)
-    admin_user, admin_headers, _ = register_and_login(
+    admin_user, admin_headers = register_and_login(
         client, username="adminuser", password="adminpassword", email="admin@example.com", is_owner=False)
     # Patch admin role directly in DB for testing
     from app.db.session import SessionLocal
@@ -61,7 +61,7 @@ def test_get_users():
     admin_headers = {"Authorization": f"Bearer {token}"}
 
     # Register owner user
-    user2, _, _ = register_and_login(
+    user2, _ = register_and_login(
         client, username="testuser2", password="testpassword2", email="test2@example.com", is_owner=True)
     response = client.get("/users/", headers=admin_headers)
     print("GET /users status:", response.status_code, "body:", response.json())
@@ -73,7 +73,7 @@ def test_get_users():
     assert "testuser2" in usernames
 
 def test_update_user():
-    user, headers, _ = register_and_login(client, username="testuser", password="testpassword", email="test@example.com", is_owner=True)
+    user, headers = register_and_login(client, username="testuser", password="testpassword", email="test@example.com", is_owner=True)
     user_id = user["id"]
     response = client.put(
         f"/users/{user_id}",
@@ -90,7 +90,7 @@ def test_update_user():
     assert data["full_name"] == "Updated User"
 
 def test_delete_user():
-    user, headers, _ = register_and_login(client, username="testuser", password="testpassword", email="test@example.com", is_owner=True)
+    user, headers = register_and_login(client, username="testuser", password="testpassword", email="test@example.com", is_owner=True)
     user_id = user["id"]
     response = client.delete(f"/users/{user_id}", headers=headers)
     assert response.status_code == 200
@@ -133,13 +133,13 @@ def test_login_with_wrong_password():
     assert response.status_code in (400, 401)
 
 def test_get_user_unauthenticated():
-    user, headers, _ = register_and_login(client, username="unauthuser", password="testpassword", email="unauth@example.com")
+    user, headers = register_and_login(client, username="unauthuser", password="testpassword", email="unauth@example.com")
     user_id = user["id"]
     response = client.get(f"/users/{user_id}")
     assert response.status_code == 401
 
 def test_update_user_unauthenticated():
-    user, headers, _ = register_and_login(client, username="unauthupdate", password="testpassword", email="unauthupdate@example.com")
+    user, headers = register_and_login(client, username="unauthupdate", password="testpassword", email="unauthupdate@example.com")
     user_id = user["id"]
     response = client.put(
         f"/users/{user_id}",
@@ -152,18 +152,18 @@ def test_update_user_unauthenticated():
     assert response.status_code == 401
 
 def test_delete_user_unauthenticated():
-    user, headers, _ = register_and_login(client, username="unauthdelete", password="testpassword", email="unauthdelete@example.com")
+    user, headers = register_and_login(client, username="unauthdelete", password="testpassword", email="unauthdelete@example.com")
     user_id = user["id"]
     response = client.delete(f"/users/{user_id}")
     assert response.status_code == 401
 
 def test_get_nonexistent_user():
-    user, headers, _ = register_and_login(client, username="nonexistent", password="testpassword", email="nonexistent@example.com")
+    user, headers = register_and_login(client, username="nonexistent", password="testpassword", email="nonexistent@example.com")
     response = client.get("/users/99999", headers=headers)
     assert response.status_code == 404
 
 def test_update_nonexistent_user():
-    user, headers, _ = register_and_login(client, username="nonexistentupdate", password="testpassword", email="nonexistentupdate@example.com")
+    user, headers = register_and_login(client, username="nonexistentupdate", password="testpassword", email="nonexistentupdate@example.com")
     response = client.put(
         "/users/99999",
         json={
@@ -176,12 +176,12 @@ def test_update_nonexistent_user():
     assert response.status_code == 404
 
 def test_delete_nonexistent_user():
-    user, headers, _ = register_and_login(client, username="nonexistentdelete", password="testpassword", email="nonexistentdelete@example.com")
+    user, headers = register_and_login(client, username="nonexistentdelete", password="testpassword", email="nonexistentdelete@example.com")
     response = client.delete("/users/99999", headers=headers)
     assert response.status_code == 404
 
 def test_update_user_invalid_email():
-    user, headers, _ = register_and_login(client, username="invalidemail", password="testpassword", email="invalidemail@example.com")
+    user, headers = register_and_login(client, username="invalidemail", password="testpassword", email="invalidemail@example.com")
     user_id = user["id"]
     response = client.put(
         f"/users/{user_id}",
@@ -195,7 +195,7 @@ def test_update_user_invalid_email():
     assert response.status_code == 422
 
 def test_delete_user_twice():
-    user, headers, _ = register_and_login(client, username="twicedelete", password="testpassword", email="twicedelete@example.com")
+    user, headers = register_and_login(client, username="twicedelete", password="testpassword", email="twicedelete@example.com")
     user_id = user["id"]
     response = client.delete(f"/users/{user_id}", headers=headers)
     assert response.status_code == 200
@@ -203,8 +203,8 @@ def test_delete_user_twice():
     assert response.status_code == 404
 
 def test_update_another_user_forbidden():
-    user1, headers1, _ = register_and_login(client, username="user1", password="testpassword", email="user1@example.com")
-    user2, headers2, _ = register_and_login(client, username="user2", password="testpassword", email="user2@example.com")
+    user1, headers1 = register_and_login(client, username="user1", password="testpassword", email="user1@example.com")
+    user2, headers2 = register_and_login(client, username="user2", password="testpassword", email="user2@example.com")
     user1_id = user1["id"]
     response = client.put(
         f"/users/{user1_id}",
@@ -219,11 +219,11 @@ def test_update_another_user_forbidden():
 
 def test_list_users_admin_only():
     # Register regular user
-    _, user_headers, _ = register_and_login(client, username="user1", password="pw", email="user1@example.com")
+    _, user_headers = register_and_login(client, username="user1", password="pw", email="user1@example.com")
     # Register owner
-    _, owner_headers, _ = register_and_login(client, username="owner1", password="pw", email="owner1@example.com", is_owner=True)
+    _, owner_headers = register_and_login(client, username="owner1", password="pw", email="owner1@example.com", is_owner=True)
     # Register admin and patch role
-    admin_user, _, _ = register_and_login(client, username="admin1", password="pw", email="admin1@example.com")
+    admin_user, _ = register_and_login(client, username="admin1", password="pw", email="admin1@example.com")
     from app.db.session import SessionLocal
     from app.models.user import User, UserRole
     db = SessionLocal()

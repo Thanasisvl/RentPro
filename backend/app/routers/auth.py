@@ -48,3 +48,12 @@ def refresh_access_token(request: Request, response: Response, db: Session = Dep
     access_token = create_access_token(subject=str(subject))
     response.set_cookie("refresh_token", token, httponly=True, secure=False, samesite="lax")
     return {"access_token": access_token, "token_type": "bearer"}
+
+@router.post("/logout", status_code=status.HTTP_200_OK)
+def logout(response: Response):
+    """
+    Logout endpoint: σβήνει το refresh token cookie.
+    Το access token “λήγει μόνο του” (JWT), απλά το frontend το πετάει.
+    """
+    response.delete_cookie("refresh_token")
+    return {"detail": "Logged out"}

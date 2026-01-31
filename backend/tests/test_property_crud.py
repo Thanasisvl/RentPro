@@ -18,7 +18,7 @@ client = TestClient(app)
 
 @pytest.fixture
 def owner_headers():
-    _, headers, _ = register_and_login(client, "owner1", "testpassword", "owner1@example.com", is_owner=True)
+    _, headers = register_and_login(client, "owner1", "testpassword", "owner1@example.com", is_owner=True)
     return headers
 
 def test_create_property(owner_headers):
@@ -265,7 +265,7 @@ def test_update_property_not_owner(owner_headers):
     )
     prop_id = resp.json()["id"]
     # Register and login as another user
-    _, other_headers, _ = register_and_login(
+    _, other_headers = register_and_login(
         client, username="owner2", password="testpassword", email="owner2@example.com", is_owner=True)
     # Try to update property as owner2
     resp = client.put(
@@ -299,7 +299,7 @@ def test_cross_user_property_access(owner_headers):
     prop_id = resp.json()["id"]
 
     # Register and login as another owner
-    _, other_headers, _ = register_and_login(
+    _, other_headers = register_and_login(
         client, username="owner2", password="testpassword", email="owner2@example.com", is_owner=True)
     # Try to GET/UPDATE/DELETE as owner2
     assert client.get(f"/properties/{prop_id}", headers=other_headers).status_code in (403, 404)
@@ -314,7 +314,7 @@ def test_cross_user_property_access(owner_headers):
     assert client.delete(f"/properties/{prop_id}", headers=other_headers).status_code in (403, 404)
 
     # Admin can access
-    _, admin_headers, _ = register_and_login(
+    _, admin_headers = register_and_login(
         client, username="admin1", password="testpassword", email="admin1@example.com")
     make_admin("admin1")
     login_resp = client.post("/login", json={"username": "admin1", "password": "testpassword"})

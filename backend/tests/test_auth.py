@@ -105,6 +105,29 @@ def test_login_success():
     data = resp.json()
     assert "access_token" in data
 
+def test_login_owner_success():
+    # register owner
+    resp_reg = client.post(
+        "/users/register",
+        json={
+            "username": "ownerlogin",
+            "email": "ownerlogin@example.com",
+            "full_name": "Owner Login",
+            "password": "mypassword",
+            "role": "OWNER",
+        },
+    )
+    assert resp_reg.status_code == 200
+
+    # login
+    resp = client.post(
+        "/login",
+        json={"username": "ownerlogin", "password": "mypassword"},
+    )
+    assert resp.status_code == 200
+    data = resp.json()
+    assert "access_token" in data
+
 def test_login_wrong_password():
     client.post(
         "/users/register",
@@ -211,4 +234,53 @@ def test_refresh_access_token_missing_cookie():
 
     no_cookie_client = TestClient(app)
     resp = no_cookie_client.post("/auth/refresh")
+    assert resp.status_code == 401
+
+def test_logout_clears_refresh_and_blocks_refresh():
+    # ξεκινάμε με καθαρά cookies
+    client.cookies.clear()
+
+    # register user
+    resp_reg = client.post(
+        "/users/register",
+        json={
+            "username": "logoutuser",
+            "email": "logoutuser@example.com",
+            "full_name": "Logout User",
+            "password": "testpassword",
+        },
+    )
+    assert resp_reg.status_code == 200
+
+    # login -> αποκτούμε access_token + refresh_token cookie
+    resp_login = client.post(
+        "/login",
+        json={"username": "logoutuser", "password": "testpassword"},
+    )
+    assert resp_login.status_code == 200
+    data_login = resp_login.json()
+    assert "access_token" in data_login
+    token = data_login["access_token"]
+    assert client.cookies.get("refresh_token") is not None
+
+    # πριν το logout: refresh δουλεύει
+    resp_refresh_ok = client.post("/auth/refresh")
+    assert resp_refresh_ok.status_code == 200
+    assert "access_token" in resp_refresh_ok.json()
+
+    # logout -> χρειάζεται Authorization header, backend σβήνει το refresh cookie
+    headers = {"Authorization": f"Bearer {token}"}
+    resp_logout = client.post("/logout", headers=headers)
+    assert resp_logout.status_code == 200
+    assert client.cookies.get("refresh_token") is None
+
+    # μετά το logout: refresh πρέπει να αποτυγχάνει (δεν υπάρχει cookie)
+    resp_refresh_after = client.post("/auth/refresh")
+    assert resp_refresh_after.status_code == 401
+
+
+def test_logout_without_cookie_is_ok():
+    # χωρίς refresh cookie και χωρίς Authorization → πρέπει να είναι 401 (unauthorized)
+    client.cookies.clear()
+    resp = client.post("/logout")
     assert resp.status_code == 401

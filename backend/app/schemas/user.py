@@ -1,4 +1,4 @@
-from pydantic import BaseModel, ConfigDict, EmailStr
+from pydantic import BaseModel, ConfigDict, EmailStr, field_validator
 from app.models.role import UserRole
 from app.schemas.property import PropertyCreate, PropertyOut
 
@@ -8,6 +8,14 @@ class UserCreate(BaseModel):
     full_name: str
     password: str
     role: UserRole = UserRole.USER
+
+    @field_validator("role")
+    @classmethod
+    def disallow_admin(cls, v: UserRole) -> UserRole:
+        # Δεν επιτρέπουμε εγγραφή ως ADMIN από το public API
+        if v == UserRole.ADMIN:
+            raise ValueError("Cannot register as ADMIN")
+        return v
 
 class UserUpdate(BaseModel):
     username: str | None = None
@@ -31,14 +39,3 @@ class UserLogin(BaseModel):
 class Token(BaseModel):
     access_token: str
     token_type: str
-
-class OwnerRegister(BaseModel):
-    username: str
-    email: EmailStr
-    full_name: str
-    password: str
-    property: PropertyCreate
-
-class OwnerRegisterResponse(BaseModel):
-    user: UserOut
-    property: PropertyOut
