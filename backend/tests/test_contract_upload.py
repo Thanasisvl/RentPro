@@ -2,6 +2,13 @@ import os
 import io
 import shutil
 import pytest
+
+os.environ["RENTPRO_DATABASE_URL"] = "sqlite:///./test_test.db"
+os.environ["ACCESS_TOKEN_EXPIRE_MINUTES"] = "60"
+
+from dotenv import load_dotenv
+load_dotenv()
+
 from fastapi.testclient import TestClient
 from app.main import app
 from app.db.session import Base, engine

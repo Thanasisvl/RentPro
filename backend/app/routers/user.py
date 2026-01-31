@@ -4,7 +4,7 @@ from app.schemas.user import UserCreate, UserOut, UserUpdate, OwnerRegister, Own
 from app.models.role import UserRole
 from app.crud import user as crud_user
 from app.crud import property as crud_property
-from app.core.utils import is_admin, get_current_user_payload
+from app.core.utils import is_admin, get_current_user_payload, require_admin
 from app.db.session import get_db
 from typing import List
 
@@ -47,15 +47,24 @@ def register_owner(data: OwnerRegister, db: Session = Depends(get_db)):
     property_obj = crud_property.create_property(db, data.property, owner_id=user.id)
     return OwnerRegisterResponse(user=user, property=property_obj)
 
+# @router.get("/", response_model=List[UserOut])
+# def list_users(
+#     request: Request,
+#     skip: int = 0,
+#     limit: int = 100,
+#     db: Session = Depends(get_db)
+#     ):
+#     if not is_admin(request):
+#         raise HTTPException(status_code=403, detail="Not authorized")
+#     return crud_user.get_users(db=db, skip=skip, limit=limit)
+
 @router.get("/", response_model=List[UserOut])
 def list_users(
-    request: Request,
+    _: dict = Depends(require_admin),  # 403 αν δεν είναι admin
     skip: int = 0,
     limit: int = 100,
-    db: Session = Depends(get_db)
-    ):
-    if not is_admin(request):
-        raise HTTPException(status_code=403, detail="Not authorized")
+    db: Session = Depends(get_db),
+):
     return crud_user.get_users(db=db, skip=skip, limit=limit)
 
 @router.get("/{user_id}", response_model=UserOut)

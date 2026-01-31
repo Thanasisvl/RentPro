@@ -18,10 +18,10 @@ class ContractCreate(ContractBase):
     pdf_file: str
 
     @model_validator(mode="after")
-    def check_dates(cls, values):
-        if values.end_date <= values.start_date:
-            raise ValueError('end_date must be after start_date')
-        return values
+    def check_dates(self) -> "ContractCreate":
+        if self.end_date <= self.start_date:
+            raise ValueError("end_date must be after start_date")
+        return self
 
 class ContractUpdate(ContractBase):
     start_date: date | None = None

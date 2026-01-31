@@ -11,6 +11,7 @@ PUBLIC_PATHS = [
     "/docs/",
     "/redoc",
     "/redoc/",
+    "/auth/refresh",
 ]
 
 class JWTAuthMiddleware(BaseHTTPMiddleware):

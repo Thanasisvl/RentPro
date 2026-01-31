@@ -1,5 +1,5 @@
 import os
-os.environ["RENTPRO_DATABASE_URL"] = "sqlite:///./backend/test_test.db"
+os.environ["RENTPRO_DATABASE_URL"] = "sqlite:///./test_test.db"
 from dotenv import load_dotenv
 load_dotenv()
 
@@ -8,6 +8,7 @@ from fastapi.testclient import TestClient
 from app.main import app
 from app.db.session import Base, engine
 from app.models.user import UserRole
+from app.core.jwt import create_refresh_token
 
 @pytest.fixture(autouse=True)
 def clean_db():
@@ -142,3 +143,72 @@ def test_login_missing_fields():
         }
     )
     assert resp.status_code == 422
+
+def test_refresh_ok():
+    # create a real user first
+    user_data = {
+        "username": "refreshbasic",
+        "password": "testpassword",
+        "email": "refreshbasic@example.com",
+        "full_name": "Refresh Basic",
+    }
+    resp_reg = client.post("/users/register", json=user_data)
+    assert resp_reg.status_code == 200
+
+    # create a refresh token for that username
+    refresh = create_refresh_token("refreshbasic")
+    client.cookies.set("refresh_token", refresh)
+
+    r = client.post("/auth/refresh")
+    assert r.status_code == 200
+    body = r.json()
+    assert "access_token" in body
+    assert body["token_type"] == "bearer"
+
+def test_refresh_missing_cookie():
+    client.cookies.clear()
+    r = client.post("/auth/refresh")
+    assert r.status_code == 401
+
+def test_refresh_invalid_token():
+    client.cookies.clear()
+    client.cookies.set("refresh_token", "bad.token.value")
+    r = client.post("/auth/refresh")
+    assert r.status_code == 401
+
+def test_refresh_access_token_success():
+    # register user
+    user_data = {
+        "username": "refreshuser",
+        "password": "testpassword",
+        "email": "refresh@example.com",
+        "full_name": "Refresh User",
+    }
+    resp_reg = client.post("/users/register", json=user_data)
+    assert resp_reg.status_code == 200
+
+    # login to get access token + refresh cookie
+    resp_login = client.post(
+        "/login",
+        json={"username": "refreshuser", "password": "testpassword"},
+    )
+    assert resp_login.status_code == 200
+    first_token = resp_login.json()["access_token"]
+    assert first_token  # not empty
+
+    # call /auth/refresh using same client (cookies preserved)
+    resp_refresh = client.post("/auth/refresh")
+    assert resp_refresh.status_code == 200
+    data = resp_refresh.json()
+    assert "access_token" in data
+    assert data["access_token"]  # not empty
+
+
+def test_refresh_access_token_missing_cookie():
+    # new client without cookies
+    from fastapi.testclient import TestClient
+    from app.main import app
+
+    no_cookie_client = TestClient(app)
+    resp = no_cookie_client.post("/auth/refresh")
+    assert resp.status_code == 401

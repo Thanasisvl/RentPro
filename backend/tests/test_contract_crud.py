@@ -1,5 +1,6 @@
 import os
-os.environ["RENTPRO_DATABASE_URL"] = "sqlite:///./backend/test_test.db"
+os.environ["RENTPRO_DATABASE_URL"] = "sqlite:///./test_test.db"
+os.environ["ACCESS_TOKEN_EXPIRE_MINUTES"] = "60"
 from dotenv import load_dotenv
 load_dotenv()
 

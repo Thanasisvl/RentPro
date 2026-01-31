@@ -1,5 +1,5 @@
 import os
-os.environ["RENTPRO_DATABASE_URL"] = "sqlite:///./backend/test_test.db"
+os.environ["RENTPRO_DATABASE_URL"] = "sqlite:///./test_test.db"
 from dotenv import load_dotenv
 load_dotenv()
 

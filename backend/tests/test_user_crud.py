@@ -1,5 +1,5 @@
 import os
-os.environ["RENTPRO_DATABASE_URL"] = "sqlite:///./backend/test_test.db"
+os.environ["RENTPRO_DATABASE_URL"] = "sqlite:///./test_test.db"
 from dotenv import load_dotenv
 load_dotenv()
 
@@ -64,6 +64,7 @@ def test_get_users():
     user2, _, _ = register_and_login(
         client, username="testuser2", password="testpassword2", email="test2@example.com", is_owner=True)
     response = client.get("/users/", headers=admin_headers)
+    print("GET /users status:", response.status_code, "body:", response.json())
     assert response.status_code == 200
     data = response.json()
     assert isinstance(data, list)

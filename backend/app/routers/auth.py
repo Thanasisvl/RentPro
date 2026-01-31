@@ -1,10 +1,10 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from sqlalchemy.orm import Session
 from app.core.security import verify_password
 from app.db.session import get_db
 from app.models.user import User
 from app.schemas.user import UserLogin, Token
-from app.core.jwt import create_access_token
+from app.core.jwt import create_access_token, create_refresh_token, verify_refresh_token
 
 router = APIRouter()
 
@@ -15,9 +15,36 @@ def authenticate_user(db: Session, username: str, password: str):
     return user
 
 @router.post("/login", response_model=Token)
-def login(user_in: UserLogin, db: Session = Depends(get_db)):
+def login(user_in: UserLogin, response: Response, db: Session = Depends(get_db)):
     user = authenticate_user(db, user_in.username, user_in.password)
     if not user:
         raise HTTPException(status_code=400, detail="Invalid credentials")
-    token = create_access_token({"sub": user.username, "role": user.role.value})
-    return {"access_token": token, "token_type": "bearer"}
+    # create tokens
+    access_token = create_access_token(str(user.username))
+    refresh_token = create_refresh_token(str(user.username))
+    # set HttpOnly refresh cookie (secure=False for dev; set True in prod)
+    response.set_cookie("refresh_token", refresh_token, httponly=True, secure=False, samesite="lax")
+    return {"access_token": access_token, "token_type": "bearer"}
+
+@router.post("/auth/refresh", summary="Refresh access token")
+def refresh_access_token(request: Request, response: Response, db: Session = Depends(get_db)):
+    token = request.cookies.get("refresh_token")
+    if not token:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Missing refresh token")
+    try:
+        payload = verify_refresh_token(token)
+    except Exception:
+        response.delete_cookie("refresh_token")
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid or expired refresh token")
+
+    subject = payload.get("sub")
+    if not subject:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token payload")
+
+    user = db.query(User).filter(User.username == subject).first()
+    if not user:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found")
+
+    access_token = create_access_token(subject=str(subject))
+    response.set_cookie("refresh_token", token, httponly=True, secure=False, samesite="lax")
+    return {"access_token": access_token, "token_type": "bearer"}
