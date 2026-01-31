@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session
 
 SQLALCHEMY_DATABASE_URL = os.getenv(
     "RENTPRO_DATABASE_URL",  # Use this env variable if set
-    "sqlite:///./backend/rentpro_dev.db"    # Default to dev db in backend folder
+    "sqlite:///./rentpro_dev.db"    # Default to dev db in backend folder
 )
 
 engine = create_engine(SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False})

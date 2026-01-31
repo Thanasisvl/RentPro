@@ -17,14 +17,20 @@ def _to_timestamp(dt: datetime) -> int:
         dt = dt.replace(tzinfo=timezone.utc)
     return int(dt.timestamp())
 
-def create_access_token(subject: str, expires_delta: Optional[timedelta] = None) -> str:
+def create_access_token(
+    subject: str,
+    expires_delta: Optional[timedelta] = None,
+    extra_claims: Optional[Dict[str, Any]] = None,
+) -> str:
     """
     Create JWT access token.
     - subject: user identifier (e.g. user.id or username)
-    - token includes 'sub', 'type'='access', 'exp'
+    - token includes 'sub', 'type'='access', 'exp', plus any extra_claims
     """
     if expires_delta is None:
-        minutes = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", str(ACCESS_TOKEN_EXPIRE_MINUTES_DEFAULT)))
+        minutes = int(
+            os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", str(ACCESS_TOKEN_EXPIRE_MINUTES_DEFAULT))
+        )
         expires_delta = timedelta(minutes=minutes)
 
     expire = datetime.utcnow() + expires_delta
@@ -33,6 +39,9 @@ def create_access_token(subject: str, expires_delta: Optional[timedelta] = None)
         "type": "access",
         "exp": _to_timestamp(expire),
     }
+    if extra_claims:
+        payload.update(extra_claims)
+
     return jwt.encode(payload, SECRET_KEY, algorithm=ALGORITHM)
 
 def create_refresh_token(subject: str, expires_delta: Optional[timedelta] = None) -> str:
