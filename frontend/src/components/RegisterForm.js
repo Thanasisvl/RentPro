@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import axios from 'axios';
 import {
   Box,
   Paper,
@@ -10,35 +9,36 @@ import {
   Alert,
 } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
+import api from '../api';
 
 function RegisterForm() {
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [fullName, setFullName] = useState('');
   const [password, setPassword] = useState('');
+  const [role, setRole] = useState('USER');
   const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
-    setSuccess('');
+
     try {
-      await axios.post('http://localhost:8000/users/register', {
+      await api.post('/users/register', {
         username,
         email,
         full_name: fullName,
         password,
+        role, // "USER" ή "OWNER"
       });
-      setSuccess('Registration successful! You can now log in.');
-      setTimeout(() => navigate('/login'), 1500);
+
+      // Επιτυχής εγγραφή → redirect στο login
+      navigate('/login');
     } catch (err) {
-      if (err.response && err.response.data && err.response.data.detail) {
-        setError('Registration failed: ' + err.response.data.detail);
-      } else {
-        setError('Registration failed!');
-      }
+      const detail =
+        err.response && err.response.data && err.response.data.detail;
+      setError(`Registration failed${detail ? `: ${detail}` : ''}`);
     }
   };
 
@@ -48,13 +48,18 @@ function RegisterForm() {
         <Typography variant="h4" align="center" gutterBottom>
           Register
         </Typography>
-        {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
-        {success && <Alert severity="success" sx={{ mb: 2 }}>{success}</Alert>}
+
+        {error && (
+          <Alert severity="error" sx={{ mb: 2 }}>
+            {error}
+          </Alert>
+        )}
+
         <form onSubmit={handleSubmit}>
           <TextField
             label="Username"
             value={username}
-            onChange={e => setUsername(e.target.value)}
+            onChange={(e) => setUsername(e.target.value)}
             fullWidth
             margin="normal"
             required
@@ -63,7 +68,7 @@ function RegisterForm() {
             label="Email"
             type="email"
             value={email}
-            onChange={e => setEmail(e.target.value)}
+            onChange={(e) => setEmail(e.target.value)}
             fullWidth
             margin="normal"
             required
@@ -71,16 +76,28 @@ function RegisterForm() {
           <TextField
             label="Full Name"
             value={fullName}
-            onChange={e => setFullName(e.target.value)}
+            onChange={(e) => setFullName(e.target.value)}
             fullWidth
             margin="normal"
             required
           />
           <TextField
+            select
+            label="Account Type"
+            value={role}
+            onChange={(e) => setRole(e.target.value)}
+            fullWidth
+            margin="normal"
+            required
+          >
+            <MenuItem value="USER">Tenant / Regular User</MenuItem>
+            <MenuItem value="OWNER">Owner</MenuItem>
+          </TextField>
+          <TextField
             label="Password"
             type="password"
             value={password}
-            onChange={e => setPassword(e.target.value)}
+            onChange={(e) => setPassword(e.target.value)}
             fullWidth
             margin="normal"
             required

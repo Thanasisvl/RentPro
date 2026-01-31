@@ -16,10 +16,10 @@ venv/
 # SQLite database files
 *.db
 *.sqlite3
-
+```
 # OS files
 .DS_Store
-Thumbs.db
+Thumbs.db```
 
 #VS Code
 .vscode/
@@ -35,3 +35,12 @@ alembic/versions/
 
 #Uploads
 uploads/contracts/*
+
+# Specific files
+docs/domainModel.md
+docs/flows.md
+docs/modelEntities.md
+docs/useCases.md
+docs/nextSteps.md
+
+./idea

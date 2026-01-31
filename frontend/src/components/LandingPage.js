@@ -8,7 +8,12 @@ function LandingPage() {
   return (
     <Box display="flex" justifyContent="center" alignItems="center" minHeight="100vh">
       <Paper elevation={3} style={{ padding: 40, textAlign: 'center' }}>
-        <Typography variant="h3" gutterBottom>RentPro</Typography>
+        <Typography variant="h3" gutterBottom>
+          RentPro
+        </Typography>
+        <Typography variant="subtitle1" gutterBottom>
+          Register as Owner or Tenant and manage rental properties, tenants and contracts.
+        </Typography>
         <Box mt={4}>
           <Button
             variant="contained"
@@ -22,16 +27,8 @@ function LandingPage() {
             variant="outlined"
             color="primary"
             onClick={() => navigate('/register')}
-            style={{ marginRight: 16 }}
           >
-            Register as User/Tenant
-          </Button>
-          <Button
-            variant="outlined"
-            color="secondary"
-            onClick={() => navigate('/register-owner')}
-          >
-            Register as Owner
+            Register
           </Button>
         </Box>
       </Paper>

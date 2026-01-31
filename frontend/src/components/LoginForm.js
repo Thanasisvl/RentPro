@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import axios from 'axios';
 import {
   Box,
   Paper,
@@ -9,26 +8,35 @@ import {
   Alert,
 } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
+import { login } from '../api';
+import jwtDecode from 'jwt-decode';
 
 function LoginForm() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
-    setSuccess('');
+
     try {
-      const res = await axios.post('http://localhost:8000/login', {
-        username,
-        password,
-      });
-      localStorage.setItem('token', res.data.access_token); // Save JWT
-      setSuccess('Login successful!');
-      setTimeout(() => navigate('/'), 1000); // Redirect to home or dashboard
+      const res = await login(username, password);
+      // το login() ήδη αποθηκεύει το token στο localStorage
+      const token = res.data.access_token;
+
+      // Διαβάζουμε το role από το JWT
+      const decoded = jwtDecode(token); // { sub, type, exp, role, username, ... }
+      const role = decoded.role;
+
+      // Redirect ανά ρόλο, όπως γράφεις στο UC-01
+      if (role === 'OWNER') {
+        navigate('/properties'); // αρχική σελίδα για ιδιοκτήτη
+      } else {
+        // USER / Tenant
+        navigate('/tenants'); // ή όπου θεωρείς "αρχική" για tenant/user
+      }
     } catch (err) {
       if (err.response && err.response.data && err.response.data.detail) {
         setError('Login failed: ' + err.response.data.detail);
@@ -44,13 +52,16 @@ function LoginForm() {
         <Typography variant="h4" align="center" gutterBottom>
           Login
         </Typography>
-        {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
-        {success && <Alert severity="success" sx={{ mb: 2 }}>{success}</Alert>}
+        {error && (
+          <Alert severity="error" sx={{ mb: 2 }}>
+            {error}
+          </Alert>
+        )}
         <form onSubmit={handleSubmit}>
           <TextField
             label="Username"
             value={username}
-            onChange={e => setUsername(e.target.value)}
+            onChange={(e) => setUsername(e.target.value)}
             fullWidth
             margin="normal"
             required
@@ -59,7 +70,7 @@ function LoginForm() {
             label="Password"
             type="password"
             value={password}
-            onChange={e => setPassword(e.target.value)}
+            onChange={(e) => setPassword(e.target.value)}
             fullWidth
             margin="normal"
             required
