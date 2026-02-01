@@ -27,13 +27,24 @@ class PropertyCreate(PropertyBase):
     owner_id: int | None = Field(default=None, gt=0)
 
 class PropertyUpdate(BaseModel):
-    title: str | None = None
+    title: str | None = Field(default=None, min_length=1)
     description: str | None = None
-    address: str | None = None
-    type: str | None = None
-    size: float | None = Field(None, gt=0)
-    price: float | None = Field(None, gt=0)
+    address: str | None = Field(default=None, min_length=1)
+    type: str | None = Field(default=None, min_length=1)
+    size: float | None = Field(default=None, gt=0)
+    price: float | None = Field(default=None, gt=0)
     status: PropertyStatus | None = None
+
+    @field_validator("title", "address", "type", mode="before")
+    @classmethod
+    def strip_and_reject_blank(cls, v):
+        if v is None:
+            return v
+        if isinstance(v, str):
+            v = v.strip()
+        if not v:
+            raise ValueError("must not be blank")
+        return v
 
 class PropertyOut(PropertyBase):
     id: int
