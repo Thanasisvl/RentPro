@@ -1,5 +1,6 @@
 from pydantic import BaseModel, ConfigDict, field_validator, Field, model_validator
 from datetime import date, datetime
+from app.models.contract import ContractStatus
 
 class ContractBase(BaseModel):
     property_id: int
@@ -31,6 +32,9 @@ class ContractUpdate(ContractBase):
 
 class ContractOut(ContractBase):
     id: int
+    status: ContractStatus  # added
+    terminated_at: date | None = None
+
     created_at: date
     updated_at: date | None = None
 
@@ -39,9 +43,15 @@ class ContractOut(ContractBase):
         if isinstance(v, datetime):
             return v.date()
         return v
-    
+
     @field_validator("updated_at", mode="before")
     def parse_updated_at(cls, v):
+        if isinstance(v, datetime):
+            return v.date()
+        return v
+
+    @field_validator("terminated_at", mode="before")
+    def parse_terminated_at(cls, v):
         if isinstance(v, datetime):
             return v.date()
         return v

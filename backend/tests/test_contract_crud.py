@@ -435,7 +435,7 @@ def test_admin_properties_endpoint_returns_all_properties():
         client, "admin_list", "testpassword", "admin_list@example.com", is_owner=False
     )
     make_admin("admin_list")
-    admin_headers = login_headers(client, "admin_list", "testpassword")  # fixed
+    admin_headers = login_headers(client, "admin_list", "testpassword")
 
     resp = client.get("/admin/properties", headers=admin_headers)
     assert resp.status_code == 200
@@ -444,3 +444,39 @@ def test_admin_properties_endpoint_returns_all_properties():
     titles = [p["title"] for p in data]
     assert "Owner1 Property" in titles
     assert "Owner2 Property" in titles
+
+def test_terminate_contract_sets_property_available_and_contract_terminated(owner_and_property, tenant_and_profile):
+    _, owner_headers, property_id = owner_and_property
+    _, _, tenant_id = tenant_and_profile
+
+    today = str(date.today())
+    end_date = str(date.today() + timedelta(days=365))
+
+    # Create contract => RENTED
+    create_resp = client.post(
+        "/contracts/",
+        json={
+            "property_id": property_id,
+            "tenant_id": tenant_id,
+            "start_date": today,
+            "end_date": end_date,
+            "rent_amount": 1200.0,
+            "pdf_file": "contract_term.pdf",
+        },
+        headers=owner_headers,
+    )
+    assert create_resp.status_code == 200
+    contract_id = create_resp.json()["id"]
+
+    prop_rented = client.get(f"/properties/{property_id}", headers=owner_headers)
+    assert prop_rented.status_code == 200
+    assert prop_rented.json()["status"] == "RENTED"
+
+    # Terminate => AVAILABLE + contract status TERMINATED
+    term_resp = client.post(f"/contracts/{contract_id}/terminate", headers=owner_headers)
+    assert term_resp.status_code == 200
+    assert term_resp.json()["status"] == "TERMINATED"
+
+    prop_available = client.get(f"/properties/{property_id}", headers=owner_headers)
+    assert prop_available.status_code == 200
+    assert prop_available.json()["status"] == "AVAILABLE"

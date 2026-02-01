@@ -2,14 +2,15 @@ from fastapi import APIRouter, Depends, HTTPException, Request, UploadFile, File
 import os
 from uuid import uuid4
 from sqlalchemy.orm import Session
+from datetime import datetime, timezone
+
 from app.schemas.contract import ContractCreate, ContractUpdate, ContractOut
-from app.models.property import Property
-from app.models.contract import Contract
+from app.models.property import Property, PropertyStatus
+from app.models.contract import Contract, ContractStatus
 from app.crud import contract as crud_contract
 from app.core.utils import is_admin, get_current_user
 from app.db.session import get_db
 from typing import List
-from app.models.property import PropertyStatus
 
 router = APIRouter()
 
@@ -25,7 +26,10 @@ def create_contract(
     user = get_current_user(request, db)
 
     property_obj = db.query(Property).filter(Property.id == contract.property_id).first()
-    if (not property_obj) or (property_obj.owner_id != user.id and not is_admin(request, db)):
+    if not property_obj:
+        raise HTTPException(status_code=404, detail="Property not found")
+
+    if property_obj.owner_id != user.id and not is_admin(request, db):
         raise HTTPException(status_code=403, detail="Not authorized to create contract for this property")
 
     if property_obj.status == PropertyStatus.RENTED:
@@ -33,7 +37,7 @@ def create_contract(
 
     db_contract = crud_contract.create_contract(db=db, contract=contract)
 
-    # UC-02: update property status on contract creation
+    # UC-05 / FR-8: update property status on contract creation
     property_obj.status = PropertyStatus.RENTED
     db.commit()
     db.refresh(property_obj)
@@ -106,13 +110,41 @@ def delete_contract(
     property_obj = db_contract.property  # relationship
     deleted = crud_contract.delete_contract(db, contract_id)
 
-    # UC-02: revert property status on contract deletion
+    # UC-05 / FR-8: revert property status on contract deletion
     if property_obj is not None:
         property_obj.status = PropertyStatus.AVAILABLE
         db.commit()
         db.refresh(property_obj)
 
     return deleted
+
+@router.post("/{contract_id}/terminate", response_model=ContractOut)
+def terminate_contract(
+    request: Request,
+    contract_id: int,
+    db: Session = Depends(get_db),
+):
+    db_contract = crud_contract.get_contract(db, contract_id)
+    if not db_contract:
+        raise HTTPException(status_code=404, detail="Contract not found")
+
+    user = get_current_user(request, db)
+    if db_contract.property.owner_id != user.id and not is_admin(request, db):
+        raise HTTPException(status_code=403, detail="Not authorized to terminate this contract")
+
+    if db_contract.status != ContractStatus.ACTIVE:
+        raise HTTPException(status_code=409, detail="Contract is not active")
+
+    # mark contract terminated
+    db_contract.status = ContractStatus.TERMINATED
+    db_contract.terminated_at = datetime.now(timezone.utc)
+
+    # business rule: termination frees the property
+    db_contract.property.status = PropertyStatus.AVAILABLE
+
+    db.commit()
+    db.refresh(db_contract)
+    return db_contract
 
 @router.post("/{contract_id}/upload")
 async def upload_contract_pdf(
