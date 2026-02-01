@@ -1,10 +1,10 @@
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy.orm import Session
 from app.schemas.property import PropertyCreate, PropertyOut, PropertyUpdate
-from app.models.user import User
 from app.models.role import UserRole
+from app.models.property import Property
 from app.crud import property as crud_property
-from app.core.utils import is_admin, get_current_user_payload
+from app.core.utils import is_admin, get_current_user
 from app.db.session import get_db
 from typing import List
 
@@ -16,11 +16,49 @@ def create_property(
     property: PropertyCreate, 
     db: Session = Depends(get_db)
     ):
-    user_payload = get_current_user_payload(request)
-    user = db.query(User).filter(User.username == user_payload["sub"]).first()
-    if not user or user.role != UserRole.OWNER:
-        raise HTTPException(status_code=401, detail="User not found")
-    return crud_property.create_property(db=db, property=property, owner_id=user.id)
+
+    user = get_current_user(request, db)
+
+    # OWNER: creates only for self
+    if user.role == UserRole.OWNER:
+        if property.owner_id is not None and property.owner_id != user.id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Owners cannot create properties for other users",
+            )
+        target_owner_id = user.id
+
+    # ADMIN: must provide owner_id and it must belong to an OWNER user
+    elif user.role == UserRole.ADMIN:
+        if property.owner_id is None:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail="owner_id is required for admins",
+            )
+
+        from app.models.user import User
+
+        owner = db.query(User).filter(User.id == property.owner_id).first()
+        if owner is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Owner not found",
+            )
+        if owner.role != UserRole.OWNER:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail="owner_id must refer to a user with role OWNER",
+            )
+
+        target_owner_id = owner.id
+
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only owners or admins can create properties",
+        )
+
+    return crud_property.create_property(db=db, property=property, owner_id=target_owner_id)
 
 @router.get("/", response_model=List[PropertyOut])
 def list_properties(
@@ -29,10 +67,15 @@ def list_properties(
     limit: int = 100, 
     db: Session = Depends(get_db)
     ):
-    user_payload = get_current_user_payload(request)
-    user = db.query(User).filter(User.username == user_payload["sub"]).first()
+    user = get_current_user(request, db)
     # Only return properties owned by the current user
-    return db.query(crud_property.Property).filter(crud_property.Property.owner_id == user.id).offset(skip).limit(limit).all()
+    return (
+        db.query(Property)
+        .filter(Property.owner_id == user.id)
+        .offset(skip)
+        .limit(limit)
+        .all()
+    )
 
 @router.get("/{property_id}", response_model=PropertyOut)
 def get_property(
@@ -40,12 +83,12 @@ def get_property(
     property_id: int, 
     db: Session = Depends(get_db)
     ):
-    user_payload = get_current_user_payload(request)
     db_property = crud_property.get_property(db, property_id)
     if not db_property:
         raise HTTPException(status_code=404, detail="Property not found")
-    user = db.query(User).filter(User.username == user_payload["sub"]).first()
-    if db_property.owner_id != user.id and not is_admin(request):
+
+    user = get_current_user(request, db)
+    if db_property.owner_id != user.id and not is_admin(request, db):
         raise HTTPException(status_code=403, detail="Not authorized to view this property")
     return db_property
 
@@ -60,9 +103,8 @@ def update_property(
     if not db_property:
         raise HTTPException(status_code=404, detail="Property not found")
     # Check ownership
-    user_payload = get_current_user_payload(request)
-    user = db.query(User).filter(User.username == user_payload["sub"]).first()
-    if db_property.owner_id != user.id and not is_admin(request):
+    user = get_current_user(request, db)
+    if db_property.owner_id != user.id and not is_admin(request, db):
         raise HTTPException(status_code=403, detail="Not authorized to update this property")
     db_property = crud_property.update_property(db, property_id, property)
     return db_property
@@ -77,9 +119,8 @@ def delete_property(
     if not db_property:
         raise HTTPException(status_code=404, detail="Property not found")
     # Check ownership
-    user_payload = get_current_user_payload(request)
-    user = db.query(User).filter(User.username == user_payload["sub"]).first()
-    if db_property.owner_id != user.id and not is_admin(request):
+    user = get_current_user(request, db)
+    if db_property.owner_id != user.id and not is_admin(request, db):
         raise HTTPException(status_code=403, detail="Not authorized to delete this property")
     db_property = crud_property.delete_property(db, property_id)
     return db_property

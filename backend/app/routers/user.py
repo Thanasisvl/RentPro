@@ -1,10 +1,8 @@
 from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 from app.schemas.user import UserCreate, UserOut, UserUpdate
-from app.models.role import UserRole
 from app.crud import user as crud_user
-from app.crud import property as crud_property
-from app.core.utils import is_admin, get_current_user_payload, require_admin
+from app.core.utils import is_admin, get_current_user, require_admin
 from app.db.session import get_db
 from typing import List
 
@@ -43,11 +41,11 @@ def get_user(
     user_id: int,
     db: Session = Depends(get_db)
     ):
-    user_payload = get_current_user_payload(request)
+    current_user = get_current_user(request, db)
     db_user = crud_user.get_user(db, user_id)
     if not db_user:
         raise HTTPException(status_code=404, detail="User not found")
-    if db_user.username != user_payload["sub"] and not is_admin(request):
+    if db_user.username != current_user.username and not is_admin(request, db):
         raise HTTPException(status_code=403, detail="Not authorized to view this user")
     return db_user
 
@@ -58,11 +56,11 @@ def update_user(
     user: UserUpdate,
     db: Session = Depends(get_db)
     ):
-    user_payload = get_current_user_payload(request)
+    current_user = get_current_user(request, db)
     db_user = crud_user.get_user(db, user_id)
     if not db_user:
         raise HTTPException(status_code=404, detail="User not found")
-    if db_user.username != user_payload["sub"] and not is_admin(request):
+    if db_user.username != current_user.username and not is_admin(request, db):
         raise HTTPException(status_code=403, detail="Not authorized to update this user")
     db_user = crud_user.update_user(db, user_id, user)
     return db_user
@@ -73,11 +71,11 @@ def delete_user(
     user_id: int,
     db: Session = Depends(get_db)
     ):
-    user_payload = get_current_user_payload(request)
+    current_user = get_current_user(request, db)
     db_user = crud_user.get_user(db, user_id)
     if not db_user:
         raise HTTPException(status_code=404, detail="User not found")
-    if db_user.username != user_payload["sub"] and not is_admin(request):
+    if db_user.username != current_user.username and not is_admin(request, db):
         raise HTTPException(status_code=403, detail="Not authorized to delete this user")
     db_user = crud_user.delete_user(db, user_id)
     return db_user

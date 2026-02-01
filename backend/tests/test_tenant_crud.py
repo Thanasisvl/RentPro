@@ -120,15 +120,20 @@ def test_create_tenant_missing_fields(tenant_headers):
     )
     assert resp.status_code == 422
 
-def test_create_tenant_invalid_afm(tenant_headers):
-    headers, _ = tenant_headers
+def test_create_tenant_invalid_afm():
+    # fresh user WITHOUT existing tenant profile
+    user, headers = register_and_login(
+        client, username="tenant_invalid_afm", password="testpassword", email="tenant_invalid_afm@example.com"
+    )
+
     resp = client.post(
         "/tenants/",
         json={
             "name": "Invalid AFM",
-            "afm": "abc",
+            "afm": "abc",  # invalid: should be 9 digits
             "phone": "1234567890",
-            "email": "invalidafm@example.com"
+            "email": "invalidafm@example.com",
+            # no user_id: server derives it from token
         },
         headers=headers
     )

@@ -7,6 +7,16 @@ def make_admin(username):
     db.commit()
     db.close()
 
+def login_headers(client, username: str, password: str):
+    """
+    Login existing user and return Authorization headers.
+    Useful when you changed role in DB (e.g. make_admin) and need a fresh token.
+    """
+    login_resp = client.post("/login", json={"username": username, "password": password})
+    assert login_resp.status_code == 200
+    token = login_resp.json()["access_token"]
+    return {"Authorization": f"Bearer {token}"}
+
 def register_and_login(client, username, password, email, is_owner=False):
     from app.models.user import UserRole
 

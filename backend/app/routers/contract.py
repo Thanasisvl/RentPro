@@ -3,12 +3,13 @@ import os
 from uuid import uuid4
 from sqlalchemy.orm import Session
 from app.schemas.contract import ContractCreate, ContractUpdate, ContractOut
-from app.models.user import User
 from app.models.property import Property
+from app.models.contract import Contract
 from app.crud import contract as crud_contract
-from app.core.utils import is_admin, get_current_user_payload
+from app.core.utils import is_admin, get_current_user
 from app.db.session import get_db
 from typing import List
+from app.models.property import PropertyStatus
 
 router = APIRouter()
 
@@ -21,12 +22,23 @@ def create_contract(
     contract: ContractCreate,
     db: Session = Depends(get_db)
     ):
-    user_payload = get_current_user_payload(request)
-    user = db.query(User).filter(User.username == user_payload["sub"]).first()
+    user = get_current_user(request, db)
+
     property_obj = db.query(Property).filter(Property.id == contract.property_id).first()
-    if not property_obj or property_obj.owner_id != user.id and not is_admin(request):
+    if (not property_obj) or (property_obj.owner_id != user.id and not is_admin(request, db)):
         raise HTTPException(status_code=403, detail="Not authorized to create contract for this property")
-    return crud_contract.create_contract(db=db, contract=contract)
+
+    if property_obj.status == PropertyStatus.RENTED:
+        raise HTTPException(status_code=409, detail="Property is already rented")
+
+    db_contract = crud_contract.create_contract(db=db, contract=contract)
+
+    # UC-02: update property status on contract creation
+    property_obj.status = PropertyStatus.RENTED
+    db.commit()
+    db.refresh(property_obj)
+
+    return db_contract
 
 @router.get("/", response_model=List[ContractOut])
 def get_contracts(
@@ -34,24 +46,30 @@ def get_contracts(
     skip: int = 0,
     limit: int = 100,
     db: Session = Depends(get_db)
-    ):
-    user_payload = get_current_user_payload(request)
-    user = db.query(User).filter(User.username == user_payload["sub"]).first()
+):
+    user = get_current_user(request, db)
     # Only return contracts for properties owned by the current user
-    return db.query(crud_contract.Contract).join(Property).filter(Property.owner_id == user.id).offset(skip).limit(limit).all()
+    return (
+        db.query(Contract)
+        .join(Property, Contract.property_id == Property.id)
+        .filter(Property.owner_id == user.id)
+        .offset(skip)
+        .limit(limit)
+        .all()
+    )
 
 @router.get("/{contract_id}", response_model=ContractOut)
 def get_contract(
     request: Request,
     contract_id: int,
     db: Session = Depends(get_db)
-    ):
+):
     db_contract = crud_contract.get_contract(db, contract_id)
     if not db_contract:
         raise HTTPException(status_code=404, detail="Contract not found")
-    user_payload = get_current_user_payload(request)
-    user = db.query(User).filter(User.username == user_payload["sub"]).first()
-    if db_contract.property.owner_id != user.id and not is_admin(request):
+
+    user = get_current_user(request, db)
+    if db_contract.property.owner_id != user.id and not is_admin(request, db):
         raise HTTPException(status_code=403, detail="Not authorized to view this contract")
     return db_contract
 
@@ -61,16 +79,15 @@ def update_contract(
     contract_id: int,
     contract: ContractUpdate,
     db: Session = Depends(get_db)
-    ):
+):
     db_contract = crud_contract.get_contract(db, contract_id)
     if not db_contract:
         raise HTTPException(status_code=404, detail="Contract not found")
-    user_payload = get_current_user_payload(request)
-    user = db.query(User).filter(User.username == user_payload["sub"]).first()
-    if db_contract.property.owner_id != user.id and not is_admin(request):
+
+    user = get_current_user(request, db)
+    if db_contract.property.owner_id != user.id and not is_admin(request, db):
         raise HTTPException(status_code=403, detail="Not authorized to update this contract")
-    db_contract = crud_contract.update_contract(db, contract_id, contract)
-    return db_contract
+    return crud_contract.update_contract(db, contract_id, contract)
 
 @router.delete("/{contract_id}", response_model=ContractOut)
 def delete_contract(
@@ -81,12 +98,21 @@ def delete_contract(
     db_contract = crud_contract.get_contract(db, contract_id)
     if not db_contract:
         raise HTTPException(status_code=404, detail="Contract not found")
-    user_payload = get_current_user_payload(request)
-    user = db.query(User).filter(User.username == user_payload["sub"]).first()
-    if db_contract.property.owner_id != user.id and not is_admin(request):
+
+    user = get_current_user(request, db)
+    if db_contract.property.owner_id != user.id and not is_admin(request, db):
         raise HTTPException(status_code=403, detail="Not authorized to delete this contract")
-    db_contract = crud_contract.delete_contract(db, contract_id)
-    return db_contract
+
+    property_obj = db_contract.property  # relationship
+    deleted = crud_contract.delete_contract(db, contract_id)
+
+    # UC-02: revert property status on contract deletion
+    if property_obj is not None:
+        property_obj.status = PropertyStatus.AVAILABLE
+        db.commit()
+        db.refresh(property_obj)
+
+    return deleted
 
 @router.post("/{contract_id}/upload")
 async def upload_contract_pdf(
@@ -94,26 +120,28 @@ async def upload_contract_pdf(
     contract_id: int,
     file: UploadFile = File(...),
     db: Session = Depends(get_db)
-    ):
-    user_payload = get_current_user_payload(request)
-    user = db.query(User).filter(User.username == user_payload["sub"]).first()
+):
+    user = get_current_user(request, db)
     db_contract = crud_contract.get_contract(db, contract_id)
     if not db_contract:
         raise HTTPException(status_code=404, detail="Contract not found")
-    if db_contract.property.owner_id != user.id and not is_admin(request):
+
+    if db_contract.property.owner_id != user.id and not is_admin(request, db):
         raise HTTPException(status_code=403, detail="Not authorized to upload for this contract")
+
     if not file.filename.lower().endswith(".pdf"):
         raise HTTPException(status_code=400, detail="Only PDF files allowed")
+
     content = await file.read()
     MAX_FILE_SIZE = 5 * 1024 * 1024  # 5 MB
     if len(content) > MAX_FILE_SIZE:
         raise HTTPException(status_code=413, detail="File too large")
+
     filename = f"{contract_id}_{uuid4().hex}.pdf"
     file_path = os.path.join(UPLOAD_DIR, filename)
     with open(file_path, "wb") as f:
-        content = await file.read()
         f.write(content)
-    # Update the contract's pdf_file field
+
     db_contract.pdf_file = f"/uploads/contracts/{filename}"
     db.commit()
     db.refresh(db_contract)

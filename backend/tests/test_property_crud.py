@@ -330,3 +330,203 @@ def test_cross_user_property_access(owner_headers):
         "price": 1200.0
     }, headers=admin_headers).status_code == 200
     assert client.delete(f"/properties/{prop_id}", headers=admin_headers).status_code == 200
+
+def test_admin_create_property_for_owner_success():
+    # Create target OWNER
+    owner, _ = register_and_login(
+        client, "owner_target", "testpassword", "owner_target@example.com", is_owner=True
+    )
+
+    # Create ADMIN
+    _, _ = register_and_login(
+        client, "admin_creator", "testpassword", "admin_creator@example.com", is_owner=False
+    )
+    make_admin("admin_creator")
+
+    login_resp = client.post("/login", json={"username": "admin_creator", "password": "testpassword"})
+    assert login_resp.status_code == 200
+    admin_token = login_resp.json()["access_token"]
+    admin_headers = {"Authorization": f"Bearer {admin_token}"}
+
+    resp = client.post(
+        "/properties/",
+        json={
+            "title": "Admin Created Property",
+            "description": "Created on behalf of owner",
+            "address": "999 Admin St",
+            "type": "Apartment",
+            "size": 55.0,
+            "price": 1500.0,
+            "owner_id": owner["id"],
+        },
+        headers=admin_headers,
+    )
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["owner_id"] == owner["id"]
+    assert data["title"] == "Admin Created Property"
+
+
+def test_admin_create_property_missing_owner_id_returns_422():
+    _, _ = register_and_login(
+        client, "admin_missing_owner", "testpassword", "admin_missing_owner@example.com", is_owner=False
+    )
+    make_admin("admin_missing_owner")
+
+    login_resp = client.post("/login", json={"username": "admin_missing_owner", "password": "testpassword"})
+    assert login_resp.status_code == 200
+    admin_token = login_resp.json()["access_token"]
+    admin_headers = {"Authorization": f"Bearer {admin_token}"}
+
+    resp = client.post(
+        "/properties/",
+        json={
+            "title": "Missing owner_id",
+            "description": "Admin must provide owner_id",
+            "address": "1 Missing St",
+            "type": "Apartment",
+            "size": 50.0,
+            "price": 1000.0,
+        },
+        headers=admin_headers,
+    )
+    assert resp.status_code == 422
+
+
+def test_admin_create_property_owner_not_found_returns_404():
+    _, _ = register_and_login(
+        client, "admin_owner_not_found", "testpassword", "admin_owner_not_found@example.com", is_owner=False
+    )
+    make_admin("admin_owner_not_found")
+
+    login_resp = client.post("/login", json={"username": "admin_owner_not_found", "password": "testpassword"})
+    assert login_resp.status_code == 200
+    admin_token = login_resp.json()["access_token"]
+    admin_headers = {"Authorization": f"Bearer {admin_token}"}
+
+    resp = client.post(
+        "/properties/",
+        json={
+            "title": "Bad owner_id",
+            "description": "Should fail",
+            "address": "404 St",
+            "type": "House",
+            "size": 70.0,
+            "price": 1100.0,
+            "owner_id": 999999,
+        },
+        headers=admin_headers,
+    )
+    assert resp.status_code == 404
+
+
+def test_admin_create_property_owner_id_must_point_to_owner_returns_422():
+    # Create a plain USER (not OWNER)
+    non_owner, _ = register_and_login(
+        client, "plain_user1", "testpassword", "plain_user1@example.com", is_owner=False
+    )
+
+    # Create ADMIN
+    _, _ = register_and_login(
+        client, "admin_wrong_owner_role", "testpassword", "admin_wrong_owner_role@example.com", is_owner=False
+    )
+    make_admin("admin_wrong_owner_role")
+
+    login_resp = client.post("/login", json={"username": "admin_wrong_owner_role", "password": "testpassword"})
+    assert login_resp.status_code == 200
+    admin_token = login_resp.json()["access_token"]
+    admin_headers = {"Authorization": f"Bearer {admin_token}"}
+
+    resp = client.post(
+        "/properties/",
+        json={
+            "title": "Wrong owner role",
+            "description": "owner_id points to a non-owner",
+            "address": "422 St",
+            "type": "Apartment",
+            "size": 60.0,
+            "price": 1300.0,
+            "owner_id": non_owner["id"],
+        },
+        headers=admin_headers,
+    )
+    assert resp.status_code == 422
+
+
+def test_owner_cannot_create_property_for_other_owner():
+    owner1, owner1_headers = register_and_login(
+        client, "owner_a", "testpassword", "owner_a@example.com", is_owner=True
+    )
+    owner2, _ = register_and_login(
+        client, "owner_b", "testpassword", "owner_b@example.com", is_owner=True
+    )
+
+    resp = client.post(
+        "/properties/",
+        json={
+            "title": "Should Fail",
+            "description": "Owner cannot create for other owner",
+            "address": "Forbidden St",
+            "type": "Apartment",
+            "size": 45.0,
+            "price": 900.0,
+            "owner_id": owner2["id"],
+        },
+        headers=owner1_headers,
+    )
+    assert resp.status_code == 403
+
+
+def test_owner_create_property_with_owner_id_self_is_allowed():
+    owner, owner_headers = register_and_login(
+        client, "owner_self", "testpassword", "owner_self@example.com", is_owner=True
+    )
+
+    resp = client.post(
+        "/properties/",
+        json={
+            "title": "Self owner_id",
+            "description": "Owner sends owner_id=self",
+            "address": "Self St",
+            "type": "Apartment",
+            "size": 40.0,
+            "price": 800.0,
+            "owner_id": owner["id"],
+        },
+        headers=owner_headers,
+    )
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["owner_id"] == owner["id"]
+    assert data["title"] == "Self owner_id"
+
+def test_create_property_invalid_data(owner_headers):
+    resp = client.post(
+        "/properties/",
+        json={
+            "title": "Invalid Property",
+            "description": "Negative size",
+            "address": "123 Main St",
+            "type": "Apartment",
+            "size": -50.0,
+            "price": -100.0
+        },
+        headers=owner_headers
+    )
+    assert resp.status_code == 422
+
+def test_create_property_rejects_blank_strings_after_strip(owner_headers):
+    # title/address/type are required and must not be blank after stripping whitespace
+    resp = client.post(
+        "/properties/",
+        json={
+            "title": "   ",
+            "description": "desc",
+            "address": "  ",
+            "type": "\t",
+            "size": 50.0,
+            "price": 1000.0
+        },
+        headers=owner_headers
+    )
+    assert resp.status_code == 422

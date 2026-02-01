@@ -5,12 +5,13 @@ import LandingPage from './components/LandingPage';
 import LoginForm from './components/LoginForm';
 import RegisterForm from './components/RegisterForm';
 import PropertyList from './components/PropertyList';
+import PropertyForm from './components/PropertyForm';
+import PropertyDetails from './components/PropertyDetails';
 import TenantList from './components/TenantList';
 import RequireAuth from './components/RequireAuth';
 import LogoutButton from './components/LogoutButton';
 
 function App() {
-  // απλό “isAuthenticated”: υπάρχει token στο localStorage;
   const isAuthenticated = !!localStorage.getItem('token');
 
   return (
@@ -55,6 +56,7 @@ function App() {
           <Route path="/" element={<LandingPage />} />
           <Route path="/login" element={<LoginForm />} />
           <Route path="/register" element={<RegisterForm />} />
+
           <Route
             path="/properties"
             element={
@@ -63,6 +65,37 @@ function App() {
               </RequireAuth>
             }
           />
+
+          {/* UC-02: New property screen */}
+          <Route
+            path="/properties/new"
+            element={
+              <RequireAuth>
+                <PropertyForm mode="create" />
+              </RequireAuth>
+            }
+          />
+
+          {/* UC-02: Details screen */}
+          <Route
+            path="/properties/:id"
+            element={
+              <RequireAuth>
+                <PropertyDetails />
+              </RequireAuth>
+            }
+          />
+
+          {/* UC-02: Edit screen */}
+          <Route
+            path="/properties/:id/edit"
+            element={
+              <RequireAuth>
+                <PropertyForm mode="edit" />
+              </RequireAuth>
+            }
+          />
+
           <Route
             path="/tenants"
             element={

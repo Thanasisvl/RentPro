@@ -1,20 +1,19 @@
-from pydantic import BaseModel, EmailStr, ConfigDict
+from pydantic import BaseModel, EmailStr, ConfigDict, Field
 
 class TenantBase(BaseModel):
     name: str
-    afm: str
+    afm: str = Field(..., pattern=r"^\d{9}$")
     phone: str | None = None
     email: EmailStr | None = None
 
 class TenantCreate(TenantBase):
-    user_id: int
+    pass
 
 class TenantUpdate(BaseModel):
     name: str | None = None
-    afm: str | None = None
+    afm: str | None = Field(default=None, pattern=r"^\d{9}$")
     phone: str | None = None
     email: EmailStr | None = None
-    user_id: int | None = None
 
 class TenantOut(TenantBase):
     id: int

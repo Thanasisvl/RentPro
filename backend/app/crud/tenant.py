@@ -4,12 +4,15 @@ from app.models.user import User
 from app.schemas.tenant import TenantCreate, TenantUpdate
 from fastapi import HTTPException
 
-def create_tenant(db: Session, tenant: TenantCreate):
+def create_tenant(db: Session, tenant: TenantCreate, user_id: int):
     # Check if user exists
-    user = db.query(User).filter(User.id == tenant.user_id).first()
+    user = db.query(User).filter(User.id == user_id).first()
     if not user:
         raise HTTPException(status_code=400, detail="User does not exist")
-    db_tenant = Tenant(**tenant.model_dump())
+
+    tenant_data = tenant.model_dump()
+    db_tenant = Tenant(**tenant_data, user_id=user_id)
+
     db.add(db_tenant)
     db.commit()
     db.refresh(db_tenant)

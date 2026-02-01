@@ -11,7 +11,7 @@ from app.db.session import Base, engine
 from datetime import date, timedelta
 from app.db.session import SessionLocal
 from app.models.user import User, UserRole
-from tests.utils import make_admin, register_and_login
+from tests.utils import make_admin, register_and_login, login_headers
 
 @pytest.fixture(autouse=True)
 def clean_db():
@@ -53,7 +53,6 @@ def tenant_and_profile():
             "afm": "123456789",
             "phone": "1234567890",
             "email": "tenant1@example.com",
-            "user_id": user["id"]
         },
         headers=headers
     )
@@ -281,3 +280,167 @@ def test_contract_invalid_dates(owner_and_property, tenant_and_profile):
         headers=owner_headers
     )
     assert resp.status_code == 422 or resp.status_code == 400
+
+def test_property_status_becomes_rented_on_contract_creation(owner_and_property, tenant_and_profile):
+    _, owner_headers, property_id = owner_and_property
+    _, _, tenant_id = tenant_and_profile
+
+    # Before: should be AVAILABLE
+    prop_before = client.get(f"/properties/{property_id}", headers=owner_headers)
+    assert prop_before.status_code == 200
+    assert prop_before.json()["status"] == "AVAILABLE"
+
+    today = str(date.today())
+    end_date = str(date.today() + timedelta(days=365))
+
+    # Create contract => property should become RENTED
+    resp = client.post(
+        "/contracts/",
+        json={
+            "property_id": property_id,
+            "tenant_id": tenant_id,
+            "start_date": today,
+            "end_date": end_date,
+            "rent_amount": 1200.0,
+            "pdf_file": "contract_status.pdf",
+        },
+        headers=owner_headers,
+    )
+    assert resp.status_code == 200
+
+    prop_after = client.get(f"/properties/{property_id}", headers=owner_headers)
+    assert prop_after.status_code == 200
+    assert prop_after.json()["status"] == "RENTED"
+
+
+def test_property_status_becomes_available_on_contract_deletion(owner_and_property, tenant_and_profile):
+    _, owner_headers, property_id = owner_and_property
+    _, _, tenant_id = tenant_and_profile
+
+    today = str(date.today())
+    end_date = str(date.today() + timedelta(days=365))
+
+    # Create contract => RENTED
+    create_resp = client.post(
+        "/contracts/",
+        json={
+            "property_id": property_id,
+            "tenant_id": tenant_id,
+            "start_date": today,
+            "end_date": end_date,
+            "rent_amount": 1200.0,
+            "pdf_file": "contract_to_delete.pdf",
+        },
+        headers=owner_headers,
+    )
+    assert create_resp.status_code == 200
+    contract_id = create_resp.json()["id"]
+
+    prop_rented = client.get(f"/properties/{property_id}", headers=owner_headers)
+    assert prop_rented.status_code == 200
+    assert prop_rented.json()["status"] == "RENTED"
+
+    # Delete contract => AVAILABLE
+    del_resp = client.delete(f"/contracts/{contract_id}", headers=owner_headers)
+    assert del_resp.status_code == 200
+
+    prop_available = client.get(f"/properties/{property_id}", headers=owner_headers)
+    assert prop_available.status_code == 200
+    assert prop_available.json()["status"] == "AVAILABLE"
+
+
+def test_cannot_create_contract_when_property_already_rented(owner_and_property, tenant_and_profile):
+    _, owner_headers, property_id = owner_and_property
+    _, _, tenant_id = tenant_and_profile
+
+    today = str(date.today())
+    end_date = str(date.today() + timedelta(days=365))
+
+    # First contract OK
+    resp1 = client.post(
+        "/contracts/",
+        json={
+            "property_id": property_id,
+            "tenant_id": tenant_id,
+            "start_date": today,
+            "end_date": end_date,
+            "rent_amount": 1200.0,
+            "pdf_file": "first.pdf",
+        },
+        headers=owner_headers,
+    )
+    assert resp1.status_code == 200
+
+    # Second contract should fail with 409 (Property already rented)
+    resp2 = client.post(
+        "/contracts/",
+        json={
+            "property_id": property_id,
+            "tenant_id": tenant_id,
+            "start_date": today,
+            "end_date": end_date,
+            "rent_amount": 1300.0,
+            "pdf_file": "second.pdf",
+        },
+        headers=owner_headers,
+    )
+    assert resp2.status_code == 409
+
+
+def test_admin_properties_endpoint_forbidden_for_owner(owner_and_property):
+    _, owner_headers, _ = owner_and_property
+    resp = client.get("/admin/properties", headers=owner_headers)
+    assert resp.status_code == 403
+
+
+def test_admin_properties_endpoint_returns_all_properties():
+    # Owner1 creates a property
+    _, owner1_headers = register_and_login(
+        client, "owner_admin_list_1", "testpassword", "oal1@example.com", is_owner=True
+    )
+    resp1 = client.post(
+        "/properties/",
+        json={
+            "title": "Owner1 Property",
+            "description": "desc",
+            "address": "addr1",
+            "type": "Apartment",
+            "size": 50.0,
+            "price": 1000.0,
+        },
+        headers=owner1_headers,
+    )
+    assert resp1.status_code == 200
+
+    # Owner2 creates a property
+    _, owner2_headers = register_and_login(
+        client, "owner_admin_list_2", "testpassword", "oal2@example.com", is_owner=True
+    )
+    resp2 = client.post(
+        "/properties/",
+        json={
+            "title": "Owner2 Property",
+            "description": "desc",
+            "address": "addr2",
+            "type": "House",
+            "size": 60.0,
+            "price": 1100.0,
+        },
+        headers=owner2_headers,
+    )
+    assert resp2.status_code == 200
+
+    # Create admin and list all
+    _, _ = register_and_login(
+        client, "admin_list", "testpassword", "admin_list@example.com", is_owner=False
+    )
+    make_admin("admin_list")
+    admin_headers = login_headers(client, "admin_list", "testpassword")  # fixed
+
+    resp = client.get("/admin/properties", headers=admin_headers)
+    assert resp.status_code == 200
+    data = resp.json()
+
+    titles = [p["title"] for p in data]
+    assert "Owner1 Property" in titles
+    assert "Owner2 Property" in titles

@@ -3,7 +3,10 @@ from app.models.property import Property
 from app.schemas.property import PropertyCreate, PropertyUpdate
 
 def create_property(db: Session, property: PropertyCreate, owner_id: int):
-    db_property = Property(**property.model_dump(), owner_id=owner_id)
+    data = property.model_dump()
+    data.pop("owner_id", None)
+
+    db_property = Property(**data, owner_id=owner_id)
     db.add(db_property)
     db.commit()
     db.refresh(db_property)

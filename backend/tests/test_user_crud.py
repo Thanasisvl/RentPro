@@ -94,9 +94,10 @@ def test_delete_user():
     user_id = user["id"]
     response = client.delete(f"/users/{user_id}", headers=headers)
     assert response.status_code == 200
-    # Confirm user is deleted
+
+    # Token belongs to a user that no longer exists -> guarded as 401
     response = client.get(f"/users/{user_id}", headers=headers)
-    assert response.status_code == 404
+    assert response.status_code == 401
 
 def test_register_with_existing_username():
     register_and_login(client, username="duplicateuser", password="testpassword", email="unique1@example.com")
@@ -199,8 +200,10 @@ def test_delete_user_twice():
     user_id = user["id"]
     response = client.delete(f"/users/{user_id}", headers=headers)
     assert response.status_code == 200
+
+    # Token belongs to a user that no longer exists -> guarded as 401
     response = client.delete(f"/users/{user_id}", headers=headers)
-    assert response.status_code == 404
+    assert response.status_code == 401
 
 def test_update_another_user_forbidden():
     user1, headers1 = register_and_login(client, username="user1", password="testpassword", email="user1@example.com")
