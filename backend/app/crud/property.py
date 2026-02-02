@@ -48,7 +48,7 @@ def search_properties(db: Session, filters: PropertySearchFilters):
         q = q.filter(Property.address.ilike(f"%{filters.area}%"))
 
     if filters.type:
-        q = q.filter(Property.type.ilike(filters.type))
+        q = q.filter(Property.type.ilike(f"%{filters.type}%"))
 
     if filters.min_price is not None:
         q = q.filter(Property.price >= filters.min_price)

@@ -30,7 +30,7 @@ function App() {
 
           {/* ADD: Always visible (logged in or not) */}
           <Button color="inherit" component={Link} to="/search">
-            ΑΝΑΖΗΤΗΣΗ ΑΚΙΝΗΤΟΥ
+            Search
           </Button>
 
           {isAuthenticated && (

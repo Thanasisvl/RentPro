@@ -371,7 +371,9 @@ function PropertySearchPage() {
           </Box>
 
           {Array.isArray(data.items) && data.items.length === 0 ? (
-            <Typography>0 αποτελέσματα</Typography>
+            <Typography>
+              Δεν βρέθηκαν αποτελέσματα. Δοκίμασε να χαλαρώσεις τα φίλτρα.
+            </Typography>
           ) : (
             <List>
               {data.items.map((p) => (

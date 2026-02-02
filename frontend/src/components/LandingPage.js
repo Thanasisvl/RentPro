@@ -40,7 +40,7 @@ function LandingPage() {
             color="primary"
             onClick={() => navigate('/search')}
           >
-            ΑΝΑΖΗΤΗΣΗ ΑΚΙΝΗΤΟΥ
+            Search
           </Button>
         </Box>
       </Paper>
