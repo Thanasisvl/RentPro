@@ -9,6 +9,9 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import JSONResponse
 from sqlalchemy.exc import OperationalError
 
+from pydantic import ValidationError
+from fastapi.encoders import jsonable_encoder
+
 app = FastAPI()
 
 origins = [
@@ -20,6 +23,15 @@ async def db_operational_error_handler(request: Request, exc: OperationalError):
     return JSONResponse(
         status_code=503,
         content={"detail": "Database connection error"}
+    )
+
+@app.exception_handler(ValidationError)
+async def pydantic_validation_error_handler(request: Request, exc: ValidationError):
+    # Pydantic v2 may include non-JSON-serializable objects (e.g. ValueError) inside ctx.
+    # jsonable_encoder makes the structure safe for JSONResponse.
+    return JSONResponse(
+        status_code=422,
+        content={"detail": jsonable_encoder(exc.errors())},
     )
 
 app.add_middleware(

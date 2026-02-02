@@ -1,8 +1,15 @@
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy.orm import Session
-from app.schemas.property import PropertyCreate, PropertyOut, PropertyUpdate
+from app.schemas.property import (
+    PropertyCreate,
+    PropertyOut,
+    PropertyUpdate,
+    PropertySearchFilters,
+    PropertySearchResponse,
+    PropertySearchMeta,
+)
 from app.models.role import UserRole
-from app.models.property import Property
+from app.models.property import Property, PropertyStatus
 from app.crud import property as crud_property
 from app.core.utils import is_admin, get_current_user
 from app.db.session import get_db
@@ -77,20 +84,56 @@ def list_properties(
         .all()
     )
 
+@router.get("/search", response_model=PropertySearchResponse)
+def search_properties(
+    filters: PropertySearchFilters = Depends(),
+    db: Session = Depends(get_db),
+):
+    # Public endpoint (UC-03): no auth required
+    items, total = crud_property.search_properties(db=db, filters=filters)
+    return {
+        "meta": PropertySearchMeta(
+            total=total,
+            count=len(items),
+            offset=filters.offset,
+            limit=filters.limit,
+        ),
+        "items": items,
+    }
+
 @router.get("/{property_id}", response_model=PropertyOut)
 def get_property(
     request: Request,
-    property_id: int, 
-    db: Session = Depends(get_db)
-    ):
+    property_id: int,
+    db: Session = Depends(get_db),
+):
     db_property = crud_property.get_property(db, property_id)
     if not db_property:
         raise HTTPException(status_code=404, detail="Property not found")
 
-    user = get_current_user(request, db)
-    if db_property.owner_id != user.id and not is_admin(request, db):
-        raise HTTPException(status_code=403, detail="Not authorized to view this property")
-    return db_property
+    # Public card: allow AVAILABLE without authentication
+    if db_property.status == PropertyStatus.AVAILABLE:
+        return db_property
+
+    # Not AVAILABLE -> require auth; anonymous should not learn it exists
+    user_payload = getattr(request.state, "user", None)
+    if not user_payload or not user_payload.get("sub"):
+        raise HTTPException(status_code=404, detail="Property not found")
+
+    from app.models.user import User  # <-- ensure User is defined
+
+    user = db.query(User).filter(User.username == user_payload["sub"]).first()
+    if not user:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+
+    if user.role == UserRole.ADMIN:
+        return db_property
+
+    if user.role == UserRole.OWNER and db_property.owner_id == user.id:
+        return db_property
+
+    raise HTTPException(status_code=403, detail="Not authorized to view this property")
+
 
 @router.put("/{property_id}", response_model=PropertyOut)
 def update_property(

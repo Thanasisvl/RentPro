@@ -11,24 +11,36 @@ function LandingPage() {
         <Typography variant="h3" gutterBottom>
           RentPro
         </Typography>
+
         <Typography variant="subtitle1" gutterBottom>
           Register as Owner or Tenant and manage rental properties, tenants and contracts.
         </Typography>
+
         <Box mt={4}>
           <Button
             variant="contained"
             color="primary"
             onClick={() => navigate('/login')}
-            style={{ marginRight: 16 }}
+            style={{ marginRight: 12 }}
           >
             Login
           </Button>
+
           <Button
             variant="outlined"
             color="primary"
             onClick={() => navigate('/register')}
+            style={{ marginRight: 12 }}
           >
             Register
+          </Button>
+
+          <Button
+            variant="contained"
+            color="primary"
+            onClick={() => navigate('/search')}
+          >
+            ΑΝΑΖΗΤΗΣΗ ΑΚΙΝΗΤΟΥ
           </Button>
         </Box>
       </Paper>

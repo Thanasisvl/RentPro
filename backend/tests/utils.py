@@ -45,3 +45,34 @@ def register_and_login(client, username, password, email, is_owner=False):
     headers = {"Authorization": f"Bearer {token}"}
 
     return user, headers
+
+def set_property_status(property_id: int, status_value: str):
+    """
+    Update property.status directly in DB for test setup.
+    status_value: "AVAILABLE" | "RENTED" | "INACTIVE"
+    """
+    from app.db.session import SessionLocal
+    from app.models.property import Property, PropertyStatus
+
+    db = SessionLocal()
+    try:
+        p = db.query(Property).filter(Property.id == property_id).first()
+        assert p is not None
+        p.status = PropertyStatus(status_value)
+        db.commit()
+    finally:
+        db.close()
+
+def create_property(client, headers, **overrides):
+    payload = {
+        "title": "Test Property",
+        "description": "A nice place",
+        "address": "123 Main St",
+        "type": "Apartment",
+        "size": 100.0,
+        "price": 1200.0,
+    }
+    payload.update(overrides)
+    resp = client.post("/properties/", json=payload, headers=headers)
+    assert resp.status_code == 200
+    return resp.json()

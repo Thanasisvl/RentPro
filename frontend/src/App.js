@@ -10,6 +10,8 @@ import PropertyDetails from './components/PropertyDetails';
 import TenantList from './components/TenantList';
 import RequireAuth from './components/RequireAuth';
 import LogoutButton from './components/LogoutButton';
+import PropertySearchPage from './components/PropertySearchPage';
+import PublicPropertyDetails from './components/PublicPropertyDetails';
 
 function App() {
   const isAuthenticated = !!localStorage.getItem('token');
@@ -24,6 +26,11 @@ function App() {
 
           <Button color="inherit" component={Link} to="/">
             Home
+          </Button>
+
+          {/* ADD: Always visible (logged in or not) */}
+          <Button color="inherit" component={Link} to="/search">
+            ΑΝΑΖΗΤΗΣΗ ΑΚΙΝΗΤΟΥ
           </Button>
 
           {isAuthenticated && (
@@ -57,6 +64,10 @@ function App() {
           <Route path="/login" element={<LoginForm />} />
           <Route path="/register" element={<RegisterForm />} />
 
+          {/* ADD: UC-03 public routes */}
+          <Route path="/search" element={<PropertySearchPage />} />
+          <Route path="/search/properties/:id" element={<PublicPropertyDetails />} />
+
           <Route
             path="/properties"
             element={
@@ -66,7 +77,6 @@ function App() {
             }
           />
 
-          {/* UC-02: New property screen */}
           <Route
             path="/properties/new"
             element={
@@ -76,7 +86,6 @@ function App() {
             }
           />
 
-          {/* UC-02: Details screen */}
           <Route
             path="/properties/:id"
             element={
@@ -86,7 +95,6 @@ function App() {
             }
           />
 
-          {/* UC-02: Edit screen */}
           <Route
             path="/properties/:id/edit"
             element={

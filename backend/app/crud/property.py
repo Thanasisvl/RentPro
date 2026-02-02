@@ -1,6 +1,6 @@
 from sqlalchemy.orm import Session
-from app.models.property import Property
-from app.schemas.property import PropertyCreate, PropertyUpdate
+from app.models.property import Property, PropertyStatus
+from app.schemas.property import PropertyCreate, PropertyUpdate, PropertySearchFilters
 
 def create_property(db: Session, property: PropertyCreate, owner_id: int):
     data = property.model_dump()
@@ -35,3 +35,36 @@ def delete_property(db: Session, property_id: int):
         db.delete(db_property)
         db.commit()
     return db_property
+
+def search_properties(db: Session, filters: PropertySearchFilters):
+    """
+    UC-03 search:
+    - Only AVAILABLE properties are visible in the public marketplace search.
+    - Returns (items, total) so API can provide FR-11 meta.
+    """
+    q = db.query(Property).filter(Property.status == PropertyStatus.AVAILABLE)
+
+    if filters.area:
+        q = q.filter(Property.address.ilike(f"%{filters.area}%"))
+
+    if filters.type:
+        q = q.filter(Property.type.ilike(filters.type))
+
+    if filters.min_price is not None:
+        q = q.filter(Property.price >= filters.min_price)
+    if filters.max_price is not None:
+        q = q.filter(Property.price <= filters.max_price)
+
+    if filters.min_size is not None:
+        q = q.filter(Property.size >= filters.min_size)
+    if filters.max_size is not None:
+        q = q.filter(Property.size <= filters.max_size)
+
+    total = q.count()
+    items = (
+        q.order_by(Property.id.desc())
+        .offset(filters.offset)
+        .limit(filters.limit)
+        .all()
+    )
+    return items, total
