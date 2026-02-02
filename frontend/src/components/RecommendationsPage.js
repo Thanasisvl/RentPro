@@ -145,7 +145,9 @@ export default function RecommendationsPage() {
             </Typography>
 
             {items.length === 0 ? (
-              <Alert severity="info">No available properties to recommend.</Alert>
+              <Alert severity="info">
+                Δεν υπάρχουν διαθέσιμα ακίνητα για συστάσεις.
+              </Alert>
             ) : (
               <List>
                 {items.map((it, idx) => (

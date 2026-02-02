@@ -267,7 +267,7 @@ export default function PreferencesPage() {
 
         {!crOk && (
           <Alert severity="warning" sx={{ mt: 2 }}>
-            CR is above {CR_THRESHOLD.toFixed(2)}. Please revise comparisons (you can still try submit, but backend will reject).
+            CR is above {CR_THRESHOLD.toFixed(2)}. Please revise comparisons to enable submission.
           </Alert>
         )}
 
