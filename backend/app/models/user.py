@@ -5,7 +5,7 @@ from app.models.role import UserRole
 
 class User(Base):
     __tablename__ = "users"
-    
+
     id = Column(Integer, primary_key=True, index=True)
     username = Column(String, unique=True, index=True)
     email = Column(String, unique=True, index=True)
@@ -14,4 +14,6 @@ class User(Base):
     role = Column(SqlEnum(UserRole), nullable=False, default=UserRole.USER)
 
     properties = relationship("Property", back_populates="owner")
-    tenant_profile = relationship("Tenant", back_populates="user", uselist=False)
+
+    # Option A (owner-scoped tenants)
+    tenants = relationship("Tenant", back_populates="owner", cascade="all, delete-orphan")

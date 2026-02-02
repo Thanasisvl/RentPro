@@ -7,27 +7,20 @@ class ContractBase(BaseModel):
     tenant_id: int
     start_date: date
     end_date: date
-    rent_amount: float = Field(..., gt=0, description="Rent amount must be greater than zero")
-    pdf_file: str | None = None
+    rent_amount: float = Field(..., gt=0)
+    pdf_file: str | None = None  # optional
 
 class ContractCreate(ContractBase):
-    property_id: int
-    tenant_id: int
-    start_date: date
-    end_date: date
-    rent_amount: float = Field(..., gt=0)
-    pdf_file: str
-
     @model_validator(mode="after")
     def check_dates(self) -> "ContractCreate":
         if self.end_date <= self.start_date:
             raise ValueError("end_date must be after start_date")
         return self
 
-class ContractUpdate(ContractBase):
+class ContractUpdate(BaseModel):
     start_date: date | None = None
     end_date: date | None = None
-    rent_amount: float | None = None
+    rent_amount: float | None = Field(default=None, gt=0)
     pdf_file: str | None = None
 
 class ContractOut(ContractBase):

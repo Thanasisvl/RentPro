@@ -22,18 +22,22 @@ def update_property(db: Session, property_id: int, property: PropertyUpdate):
     db_property = db.query(Property).filter(Property.id == property_id).first()
     if not db_property:
         return None
+
     property_data = property.model_dump(exclude_unset=True)
     for key, value in property_data.items():
         setattr(db_property, key, value)
+
     db.commit()
     db.refresh(db_property)
     return db_property
 
 def delete_property(db: Session, property_id: int):
     db_property = db.query(Property).filter(Property.id == property_id).first()
-    if db_property:
-        db.delete(db_property)
-        db.commit()
+    if not db_property:
+        return None
+
+    db.delete(db_property)
+    db.commit()
     return db_property
 
 def search_properties(db: Session, filters: PropertySearchFilters):

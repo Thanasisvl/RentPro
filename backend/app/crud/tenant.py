@@ -1,17 +1,20 @@
 from sqlalchemy.orm import Session
-from app.models.tenant import Tenant
-from app.models.user import User
-from app.schemas.tenant import TenantCreate, TenantUpdate
 from fastapi import HTTPException
 
-def create_tenant(db: Session, tenant: TenantCreate, user_id: int):
-    # Check if user exists
-    user = db.query(User).filter(User.id == user_id).first()
-    if not user:
-        raise HTTPException(status_code=400, detail="User does not exist")
+from app.models.tenant import Tenant
+from app.schemas.tenant import TenantCreate, TenantUpdate
 
-    tenant_data = tenant.model_dump()
-    db_tenant = Tenant(**tenant_data, user_id=user_id)
+def create_tenant(db: Session, tenant: TenantCreate, owner_id: int) -> Tenant:
+    exists = (
+        db.query(Tenant)
+        .filter(Tenant.owner_id == owner_id, Tenant.afm == tenant.afm)
+        .first()
+    )
+    if exists:
+        raise HTTPException(status_code=409, detail="Tenant with this AFM already exists for this owner")
+
+    data = tenant.model_dump(exclude={"owner_id"})
+    db_tenant = Tenant(**data, owner_id=owner_id)
 
     db.add(db_tenant)
     db.commit()
@@ -21,23 +24,39 @@ def create_tenant(db: Session, tenant: TenantCreate, user_id: int):
 def get_tenant(db: Session, tenant_id: int):
     return db.query(Tenant).filter(Tenant.id == tenant_id).first()
 
-def get_tenants(db: Session, skip: int = 0, limit: int = 100):
-    return db.query(Tenant).offset(skip).limit(limit).all()
+def list_tenants(db: Session, *, owner_id: int | None = None, skip: int = 0, limit: int = 100):
+    q = db.query(Tenant)
+    if owner_id is not None:
+        q = q.filter(Tenant.owner_id == owner_id)
+    return q.offset(skip).limit(limit).all()
 
 def update_tenant(db: Session, tenant_id: int, tenant: TenantUpdate):
     db_tenant = db.query(Tenant).filter(Tenant.id == tenant_id).first()
     if not db_tenant:
         return None
-    tenant_data = tenant.model_dump(exclude_unset=True)
-    for key, value in tenant_data.items():
-        setattr(db_tenant, key, value)
+
+    data = tenant.model_dump(exclude_unset=True)
+
+    if "afm" in data and data["afm"] != db_tenant.afm:
+        exists = (
+            db.query(Tenant)
+            .filter(Tenant.owner_id == db_tenant.owner_id, Tenant.afm == data["afm"])
+            .first()
+        )
+        if exists:
+            raise HTTPException(status_code=409, detail="Tenant with this AFM already exists for this owner")
+
+    for k, v in data.items():
+        setattr(db_tenant, k, v)
+
     db.commit()
     db.refresh(db_tenant)
     return db_tenant
 
 def delete_tenant(db: Session, tenant_id: int):
     db_tenant = db.query(Tenant).filter(Tenant.id == tenant_id).first()
-    if db_tenant:
-        db.delete(db_tenant)
-        db.commit()
+    if not db_tenant:
+        return None
+    db.delete(db_tenant)
+    db.commit()
     return db_tenant

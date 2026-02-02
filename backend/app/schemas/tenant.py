@@ -7,7 +7,7 @@ class TenantBase(BaseModel):
     email: EmailStr | None = None
 
 class TenantCreate(TenantBase):
-    pass
+    owner_id: int | None = Field(default=None, ge=1)
 
 class TenantUpdate(BaseModel):
     name: str | None = None
@@ -17,5 +17,5 @@ class TenantUpdate(BaseModel):
 
 class TenantOut(TenantBase):
     id: int
-    user_id: int
+    owner_id: int
     model_config = ConfigDict(from_attributes=True)

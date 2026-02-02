@@ -23,7 +23,9 @@ from app.core.recommendation_config import (
 router = APIRouter()
 
 
-@router.get("/", response_model=RecommendationsResponse)
+# Accept both /recommendations and /recommendations/ without redirect
+@router.get("", response_model=RecommendationsResponse)
+@router.get("/", response_model=RecommendationsResponse, include_in_schema=False)
 def get_recommendations(
     request: Request,
     db: Session = Depends(get_db),

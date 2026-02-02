@@ -75,13 +75,25 @@ def list_properties(
     db: Session = Depends(get_db)
     ):
     user = get_current_user(request, db)
-    # Only return properties owned by the current user
-    return (
-        db.query(Property)
-        .filter(Property.owner_id == user.id)
-        .offset(skip)
-        .limit(limit)
-        .all()
+
+    # ADMIN: βλέπει όλα
+    if user.role == UserRole.ADMIN:
+        return crud_property.get_properties(db=db, skip=skip, limit=limit)
+
+    # OWNER: βλέπει μόνο τα δικά του
+    if user.role == UserRole.OWNER:
+        return (
+            db.query(Property)
+            .filter(Property.owner_id == user.id)
+            .offset(skip)
+            .limit(limit)
+            .all()
+        )
+
+    # USER: δεν έχει λόγο να βλέπει “private list” (υπάρχει public /search)
+    raise HTTPException(
+        status_code=status.HTTP_403_FORBIDDEN,
+        detail="Only owners or admins can list properties",
     )
 
 @router.get("/search", response_model=PropertySearchResponse)

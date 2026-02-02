@@ -92,7 +92,6 @@ def test_recommendations_success_ranked_items(user_headers, owner_headers):
 def test_recommendations_a1_high_cr_returns_422(user_headers, owner_headers):
     create_preference_profile(client, user_headers)
 
-    # Full set but intentionally inconsistent to trigger CR > 0.10 + 1e-9
     bad = {
         "comparisons": [
             {"criterion_a_key": "price", "criterion_b_key": "size", "value": 9},
@@ -106,11 +105,15 @@ def test_recommendations_a1_high_cr_returns_422(user_headers, owner_headers):
     resp = client.post("/preference-profiles/me/pairwise-comparisons", json=bad, headers=user_headers)
     assert resp.status_code == 200
 
-    # Need at least one available property to force AHP evaluation path to continue to A1 check (it happens before TOPSIS)
     p = create_property(client, owner_headers, type="APARTMENT", price=1000.0, size=60.0)
     set_area_score(p["id"], 6.0)
 
     r = client.get("/recommendations", headers=user_headers)
-    assert r.status_code == 422
-    detail = r.json()["detail"]
-    assert "cr" in detail
+    assert r.status_code == 422, r.text
+
+    body = r.json()
+    detail = body.get("detail") or body.get("message") or body.get("error") or body
+    msg = str(detail).lower()
+
+    # API returns Greek error text like: "Οι συγκρίσεις δεν είναι συνεπείς..."
+    assert ("συνεπ" in msg) or ("inconsisten" in msg)

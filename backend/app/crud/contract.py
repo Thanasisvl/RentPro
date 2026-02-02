@@ -3,7 +3,7 @@ from app.models.contract import Contract
 from app.schemas.contract import ContractCreate, ContractUpdate
 
 def create_contract(db: Session, contract: ContractCreate):
-    db_contract = Contract(**contract.model_dump())
+    db_contract = Contract(**contract.model_dump(exclude_none=True))
     db.add(db_contract)
     db.commit()
     db.refresh(db_contract)
