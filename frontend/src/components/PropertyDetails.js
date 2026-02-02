@@ -1,7 +1,7 @@
-import React, { useEffect, useState } from 'react';
-import { useNavigate, useParams, Link as RouterLink } from 'react-router-dom';
-import { Box, Paper, Typography, Button, Alert, CircularProgress } from '@mui/material';
-import api from '../api';
+import React, { useEffect, useState } from "react";
+import { useParams, useNavigate } from "react-router-dom";
+import { Box, Paper, Typography, Button, Alert, CircularProgress } from "@mui/material";
+import api from "../api";
 import StatusChip from "./StatusChip";
 
 function PropertyDetails() {
@@ -9,19 +9,19 @@ function PropertyDetails() {
   const navigate = useNavigate();
 
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
   const [property, setProperty] = useState(null);
 
   useEffect(() => {
     const fetchProperty = async () => {
       setLoading(true);
-      setError('');
+      setError("");
       try {
         const res = await api.get(`/properties/${id}`);
         setProperty(res.data);
       } catch (e) {
-        if (e.response?.status === 404) setError('Το ακίνητο δεν βρέθηκε.');
-        else setError('Αποτυχία φόρτωσης ακινήτου.');
+        if (e.response?.status === 404) setError("Το ακίνητο δεν βρέθηκε.");
+        else setError("Αποτυχία φόρτωσης ακινήτου.");
       } finally {
         setLoading(false);
       }
@@ -38,9 +38,11 @@ function PropertyDetails() {
     );
   }
 
+  const canCreateContract = property?.status === "AVAILABLE";
+
   return (
     <Box mt={4} display="flex" justifyContent="center">
-      <Paper sx={{ p: 3, width: '80%', maxWidth: 720 }}>
+      <Paper sx={{ p: 3, width: "80%", maxWidth: 720 }}>
         <Typography variant="h5" gutterBottom>
           Λεπτομέρειες Ακινήτου
         </Typography>
@@ -66,7 +68,7 @@ function PropertyDetails() {
               <Typography sx={{ mt: 1 }}><b>Περιγραφή:</b> {property.description}</Typography>
             )}
 
-            <Box display="flex" gap={1} mt={2}>
+            <Box display="flex" gap={1} mt={2} flexWrap="wrap">
               <Button
                 variant="contained"
                 component={RouterLink}
@@ -74,6 +76,22 @@ function PropertyDetails() {
               >
                 Επεξεργασία
               </Button>
+
+              <Button
+                variant="contained"
+                color="success"
+                disabled={!canCreateContract}
+                onClick={() => navigate(`/contracts/new?propertyId=${property.id}`)}
+              >
+                Νέο Συμβόλαιο
+              </Button>
+
+              {!canCreateContract && (
+                <Alert severity="info" sx={{ py: 0.5, alignSelf: "center" }}>
+                  Δεν μπορείς να δημιουργήσεις νέο συμβόλαιο όταν το ακίνητο δεν είναι διαθέσιμο.
+                </Alert>
+              )}
+
               <Button variant="outlined" onClick={() => navigate('/properties')}>
                 Πίσω
               </Button>

@@ -8,7 +8,9 @@ import {
   ListItemText,
   CircularProgress,
   Alert,
+  Button,
 } from '@mui/material';
+import { Link as RouterLink } from "react-router-dom";
 import api from '../api';
 
 function TenantList() {
@@ -49,9 +51,16 @@ function TenantList() {
   return (
     <Box mt={4} display="flex" justifyContent="center">
       <Paper sx={{ p: 3, width: '80%' }}>
-        <Typography variant="h5" gutterBottom>
-          Ενοικιαστές
-        </Typography>
+        <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
+          <Typography variant="h5">
+            Ενοικιαστές
+          </Typography>
+
+          <Button variant="contained" component={RouterLink} to="/tenants/new">
+            Νέος Ενοικιαστής
+          </Button>
+        </Box>
+
         {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
         {!error && (
           <List>

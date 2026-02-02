@@ -16,6 +16,9 @@ import PropertyList from "./components/PropertyList";
 import PropertyDetails from "./components/PropertyDetails";
 import PropertyForm from "./components/PropertyForm";
 import TenantList from "./components/TenantList";
+import TenantForm from "./components/TenantForm";
+import ContractForm from "./components/ContractForm";
+import ContractList from "./components/ContractList";
 
 function App() {
   const isAuthenticated = !!localStorage.getItem("token");
@@ -50,6 +53,10 @@ function App() {
               </Button>
               <Button color="inherit" component={Link} to="/tenants">
                 Tenants
+              </Button>
+
+              <Button color="inherit" component={Link} to="/contracts">
+                Contracts
               </Button>
 
               <LogoutButton />
@@ -125,11 +132,37 @@ function App() {
               </RequireAuth>
             }
           />
+
           <Route
             path="/tenants"
             element={
               <RequireAuth>
                 <TenantList />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/tenants/new"
+            element={
+              <RequireAuth>
+                <TenantForm />
+              </RequireAuth>
+            }
+          />
+
+          <Route
+            path="/contracts"
+            element={
+              <RequireAuth>
+                <ContractList />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/contracts/new"
+            element={
+              <RequireAuth>
+                <ContractForm />
               </RequireAuth>
             }
           />
