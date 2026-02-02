@@ -12,11 +12,18 @@ from sqlalchemy.exc import OperationalError
 from pydantic import ValidationError
 from fastapi.encoders import jsonable_encoder
 
+from app.db.session import Base, engine
+import app.models
+
 app = FastAPI()
 
 origins = [
     "http://localhost:3000",  # React dev
 ]
+
+@app.on_event("startup")
+def on_startup_create_tables():
+    Base.metadata.create_all(bind=engine)
 
 @app.exception_handler(OperationalError)
 async def db_operational_error_handler(request: Request, exc: OperationalError):

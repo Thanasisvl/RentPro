@@ -8,7 +8,7 @@ from fastapi.testclient import TestClient
 
 from app.main import app
 from app.db.session import Base, engine
-from tests.utils import register_and_login, create_property, set_property_status, make_admin, login_headers
+from tests.utils import register_and_login, create_property, seed_locked_criteria_for_tests, set_property_status, make_admin, login_headers
 
 client = TestClient(app)
 
@@ -16,6 +16,7 @@ client = TestClient(app)
 def clean_db():
     Base.metadata.drop_all(bind=engine)
     Base.metadata.create_all(bind=engine)
+    seed_locked_criteria_for_tests()
 
 @pytest.fixture
 def owner_headers():

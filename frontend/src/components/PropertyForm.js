@@ -13,6 +13,7 @@ import {
 import api from '../api';
 
 const STATUSES = ['AVAILABLE', 'RENTED', 'INACTIVE'];
+const PROPERTY_TYPES = ['STUDIO', 'APARTMENT', 'MAISONETTE', 'DETACHED_HOUSE'];
 
 function PropertyForm({ mode }) {
   const navigate = useNavigate();
@@ -72,7 +73,7 @@ function PropertyForm({ mode }) {
       title: form.title,
       description: form.description,
       address: form.address,
-      type: form.type,
+      type: String(form.type || '').trim().toUpperCase(),
       size: Number(form.size),
       price: Number(form.price),
       status: form.status,
@@ -131,7 +132,7 @@ function PropertyForm({ mode }) {
             value={form.size}
             onChange={onChange('size')}
             type="number"
-            inputProps={{ min: 0, step: '0.01' }}
+            inputProps={{ min: 0.01, step: '0.01' }}
             required
           />
           <TextField
@@ -139,7 +140,7 @@ function PropertyForm({ mode }) {
             value={form.price}
             onChange={onChange('price')}
             type="number"
-            inputProps={{ min: 0, step: '0.01' }}
+            inputProps={{ min: 0.01, step: '0.01' }}
             required
           />
 
@@ -147,6 +148,20 @@ function PropertyForm({ mode }) {
             {STATUSES.map((s) => (
               <MenuItem key={s} value={s}>
                 {s}
+              </MenuItem>
+            ))}
+          </TextField>
+
+          <TextField
+            label="Τύπος"
+            value={form.type}
+            onChange={onChange('type')}
+            select
+            required
+          >
+            {PROPERTY_TYPES.map((t) => (
+              <MenuItem key={t} value={t}>
+                {t}
               </MenuItem>
             ))}
           </TextField>

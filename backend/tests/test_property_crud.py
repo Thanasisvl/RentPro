@@ -7,12 +7,15 @@ import pytest
 from fastapi.testclient import TestClient
 from app.main import app
 from app.db.session import Base, engine
-from tests.utils import make_admin, register_and_login, set_property_status
+from tests.utils import make_admin, register_and_login, set_property_status, seed_locked_criteria_for_tests
+from starlette import status
+from starlette.status import HTTP_422_UNPROCESSABLE_CONTENT
 
 @pytest.fixture(autouse=True)
 def clean_db():
     Base.metadata.drop_all(bind=engine)
     Base.metadata.create_all(bind=engine)
+    seed_locked_criteria_for_tests()
 
 client = TestClient(app)
 
@@ -28,7 +31,7 @@ def test_create_property(owner_headers):
             "title": "Test Property",
             "description": "A nice place",
             "address": "123 Main St",
-            "type": "Apartment",
+            "type": "APARTMENT",
             "size": 100.0,
             "price": 1200.0
         },
@@ -36,9 +39,8 @@ def test_create_property(owner_headers):
     )
     assert resp.status_code == 200
     prop = resp.json()
-    assert prop["title"] == "Test Property"
+    assert prop["type"] == "APARTMENT"
     assert prop["address"] == "123 Main St"
-    assert prop["type"] == "Apartment"
     assert prop["size"] == 100.0
     assert prop["price"] == 1200.0
 
@@ -50,7 +52,7 @@ def test_get_property(owner_headers):
             "title": "Test Property",
             "description": "A nice place",
             "address": "123 Main St",
-            "type": "Apartment",
+            "type": "APARTMENT",
             "size": 100.0,
             "price": 1200.0
         },
@@ -72,7 +74,7 @@ def test_get_properties(owner_headers):
             "title": "Test Property",
             "description": "A nice place",
             "address": "123 Main St",
-            "type": "Apartment",
+            "type": "APARTMENT",
             "size": 100.0,
             "price": 1200.0
         },
@@ -84,7 +86,7 @@ def test_get_properties(owner_headers):
             "title": "Second Property",
             "description": "Another place",
             "address": "456 Side St",
-            "type": "House",
+            "type": "DETACHED_HOUSE",
             "size": 150.0,
             "price": 2000.0
         },
@@ -106,7 +108,7 @@ def test_update_property(owner_headers):
             "title": "Test Property",
             "description": "A nice place",
             "address": "123 Main St",
-            "type": "Apartment",
+            "type": "APARTMENT",
             "size": 100.0,
             "price": 1200.0
         },
@@ -120,7 +122,7 @@ def test_update_property(owner_headers):
             "title": "Updated Property",
             "description": "Updated description",
             "address": "789 New St",
-            "type": "Studio",
+            "type": "STUDIO",
             "size": 80.0,
             "price": 900.0
         },
@@ -130,7 +132,7 @@ def test_update_property(owner_headers):
     data = response.json()
     assert data["title"] == "Updated Property"
     assert data["address"] == "789 New St"
-    assert data["type"] == "Studio"
+    assert data["type"] == "STUDIO"
     assert data["size"] == 80.0
     assert data["price"] == 900.0
 
@@ -142,7 +144,7 @@ def test_delete_property(owner_headers):
             "title": "Test Property",
             "description": "A nice place",
             "address": "123 Main St",
-            "type": "Apartment",
+            "type": "APARTMENT",
             "size": 100.0,
             "price": 1200.0
         },
@@ -165,7 +167,7 @@ def test_create_property_missing_fields(owner_headers):
         },
         headers=owner_headers
     )
-    assert resp.status_code == 422
+    assert resp.status_code == HTTP_422_UNPROCESSABLE_CONTENT
 
 
 def test_get_properties_unauthenticated():
@@ -179,7 +181,7 @@ def test_create_property_unauthenticated():
             "title": "No Auth",
             "description": "No Auth",
             "address": "No Auth",
-            "type": "Apartment",
+            "type": "APARTMENT",
             "size": 50.0,
             "price": 1000.0
         }
@@ -193,7 +195,7 @@ def test_update_nonexistent_property(owner_headers):
             "title": "Does Not Exist",
             "description": "Nope",
             "address": "Nowhere",
-            "type": "House",
+            "type": "DETACHED_HOUSE",
             "size": 100.0,
             "price": 1000.0
         },
@@ -213,7 +215,7 @@ def test_update_property_invalid_data(owner_headers):
             "title": "To Update",
             "description": "desc",
             "address": "addr",
-            "type": "Apartment",
+            "type": "APARTMENT",
             "size": 100.0,
             "price": 1200.0
         },
@@ -227,13 +229,13 @@ def test_update_property_invalid_data(owner_headers):
             "title": "Invalid Update",
             "description": "desc",
             "address": "addr",
-            "type": "Apartment",
+            "type": "APARTMENT",
             "size": -10.0,
             "price": -500.0
         },
         headers=owner_headers
     )
-    assert resp.status_code == 422
+    assert resp.status_code == HTTP_422_UNPROCESSABLE_CONTENT
 
 def test_update_property_not_owner(owner_headers):
     # Create property as owner1
@@ -243,7 +245,7 @@ def test_update_property_not_owner(owner_headers):
             "title": "Owner1 Property",
             "description": "desc",
             "address": "addr",
-            "type": "Apartment",
+            "type": "APARTMENT",
             "size": 100.0,
             "price": 1200.0
         },
@@ -260,7 +262,7 @@ def test_update_property_not_owner(owner_headers):
             "title": "Hacked",
             "description": "desc",
             "address": "addr",
-            "type": "Apartment",
+            "type": "APARTMENT",
             "size": 100.0,
             "price": 1200.0
         },
@@ -276,7 +278,7 @@ def test_cross_user_property_access(owner_headers):
             "title": "Owner1 Property",
             "description": "desc",
             "address": "addr",
-            "type": "Apartment",
+            "type": "APARTMENT",
             "size": 100.0,
             "price": 1200.0
         },
@@ -297,7 +299,7 @@ def test_cross_user_property_access(owner_headers):
         "title": "Hacked",
         "description": "desc",
         "address": "addr",
-        "type": "Apartment",
+        "type": "APARTMENT",
         "size": 100.0,
         "price": 1200.0
     }, headers=other_headers).status_code in (403, 404)
@@ -315,7 +317,7 @@ def test_cross_user_property_access(owner_headers):
         "title": "Admin Updated",
         "description": "desc",
         "address": "addr",
-        "type": "Apartment",
+        "type": "APARTMENT",
         "size": 100.0,
         "price": 1200.0
     }, headers=admin_headers).status_code == 200
@@ -344,7 +346,7 @@ def test_admin_create_property_for_owner_success():
             "title": "Admin Created Property",
             "description": "Created on behalf of owner",
             "address": "999 Admin St",
-            "type": "Apartment",
+            "type": "APARTMENT",
             "size": 55.0,
             "price": 1500.0,
             "owner_id": owner["id"],
@@ -374,13 +376,13 @@ def test_admin_create_property_missing_owner_id_returns_422():
             "title": "Missing owner_id",
             "description": "Admin must provide owner_id",
             "address": "1 Missing St",
-            "type": "Apartment",
+            "type": "APARTMENT",
             "size": 50.0,
             "price": 1000.0,
         },
         headers=admin_headers,
     )
-    assert resp.status_code == 422
+    assert resp.status_code == HTTP_422_UNPROCESSABLE_CONTENT
 
 
 def test_admin_create_property_owner_not_found_returns_404():
@@ -400,7 +402,7 @@ def test_admin_create_property_owner_not_found_returns_404():
             "title": "Bad owner_id",
             "description": "Should fail",
             "address": "404 St",
-            "type": "House",
+            "type": "DETACHED_HOUSE",
             "size": 70.0,
             "price": 1100.0,
             "owner_id": 999999,
@@ -433,14 +435,14 @@ def test_admin_create_property_owner_id_must_point_to_owner_returns_422():
             "title": "Wrong owner role",
             "description": "owner_id points to a non-owner",
             "address": "422 St",
-            "type": "Apartment",
+            "type": "APARTMENT",
             "size": 60.0,
             "price": 1300.0,
             "owner_id": non_owner["id"],
         },
         headers=admin_headers,
     )
-    assert resp.status_code == 422
+    assert resp.status_code == HTTP_422_UNPROCESSABLE_CONTENT
 
 
 def test_owner_cannot_create_property_for_other_owner():
@@ -457,7 +459,7 @@ def test_owner_cannot_create_property_for_other_owner():
             "title": "Should Fail",
             "description": "Owner cannot create for other owner",
             "address": "Forbidden St",
-            "type": "Apartment",
+            "type": "APARTMENT",
             "size": 45.0,
             "price": 900.0,
             "owner_id": owner2["id"],
@@ -478,7 +480,7 @@ def test_owner_create_property_with_owner_id_self_is_allowed():
             "title": "Self owner_id",
             "description": "Owner sends owner_id=self",
             "address": "Self St",
-            "type": "Apartment",
+            "type": "APARTMENT",
             "size": 40.0,
             "price": 800.0,
             "owner_id": owner["id"],
@@ -497,13 +499,13 @@ def test_create_property_invalid_data(owner_headers):
             "title": "Invalid Property",
             "description": "Negative size",
             "address": "123 Main St",
-            "type": "Apartment",
+            "type": "APARTMENT",
             "size": -50.0,
             "price": -100.0
         },
         headers=owner_headers
     )
-    assert resp.status_code == 422
+    assert resp.status_code == HTTP_422_UNPROCESSABLE_CONTENT
 
 def test_create_property_rejects_blank_strings_after_strip(owner_headers):
     # title/address/type are required and must not be blank after stripping whitespace
@@ -519,4 +521,4 @@ def test_create_property_rejects_blank_strings_after_strip(owner_headers):
         },
         headers=owner_headers
     )
-    assert resp.status_code == 422
+    assert resp.status_code == HTTP_422_UNPROCESSABLE_CONTENT

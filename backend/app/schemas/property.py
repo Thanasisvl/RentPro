@@ -1,5 +1,6 @@
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 from app.models.property import PropertyStatus
+from app.core.recommendation_config import PROPERTY_TYPE_ALLOWED
 
 class PropertyBase(BaseModel):
     title: str = Field(..., min_length=1)
@@ -12,14 +13,17 @@ class PropertyBase(BaseModel):
 
     @field_validator("title", "address", "type", mode="before")
     @classmethod
-    def strip_and_reject_blank(cls, v):
+    def normalize_text_fields(cls, v, info):
         if v is None:
             return v
-        if isinstance(v, str):
-            v = v.strip()
-        if not v:
-            raise ValueError("must not be blank")
-        return v
+        s = str(v).strip()
+
+        # normalize & lock property.type
+        if info.field_name == "type":
+            s = s.upper()
+            if s not in PROPERTY_TYPE_ALLOWED:
+                raise ValueError(f"type must be one of: {list(PROPERTY_TYPE_ALLOWED)}")
+        return s
 
 class PropertyCreate(PropertyBase):
     # Optional: used only by ADMIN to create on behalf of an owner.
@@ -37,14 +41,15 @@ class PropertyUpdate(BaseModel):
 
     @field_validator("title", "address", "type", mode="before")
     @classmethod
-    def strip_and_reject_blank(cls, v):
+    def normalize_update_text_fields(cls, v, info):
         if v is None:
             return v
-        if isinstance(v, str):
-            v = v.strip()
-        if not v:
-            raise ValueError("must not be blank")
-        return v
+        s = str(v).strip()
+        if info.field_name == "type":
+            s = s.upper()
+            if s not in PROPERTY_TYPE_ALLOWED:
+                raise ValueError(f"type must be one of: {list(PROPERTY_TYPE_ALLOWED)}")
+        return s
 
 class PropertyOut(PropertyBase):
     id: int
@@ -70,11 +75,13 @@ class PropertySearchFilters(BaseModel):
 
     @field_validator("area", "type", mode="before")
     @classmethod
-    def strip_and_normalize(cls, v):
+    def strip_and_normalize(cls, v, info):
         if v is None:
             return None
         if isinstance(v, str):
             v = v.strip()
+            if info.field_name == "type":
+                v = v.upper()
         return v or None
 
     @model_validator(mode="after")

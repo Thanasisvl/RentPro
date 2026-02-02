@@ -1,6 +1,6 @@
 from enum import Enum
 
-from sqlalchemy import Column, Integer, String, Float, ForeignKey
+from sqlalchemy import Column, Integer, String, Float, ForeignKey, CheckConstraint
 from sqlalchemy.orm import relationship
 from sqlalchemy import Enum as SAEnum
 
@@ -15,6 +15,13 @@ class PropertyStatus(str, Enum):
 
 class Property(Base):
     __tablename__ = "properties"
+
+    __table_args__ = (
+        CheckConstraint(
+            "type IN ('STUDIO','APARTMENT','MAISONETTE','DETACHED_HOUSE')",
+            name="ck_properties_type_allowed",
+        ),
+    )
 
     id = Column(Integer, primary_key=True, index=True)
     title = Column(String, index=True)
@@ -35,3 +42,12 @@ class Property(Base):
 
     owner = relationship("User", back_populates="properties")
     contracts = relationship("Contract", back_populates="property")
+
+    # UC-04: derived numeric location features (1–1)
+    location_features = relationship(
+        "PropertyLocationFeatures",
+        back_populates="property",
+        uselist=False,
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+    )

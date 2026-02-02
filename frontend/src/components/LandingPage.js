@@ -1,48 +1,55 @@
-import React from 'react';
-import { Button, Box, Typography, Paper } from '@mui/material';
-import { useNavigate } from 'react-router-dom';
+import React from "react";
+import { useNavigate } from "react-router-dom";
+import { Box, Paper, Typography, Button, Stack } from "@mui/material";
 
 function LandingPage() {
   const navigate = useNavigate();
+  const isAuthenticated = !!localStorage.getItem("token");
+
+  const go = (path) => {
+    if (!isAuthenticated) {
+      navigate("/login");
+      return;
+    }
+    navigate(path);
+  };
 
   return (
-    <Box display="flex" justifyContent="center" alignItems="center" minHeight="100vh">
-      <Paper elevation={3} style={{ padding: 40, textAlign: 'center' }}>
-        <Typography variant="h3" gutterBottom>
+    <Box sx={{ maxWidth: 900, mx: "auto", p: 2 }}>
+      <Paper sx={{ p: 3 }}>
+        <Typography variant="h4" gutterBottom>
           RentPro
         </Typography>
 
-        <Typography variant="subtitle1" gutterBottom>
-          Register as Owner or Tenant and manage rental properties, tenants and contracts.
+        <Typography variant="body1" color="text.secondary" sx={{ mb: 2 }}>
+          Welcome. Search properties publicly, or login to access owner features and recommendations.
         </Typography>
 
-        <Box mt={4}>
-          <Button
-            variant="contained"
-            color="primary"
-            onClick={() => navigate('/login')}
-            style={{ marginRight: 12 }}
-          >
-            Login
-          </Button>
-
-          <Button
-            variant="outlined"
-            color="primary"
-            onClick={() => navigate('/register')}
-            style={{ marginRight: 12 }}
-          >
-            Register
-          </Button>
-
-          <Button
-            variant="contained"
-            color="primary"
-            onClick={() => navigate('/search')}
-          >
+        <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
+          <Button variant="outlined" onClick={() => navigate("/search")}>
             Search
           </Button>
-        </Box>
+
+          {!isAuthenticated ? (
+            <>
+              <Button variant="contained" onClick={() => navigate("/login")}>
+                Login
+              </Button>
+              <Button variant="outlined" onClick={() => navigate("/register")}>
+                Register
+              </Button>
+            </>
+          ) : (
+            <>
+              <Button variant="contained" onClick={() => navigate("/preferences")}>
+                Set Preferences (AHP)
+              </Button>
+              <Button variant="outlined" onClick={() => navigate("/recommendations")}>
+                Recommendations
+              </Button>
+            </>
+          )}
+        </Stack>
       </Paper>
     </Box>
   );

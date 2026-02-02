@@ -32,7 +32,7 @@ class ContractUpdate(ContractBase):
 
 class ContractOut(ContractBase):
     id: int
-    status: ContractStatus  # added
+    status: ContractStatus
     terminated_at: date | None = None
 
     created_at: date

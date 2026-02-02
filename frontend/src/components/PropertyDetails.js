@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate, useParams, Link as RouterLink } from 'react-router-dom';
 import { Box, Paper, Typography, Button, Alert, CircularProgress } from '@mui/material';
 import api from '../api';
+import StatusChip from "./StatusChip";
 
 function PropertyDetails() {
   const { id } = useParams();
@@ -52,7 +53,10 @@ function PropertyDetails() {
 
         {property && (
           <>
-            <Typography><b>Τίτλος:</b> {property.title}</Typography>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <h2 style={{ margin: 0 }}>{property.title}</h2>
+              <StatusChip status={property.status} />
+            </div>
             <Typography><b>Διεύθυνση:</b> {property.address}</Typography>
             <Typography><b>Τύπος:</b> {property.type}</Typography>
             <Typography><b>Εμβαδόν:</b> {property.size}</Typography>

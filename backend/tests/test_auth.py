@@ -1,4 +1,6 @@
 import os
+
+from tests.utils import seed_locked_criteria_for_tests
 os.environ["RENTPRO_DATABASE_URL"] = "sqlite:///./test_test.db"
 from dotenv import load_dotenv
 load_dotenv()
@@ -14,6 +16,7 @@ from app.core.jwt import create_refresh_token
 def clean_db():
     Base.metadata.drop_all(bind=engine)
     Base.metadata.create_all(bind=engine)
+    seed_locked_criteria_for_tests()
 
 client = TestClient(app)
 

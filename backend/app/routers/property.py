@@ -39,7 +39,7 @@ def create_property(
     elif user.role == UserRole.ADMIN:
         if property.owner_id is None:
             raise HTTPException(
-                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
                 detail="owner_id is required for admins",
             )
 
@@ -53,7 +53,7 @@ def create_property(
             )
         if owner.role != UserRole.OWNER:
             raise HTTPException(
-                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
                 detail="owner_id must refer to a user with role OWNER",
             )
 

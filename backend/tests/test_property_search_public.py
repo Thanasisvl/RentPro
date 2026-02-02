@@ -8,7 +8,7 @@ from fastapi.testclient import TestClient
 
 from app.main import app
 from app.db.session import Base, engine
-from tests.utils import register_and_login, create_property, set_property_status
+from tests.utils import register_and_login, create_property, seed_locked_criteria_for_tests, set_property_status
 
 client = TestClient(app)
 
@@ -16,6 +16,7 @@ client = TestClient(app)
 def clean_db():
     Base.metadata.drop_all(bind=engine)
     Base.metadata.create_all(bind=engine)
+    seed_locked_criteria_for_tests()
 
 @pytest.fixture
 def owner_headers():
@@ -43,7 +44,7 @@ def test_public_search_filters_by_area_and_excludes_non_available(owner_headers)
         address="Athens Center, Main St 1",
         price=900.0,
         size=80.0,
-        type="Apartment",
+        type="APARTMENT",
     )
     p2 = create_property(
         client,
@@ -52,7 +53,7 @@ def test_public_search_filters_by_area_and_excludes_non_available(owner_headers)
         address="Piraeus Port, Side St 2",
         price=1500.0,
         size=120.0,
-        type="House",
+        type="DETACHED_HOUSE",
     )
 
     set_property_status(p2["id"], "RENTED")
@@ -73,7 +74,7 @@ def test_public_search_combined_filters(owner_headers):
         address="Athens Center",
         price=700.0,
         size=45.0,
-        type="Studio",
+        type="STUDIO",
     )
     create_property(
         client,
@@ -82,7 +83,7 @@ def test_public_search_combined_filters(owner_headers):
         address="Athens Center",
         price=2500.0,
         size=140.0,
-        type="House",
+        type="DETACHED_HOUSE",
     )
 
     resp = client.get("/properties/search?area=Center&min_price=600&max_price=1000&min_size=40&max_size=60")

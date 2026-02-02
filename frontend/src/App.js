@@ -1,20 +1,24 @@
-import React from 'react';
-import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom';
-import { AppBar, Toolbar, Typography, Box, Button } from '@mui/material';
-import LandingPage from './components/LandingPage';
-import LoginForm from './components/LoginForm';
-import RegisterForm from './components/RegisterForm';
-import PropertyList from './components/PropertyList';
-import PropertyForm from './components/PropertyForm';
-import PropertyDetails from './components/PropertyDetails';
-import TenantList from './components/TenantList';
-import RequireAuth from './components/RequireAuth';
-import LogoutButton from './components/LogoutButton';
-import PropertySearchPage from './components/PropertySearchPage';
-import PublicPropertyDetails from './components/PublicPropertyDetails';
+import React from "react";
+import { BrowserRouter as Router, Routes, Route, Link } from "react-router-dom";
+import { AppBar, Toolbar, Typography, Box, Button } from "@mui/material";
+
+import LandingPage from "./components/LandingPage";
+import LoginForm from "./components/LoginForm";
+import RegisterForm from "./components/RegisterForm";
+import LogoutButton from "./components/LogoutButton";
+import RequireAuth from "./components/RequireAuth";
+
+import PreferencesPage from "./components/PreferencesPage";
+import RecommendationsPage from "./components/RecommendationsPage";
+import PropertySearchPage from "./components/PropertySearchPage";
+import PublicPropertyDetails from "./components/PublicPropertyDetails";
+import PropertyList from "./components/PropertyList";
+import PropertyDetails from "./components/PropertyDetails";
+import PropertyForm from "./components/PropertyForm";
+import TenantList from "./components/TenantList";
 
 function App() {
-  const isAuthenticated = !!localStorage.getItem('token');
+  const isAuthenticated = !!localStorage.getItem("token");
 
   return (
     <Router>
@@ -28,24 +32,29 @@ function App() {
             Home
           </Button>
 
-          {/* ADD: Always visible (logged in or not) */}
           <Button color="inherit" component={Link} to="/search">
             Search
           </Button>
 
-          {isAuthenticated && (
+          {isAuthenticated ? (
             <>
+              <Button color="inherit" component={Link} to="/preferences">
+                Preferences
+              </Button>
+              <Button color="inherit" component={Link} to="/recommendations">
+                Recommendations
+              </Button>
+
               <Button color="inherit" component={Link} to="/properties">
                 Properties
               </Button>
               <Button color="inherit" component={Link} to="/tenants">
                 Tenants
               </Button>
+
               <LogoutButton />
             </>
-          )}
-
-          {!isAuthenticated && (
+          ) : (
             <>
               <Button color="inherit" component={Link} to="/login">
                 Login
@@ -64,9 +73,25 @@ function App() {
           <Route path="/login" element={<LoginForm />} />
           <Route path="/register" element={<RegisterForm />} />
 
-          {/* ADD: UC-03 public routes */}
           <Route path="/search" element={<PropertySearchPage />} />
           <Route path="/search/properties/:id" element={<PublicPropertyDetails />} />
+
+          <Route
+            path="/preferences"
+            element={
+              <RequireAuth>
+                <PreferencesPage />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/recommendations"
+            element={
+              <RequireAuth>
+                <RecommendationsPage />
+              </RequireAuth>
+            }
+          />
 
           <Route
             path="/properties"
@@ -76,7 +101,6 @@ function App() {
               </RequireAuth>
             }
           />
-
           <Route
             path="/properties/new"
             element={
@@ -85,7 +109,6 @@ function App() {
               </RequireAuth>
             }
           />
-
           <Route
             path="/properties/:id"
             element={
@@ -94,7 +117,6 @@ function App() {
               </RequireAuth>
             }
           />
-
           <Route
             path="/properties/:id/edit"
             element={
@@ -103,7 +125,6 @@ function App() {
               </RequireAuth>
             }
           />
-
           <Route
             path="/tenants"
             element={

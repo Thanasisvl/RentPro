@@ -12,12 +12,13 @@ load_dotenv()
 from fastapi.testclient import TestClient
 from app.main import app
 from app.db.session import Base, engine
-from tests.utils import register_and_login
+from tests.utils import register_and_login, seed_locked_criteria_for_tests
 
 @pytest.fixture(autouse=True)
 def clean_db():
     Base.metadata.drop_all(bind=engine)
     Base.metadata.create_all(bind=engine)
+    seed_locked_criteria_for_tests()
     # Clean uploads/contracts folder
     upload_dir = "./uploads/contracts"
     if os.path.exists(upload_dir):
@@ -37,7 +38,7 @@ def test_upload_contract_pdf():
         "title": "Initial Property",
         "description": "Initial property",
         "address": "1 Owner St",
-        "type": "Apartment",
+        "type": "APARTMENT",
         "size": 50.0,
         "price": 1000.0,
     },
@@ -104,7 +105,7 @@ def test_contract_pdf_upload_edge_cases():
             "title": "Initial Property",
             "description": "Initial property",
             "address": "1 Owner St",
-            "type": "Apartment",
+            "type": "APARTMENT",
             "size": 50.0,
             "price": 1000.0,
         },

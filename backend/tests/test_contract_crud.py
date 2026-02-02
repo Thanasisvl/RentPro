@@ -11,12 +11,13 @@ from app.db.session import Base, engine
 from datetime import date, timedelta
 from app.db.session import SessionLocal
 from app.models.user import User, UserRole
-from tests.utils import make_admin, register_and_login, login_headers
+from tests.utils import make_admin, register_and_login, login_headers, seed_locked_criteria_for_tests
 
 @pytest.fixture(autouse=True)
 def clean_db():
     Base.metadata.drop_all(bind=engine)
     Base.metadata.create_all(bind=engine)
+    seed_locked_criteria_for_tests()
 
 client = TestClient(app)
 
@@ -31,7 +32,7 @@ def owner_and_property():
             "title": "Initial Property",
             "description": "Initial property",
             "address": "1 Owner St",
-            "type": "Apartment",
+            "type": "APARTMENT",
             "size": 50.0,
             "price": 1000.0,
         },
@@ -404,7 +405,7 @@ def test_admin_properties_endpoint_returns_all_properties():
             "title": "Owner1 Property",
             "description": "desc",
             "address": "addr1",
-            "type": "Apartment",
+            "type": "APARTMENT",
             "size": 50.0,
             "price": 1000.0,
         },
@@ -422,7 +423,7 @@ def test_admin_properties_endpoint_returns_all_properties():
             "title": "Owner2 Property",
             "description": "desc",
             "address": "addr2",
-            "type": "House",
+            "type": "DETACHED_HOUSE",
             "size": 60.0,
             "price": 1100.0,
         },

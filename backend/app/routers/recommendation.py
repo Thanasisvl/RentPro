@@ -1,0 +1,133 @@
+from __future__ import annotations
+
+from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi.responses import JSONResponse
+from sqlalchemy.orm import Session, joinedload
+
+from app.core.utils import get_current_user
+from app.db.session import get_db
+from app.models.criterion import Criterion
+from app.models.preference_profile import PreferenceProfile
+from app.models.property import Property, PropertyStatus
+from app.models.property_location_features import PropertyLocationFeatures
+from app.schemas.recommendation import RecommendationsResponse, RecommendationItem
+from app.schemas.property import PropertyOut
+from app.services.ahp import compute_ahp, CR_THRESHOLD
+from app.services.topsis import topsis_rank
+from app.core.recommendation_config import (
+    CRITERIA_ORDER,
+    PROPERTY_TYPE_MAPPING,
+    STRICT_PROPERTY_TYPE_MAPPING,
+)
+
+router = APIRouter()
+
+
+@router.get("/", response_model=RecommendationsResponse)
+def get_recommendations(
+    request: Request,
+    db: Session = Depends(get_db),
+):
+    user = get_current_user(request, db)
+
+    profile = db.query(PreferenceProfile).filter(PreferenceProfile.user_id == user.id).first()
+    if profile is None:
+        raise HTTPException(status_code=404, detail="Preference profile not found. Create it via PUT /preference-profiles/me")
+
+    from app.models.pairwise_comparison import PairwiseComparison
+
+    pcs = (
+        db.query(PairwiseComparison)
+        .options(joinedload(PairwiseComparison.criterion_a), joinedload(PairwiseComparison.criterion_b))
+        .filter(PairwiseComparison.profile_id == profile.id)
+        .all()
+    )
+    if not pcs:
+        raise HTTPException(status_code=409, detail="Pairwise comparisons not set. Submit them via POST /preference-profiles/me/pairwise-comparisons")
+
+    criteria = db.query(Criterion).filter(Criterion.is_active == True).all()  # noqa: E712
+    key_to_criterion = {c.key: c for c in criteria}
+
+    missing_required = [k for k in CRITERIA_ORDER if k not in key_to_criterion]
+    if missing_required:
+        raise HTTPException(status_code=500, detail={"message": "Missing required criteria in DB", "missing": missing_required})
+
+    criteria_keys = list(CRITERIA_ORDER)
+    is_benefit = [bool(key_to_criterion[k].is_benefit) for k in criteria_keys]
+    pairwise_tuples = [(pc.criterion_a.key, pc.criterion_b.key, float(pc.value)) for pc in pcs]
+
+    ahp = compute_ahp(criteria_keys=criteria_keys, pairwise=pairwise_tuples, cr_threshold=CR_THRESHOLD)
+    if not ahp.accepted:
+        return JSONResponse(
+            status_code=422,
+            content={
+                "error": "AHP_INCONSISTENT",
+                "cr": round(float(ahp.cr), 6),
+                "threshold": CR_THRESHOLD,
+                "message": "Οι συγκρίσεις δεν είναι συνεπείς. Παρακαλώ αναθεωρήστε.",
+            },
+        )
+
+    weights = [ahp.weights[k] for k in criteria_keys]
+
+    rows = (
+        db.query(Property, PropertyLocationFeatures)
+        .outerjoin(PropertyLocationFeatures, PropertyLocationFeatures.property_id == Property.id)
+        .filter(Property.status == PropertyStatus.AVAILABLE)
+        .all()
+    )
+
+    if not rows:
+        return RecommendationsResponse(items=[], meta={"message": "No available properties to recommend"})
+
+    unknown_types: set[str] = set()
+    missing_area_score = 0
+    decision_matrix = []
+    properties = []
+
+    for prop, loc in rows:
+        ptype = (prop.type or "").strip().upper()
+        if ptype not in PROPERTY_TYPE_MAPPING:
+            unknown_types.add(ptype or "<empty>")
+            ptype_value = None
+        else:
+            ptype_value = float(PROPERTY_TYPE_MAPPING[ptype])
+
+        area_score = loc.area_score if loc is not None else None
+        if area_score is None:
+            missing_area_score += 1
+            area_score = 0.0
+
+        if ptype_value is None:
+            continue
+
+        decision_matrix.append([float(prop.price), float(prop.size), float(ptype_value), float(area_score)])
+        properties.append(prop)
+
+    if STRICT_PROPERTY_TYPE_MAPPING and unknown_types:
+        raise HTTPException(
+            status_code=422,
+            detail={"message": "Missing PROPERTY_TYPE_MAPPING for one or more Property.type values", "unknown_types": sorted(list(unknown_types))},
+        )
+
+    ranked = topsis_rank(decision_matrix=decision_matrix, weights=weights, is_benefit=is_benefit)
+
+    items = [
+        RecommendationItem(
+            property=PropertyOut.model_validate(properties[r.index]),
+            score=r.score,
+            explain={"ahp": {"weights": ahp.weights, "cr": ahp.cr}, "topsis": {"d_best": r.d_best, "d_worst": r.d_worst}},
+        )
+        for r in ranked
+    ]
+
+    return RecommendationsResponse(
+        items=items,
+        meta={
+            "criteria_order": criteria_keys,
+            "cr_threshold": CR_THRESHOLD,
+            "available_properties_total": len(rows),
+            "ranked_properties_count": len(items),
+            "missing_area_score_count": missing_area_score,
+        },
+    )

@@ -8,12 +8,13 @@ from fastapi.testclient import TestClient
 from app.main import app
 from app.db.session import Base, engine
 from app.models.user import UserRole
-from tests.utils import register_and_login
+from tests.utils import register_and_login, seed_locked_criteria_for_tests
 
 @pytest.fixture(autouse=True)
 def clean_db():
     Base.metadata.drop_all(bind=engine)
     Base.metadata.create_all(bind=engine)
+    seed_locked_criteria_for_tests()
 
 client = TestClient(app)
 

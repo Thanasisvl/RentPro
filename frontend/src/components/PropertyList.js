@@ -24,6 +24,7 @@ import EditIcon from '@mui/icons-material/Edit';
 import VisibilityIcon from '@mui/icons-material/Visibility';
 import AddIcon from '@mui/icons-material/Add';
 import api from '../api';
+import StatusChip from "./StatusChip";
 
 function PropertyList() {
   const [properties, setProperties] = useState([]);
@@ -128,7 +129,7 @@ function PropertyList() {
               <ListItem
                 key={p.id}
                 divider
-                secondaryAction={
+                secondaryAction={(
                   <>
                     <Tooltip title="Προβολή">
                       <IconButton component={RouterLink} to={`/properties/${p.id}`}>
@@ -148,11 +149,16 @@ function PropertyList() {
                       </IconButton>
                     </Tooltip>
                   </>
-                }
+                )}
               >
                 <ListItemText
-                  primary={p.title || `Property #${p.id}`}
-                  secondary={`${p.address || ''}${p.status ? ` • ${p.status}` : ''}`}
+                  primary={(
+                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                      <span>{p.title || `Property #${p.id}`}</span>
+                      <StatusChip status={p.status} />
+                    </div>
+                  )}
+                  secondary={p.address || ''}
                 />
               </ListItem>
             ))}
