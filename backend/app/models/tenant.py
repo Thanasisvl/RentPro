@@ -19,7 +19,23 @@ class Tenant(Base):
     email = Column(String, nullable=True)
 
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
-    updated_at = Column(DateTime(timezone=True), onupdate=func.now(), nullable=True)
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
 
-    owner = relationship("User", back_populates="tenants")
+    created_by_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+    updated_by_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+
+    owner = relationship(
+        "User",
+        back_populates="tenants",
+        foreign_keys=[owner_id],
+    )
+    created_by = relationship(
+        "User",
+        foreign_keys=[created_by_id],
+    )
+    updated_by = relationship(
+        "User",
+        foreign_keys=[updated_by_id],
+    )
+
     contracts = relationship("Contract", back_populates="tenant")

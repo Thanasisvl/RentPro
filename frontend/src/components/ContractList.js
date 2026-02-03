@@ -26,7 +26,7 @@ function ContractList() {
     setLoading(true);
     setError("");
     try {
-      const res = await api.get("/contracts");
+      const res = await api.get("/contracts/");
       setContracts(res.data || []);
     } catch (e) {
       setError("Αποτυχία φόρτωσης συμβολαίων.");
@@ -141,6 +141,15 @@ function ContractList() {
                           onClick={() => deleteContract(c.id)}
                         >
                           Delete
+                        </Button>
+                        <Button
+                          size="small"
+                          variant="outlined"
+                          component={RouterLink}
+                          to={`/contracts/${c.id}/edit`}
+                          disabled={disabled}
+                        >
+                          Edit
                         </Button>
                       </Stack>
                     </TableCell>

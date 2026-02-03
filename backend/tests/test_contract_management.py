@@ -207,6 +207,10 @@ def test_uc05_delete_sets_property_available():
     contract_id = c.json()["id"]
     assert _get_property_status_db(prop["id"]) == "RENTED"
 
+    # Policy: cannot delete ACTIVE; terminate first then delete
+    term = client.post(f"/contracts/{contract_id}/terminate", headers=owner_headers)
+    assert term.status_code == 200, term.text
+
     d = client.delete(f"/contracts/{contract_id}", headers=owner_headers)
     assert d.status_code == 200, d.text
     assert _get_property_status_db(prop["id"]) == "AVAILABLE"
@@ -252,7 +256,7 @@ def test_gap3_auto_expire_on_list_sets_expired_and_frees_property():
     prop = create_property(client, owner_headers, title="UC05 P8")
     tenant_id = _create_tenant_db(owner_id=owner["id"], afm="999999999")
 
-    # overdue contract (end_date < today)
+    # overdue contract (end_date < today) -> NOT "running" today, so property should be AVAILABLE per A3
     c = client.post(
         "/contracts/",
         json={
@@ -266,9 +270,11 @@ def test_gap3_auto_expire_on_list_sets_expired_and_frees_property():
     )
     assert c.status_code == 200, c.text
     contract_id = c.json()["id"]
-    assert _get_property_status_db(prop["id"]) == "RENTED"
 
-    # trigger auto-expire
+    # Under A3, an overdue contract should not keep the property RENTED
+    assert _get_property_status_db(prop["id"]) == "AVAILABLE"
+
+    # trigger list (may auto-expire if not already expired)
     lst = client.get("/contracts/", headers=owner_headers)
     assert lst.status_code == 200, lst.text
 

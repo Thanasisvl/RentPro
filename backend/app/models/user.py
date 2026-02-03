@@ -15,5 +15,22 @@ class User(Base):
 
     properties = relationship("Property", back_populates="owner")
 
-    # Option A (owner-scoped tenants)
-    tenants = relationship("Tenant", back_populates="owner", cascade="all, delete-orphan")
+    # FIX: explicit FK for the "owned tenants" relationship
+    tenants = relationship(
+        "Tenant",
+        back_populates="owner",
+        foreign_keys="Tenant.owner_id",
+        cascade="all, delete-orphan",
+    )
+
+    # (optional) audit convenience relationships (no cascade)
+    created_tenants = relationship(
+        "Tenant",
+        foreign_keys="Tenant.created_by_id",
+        viewonly=True,
+    )
+    updated_tenants = relationship(
+        "Tenant",
+        foreign_keys="Tenant.updated_by_id",
+        viewonly=True,
+    )

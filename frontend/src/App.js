@@ -18,6 +18,7 @@ import PropertyForm from "./components/PropertyForm";
 import TenantList from "./components/TenantList";
 import TenantForm from "./components/TenantForm";
 import ContractForm from "./components/ContractForm";
+import ContractEditForm from "./components/ContractEditForm";
 import ContractList from "./components/ContractList";
 
 function App() {
@@ -163,6 +164,14 @@ function App() {
             element={
               <RequireAuth>
                 <ContractForm />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/contracts/:id/edit"
+            element={
+              <RequireAuth>
+                <ContractEditForm />
               </RequireAuth>
             }
           />

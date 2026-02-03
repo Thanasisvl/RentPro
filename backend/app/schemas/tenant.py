@@ -1,4 +1,5 @@
 from pydantic import BaseModel, EmailStr, ConfigDict, Field
+from datetime import datetime
 
 class TenantBase(BaseModel):
     name: str
@@ -18,4 +19,8 @@ class TenantUpdate(BaseModel):
 class TenantOut(TenantBase):
     id: int
     owner_id: int
+    created_at: datetime | None = None
+    updated_at: datetime | None = None
+    created_by_id: int | None = None
+    updated_by_id: int | None = None
     model_config = ConfigDict(from_attributes=True)

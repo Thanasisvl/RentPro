@@ -4,7 +4,7 @@ from fastapi import HTTPException
 from app.models.tenant import Tenant
 from app.schemas.tenant import TenantCreate, TenantUpdate
 
-def create_tenant(db: Session, tenant: TenantCreate, owner_id: int) -> Tenant:
+def create_tenant(db: Session, tenant: TenantCreate, owner_id: int, *, created_by_id: int | None = None) -> Tenant:
     exists = (
         db.query(Tenant)
         .filter(Tenant.owner_id == owner_id, Tenant.afm == tenant.afm)
@@ -15,6 +15,9 @@ def create_tenant(db: Session, tenant: TenantCreate, owner_id: int) -> Tenant:
 
     data = tenant.model_dump(exclude={"owner_id"})
     db_tenant = Tenant(**data, owner_id=owner_id)
+
+    db_tenant.created_by_id = created_by_id
+    db_tenant.updated_by_id = created_by_id
 
     db.add(db_tenant)
     db.commit()
@@ -30,7 +33,7 @@ def list_tenants(db: Session, *, owner_id: int | None = None, skip: int = 0, lim
         q = q.filter(Tenant.owner_id == owner_id)
     return q.offset(skip).limit(limit).all()
 
-def update_tenant(db: Session, tenant_id: int, tenant: TenantUpdate):
+def update_tenant(db: Session, tenant_id: int, tenant: TenantUpdate, *, updated_by_id: int | None = None):
     db_tenant = db.query(Tenant).filter(Tenant.id == tenant_id).first()
     if not db_tenant:
         return None
@@ -48,6 +51,8 @@ def update_tenant(db: Session, tenant_id: int, tenant: TenantUpdate):
 
     for k, v in data.items():
         setattr(db_tenant, k, v)
+
+    db_tenant.updated_by_id = updated_by_id
 
     db.commit()
     db.refresh(db_tenant)
