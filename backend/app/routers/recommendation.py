@@ -58,9 +58,7 @@ def get_recommendations(
             detail="Pairwise comparisons not set. Submit them via POST /preference-profiles/me/pairwise-comparisons",
         )
 
-    criteria = (
-        db.query(Criterion).filter(Criterion.is_active).all()
-    )  # noqa: E712
+    criteria = db.query(Criterion).filter(Criterion.is_active).all()  # noqa: E712
     key_to_criterion = {c.key: c for c in criteria}
 
     missing_required = [k for k in CRITERIA_ORDER if k not in key_to_criterion]
