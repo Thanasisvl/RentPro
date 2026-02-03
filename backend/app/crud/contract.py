@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from datetime import date
 
 from sqlalchemy.orm import Session
@@ -37,7 +39,6 @@ def get_contracts(
 ):
     q = db.query(Contract)
 
-    # owner scope via Property.owner_id
     if owner_id is not None:
         q = q.join(Property).filter(Property.owner_id == owner_id)
 
@@ -58,7 +59,7 @@ def get_contracts(
             Contract.end_date >= today,
         )
 
-    return q.offset(skip).limit(limit).all()
+    return q.order_by(Contract.id.desc()).offset(skip).limit(limit).all()
 
 
 def update_contract(
@@ -66,7 +67,7 @@ def update_contract(
     contract_id: int,
     contract: ContractUpdate,
     *,
-    updated_by_id: int | None = None
+    updated_by_id: int | None = None,
 ):
     db_contract = db.query(Contract).filter(Contract.id == contract_id).first()
     if not db_contract:

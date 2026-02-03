@@ -1,7 +1,4 @@
-import os
 from dotenv import load_dotenv
-
-
 from datetime import date, timedelta
 
 import pytest
@@ -17,8 +14,6 @@ from tests.utils import (
 )
 
 load_dotenv()
-os.environ["RENTPRO_DATABASE_URL"] = "sqlite:///./test_test.db"
-os.environ["ACCESS_TOKEN_EXPIRE_MINUTES"] = "60"
 
 
 @pytest.fixture(autouse=True)

@@ -1,13 +1,14 @@
-import os
+from __future__ import annotations
 
-from dotenv import load_dotenv
+from datetime import date, timedelta
 
 import pytest
 from fastapi.testclient import TestClient
 from starlette.status import HTTP_422_UNPROCESSABLE_CONTENT
 
-from app.db.session import Base, engine
+from app.db.session import Base, SessionLocal, engine
 from app.main import app
+from app.models.contract import Contract, ContractStatus
 from tests.utils import (
     make_admin,
     register_and_login,
@@ -15,8 +16,9 @@ from tests.utils import (
     set_property_status,
 )
 
-os.environ["RENTPRO_DATABASE_URL"] = "sqlite:///./test_test.db"
-load_dotenv()
+# NOTE:
+# - Do NOT set os.environ / load_dotenv here.
+# - tests/conftest.py is responsible for env setup.
 
 
 @pytest.fixture(autouse=True)
@@ -313,9 +315,42 @@ def test_cross_user_property_access(owner_headers):
         },
         headers=owner_headers,
     )
+    assert resp.status_code == 200, resp.text
     prop_id = resp.json()["id"]
 
-    # IMPORTANT: make it non-public for GET authorization test
+    # Create tenant (needed for contract FK)
+    tenant_resp = client.post(
+        "/tenants/",
+        json={
+            "name": "Tenant For Rent",
+            "afm": "123456789",
+            "phone": "2100000000",
+            "email": "tenant_rent@example.com",
+        },
+        headers=owner_headers,
+    )
+    assert tenant_resp.status_code == 200, tenant_resp.text
+    tenant_id = tenant_resp.json()["id"]
+
+    # Make it non-public the correct way: create a running ACTIVE contract.
+    # This ensures sync-on-access keeps the property in RENTED state.
+    db = SessionLocal()
+    try:
+        db.add(
+            Contract(
+                property_id=prop_id,
+                tenant_id=tenant_id,
+                start_date=date.today() - timedelta(days=10),
+                end_date=date.today() + timedelta(days=10),
+                rent_amount=1200.0,
+                status=ContractStatus.ACTIVE,
+            )
+        )
+        db.commit()
+    finally:
+        db.close()
+
+    # Optional: keep (doesn't hurt), but contract is what makes it truly non-public now
     set_property_status(prop_id, "RENTED")
 
     # Register and login as another owner
@@ -377,6 +412,35 @@ def test_cross_user_property_access(owner_headers):
         ).status_code
         == 200
     )
+
+    # While there is an ACTIVE contract, delete should fail (policy)
+    assert client.delete(
+        f"/properties/{prop_id}", headers=admin_headers
+    ).status_code in (
+        400,
+        409,
+    )
+
+    # Make property deletable:
+    # 1) Expire the contract
+    # 2) Remove contract row(s) for this property (if API requires no contracts at all)
+    db = SessionLocal()
+    try:
+        contract = db.query(Contract).filter(Contract.property_id == prop_id).first()
+        assert contract is not None
+        contract.status = ContractStatus.EXPIRED
+        contract.end_date = date.today() - timedelta(days=1)
+        db.commit()
+
+        db.query(Contract).filter(Contract.property_id == prop_id).delete(
+            synchronize_session=False
+        )
+        db.commit()
+    finally:
+        db.close()
+
+    set_property_status(prop_id, "AVAILABLE")
+
     assert (
         client.delete(f"/properties/{prop_id}", headers=admin_headers).status_code
         == 200

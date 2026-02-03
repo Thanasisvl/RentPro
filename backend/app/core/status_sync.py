@@ -20,6 +20,7 @@ def sync_property_status(
     Returns the computed PropertyStatus, or None if property not found.
     """
     today = today or date.today()
+    changed = False
 
     property_obj = db.query(Property).filter(Property.id == property_id).first()
     if not property_obj:
@@ -37,9 +38,7 @@ def sync_property_status(
     )
     for c in overdue:
         c.status = ContractStatus.EXPIRED
-
-    if overdue:
-        db.commit()
+        changed = True
 
     # 2) Is there a "running" ACTIVE contract today?
     running_exists = (
@@ -58,7 +57,38 @@ def sync_property_status(
 
     if property_obj.status != new_status:
         property_obj.status = new_status
+        changed = True
+
+    if changed:
         db.commit()
         db.refresh(property_obj)
 
     return new_status
+
+
+def sync_overdue_contracts_global(db: Session, *, today: date | None = None) -> int:
+    """
+    Expire all overdue ACTIVE contracts globally and recompute affected properties.
+    Returns number of affected properties.
+    """
+    today = today or date.today()
+
+    overdue_contracts = (
+        db.query(Contract)
+        .filter(Contract.status == ContractStatus.ACTIVE, Contract.end_date < today)
+        .all()
+    )
+    if not overdue_contracts:
+        return 0
+
+    affected_property_ids: set[int] = set()
+    for c in overdue_contracts:
+        c.status = ContractStatus.EXPIRED
+        affected_property_ids.add(c.property_id)
+
+    db.commit()
+
+    for pid in affected_property_ids:
+        sync_property_status(db, pid, today=today)
+
+    return len(affected_property_ids)

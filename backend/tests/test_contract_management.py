@@ -1,7 +1,3 @@
-import os
-
-from dotenv import load_dotenv
-
 from datetime import date, timedelta
 from io import BytesIO
 
@@ -10,7 +6,6 @@ from fastapi.testclient import TestClient
 
 from app.db.session import Base, SessionLocal, engine
 from app.main import app
-from app.models.contract import Contract
 from app.models.property import Property, PropertyStatus
 from app.models.tenant import Tenant
 from tests.utils import (
@@ -20,11 +15,6 @@ from tests.utils import (
     register_and_login,
     seed_locked_criteria_for_tests,
 )
-
-os.environ["RENTPRO_DATABASE_URL"] = "sqlite:///./test_test.db"
-os.environ["ACCESS_TOKEN_EXPIRE_MINUTES"] = "60"
-load_dotenv()
-
 
 client = TestClient(app)
 
@@ -60,16 +50,6 @@ def _get_property_status_db(property_id: int) -> str:
         p = db.query(Property).filter(Property.id == property_id).first()
         assert p is not None
         return p.status.value if hasattr(p.status, "value") else str(p.status)
-    finally:
-        db.close()
-
-
-def _get_contract_db(contract_id: int) -> Contract:
-    db = SessionLocal()
-    try:
-        c = db.query(Contract).filter(Contract.id == contract_id).first()
-        assert c is not None
-        return c
     finally:
         db.close()
 
@@ -328,3 +308,124 @@ def test_gap3_auto_expire_on_list_sets_expired_and_frees_property():
     row = next(x for x in lst.json() if x["id"] == contract_id)
     assert row["status"] == "EXPIRED"
     assert _get_property_status_db(prop["id"]) == "AVAILABLE"
+
+
+def test_l2_contract_list_filters_running_today_and_status():
+    owner, owner_headers = register_and_login(
+        client, "l2_owner_a", "pw", "l2_owner_a@example.com", is_owner=True
+    )
+
+    prop1 = create_property(client, owner_headers, title="L2 P1")
+    prop2 = create_property(client, owner_headers, title="L2 P2")
+
+    t1 = _create_tenant_db(owner_id=owner["id"], afm="901901901")
+    t2 = _create_tenant_db(owner_id=owner["id"], afm="902902902")
+
+    # Running today (ACTIVE, spans today)
+    c1 = client.post(
+        "/contracts/",
+        json={
+            "property_id": prop1["id"],
+            "tenant_id": t1,
+            "start_date": str(date.today() - timedelta(days=5)),
+            "end_date": str(date.today() + timedelta(days=5)),
+            "rent_amount": 1000.0,
+        },
+        headers=owner_headers,
+    )
+    assert c1.status_code == 200, c1.text
+    c1_id = c1.json()["id"]
+
+    # Overdue (end_date < today) -> should be EXPIRED after list auto-expire
+    c2 = client.post(
+        "/contracts/",
+        json={
+            "property_id": prop2["id"],
+            "tenant_id": t2,
+            "start_date": str(date.today() - timedelta(days=20)),
+            "end_date": str(date.today() - timedelta(days=1)),
+            "rent_amount": 800.0,
+        },
+        headers=owner_headers,
+    )
+    assert c2.status_code == 200, c2.text
+    c2_id = c2.json()["id"]
+
+    # running_today should return ONLY c1
+    r = client.get("/contracts/?running_today=true", headers=owner_headers)
+    assert r.status_code == 200, r.text
+    ids = {x["id"] for x in r.json()}
+    assert c1_id in ids
+    assert c2_id not in ids
+
+    # status=EXPIRED should include c2 after auto-expire happens on list
+    r2 = client.get("/contracts/?status=EXPIRED", headers=owner_headers)
+    assert r2.status_code == 200, r2.text
+    ids2 = {x["id"] for x in r2.json()}
+    assert c2_id in ids2
+
+
+def test_l2_pdf_url_in_list_and_pdf_redirect_with_auth():
+    owner, owner_headers = register_and_login(
+        client, "l2_owner_pdf", "pw", "l2_owner_pdf@example.com", is_owner=True
+    )
+    prop = create_property(client, owner_headers, title="L2 P PDF")
+    tenant_id = _create_tenant_db(owner_id=owner["id"], afm="903903903")
+
+    c = client.post(
+        "/contracts/",
+        json={
+            "property_id": prop["id"],
+            "tenant_id": tenant_id,
+            "start_date": str(date.today()),
+            "end_date": str(date.today() + timedelta(days=30)),
+            "rent_amount": 1100.0,
+        },
+        headers=owner_headers,
+    )
+    assert c.status_code == 200, c.text
+    contract_id = c.json()["id"]
+
+    # No PDF yet -> /pdf should be 404
+    no_pdf = client.get(
+        f"/contracts/{contract_id}/pdf",
+        headers=owner_headers,
+        follow_redirects=False,
+    )
+    assert no_pdf.status_code == 404, no_pdf.text
+
+    # Upload a small valid PDF
+    pdf_bytes = BytesIO(b"%PDF-1.4\n1 0 obj\n<<>>\nendobj\ntrailer\n<<>>\n%%EOF\n")
+    up = client.post(
+        f"/contracts/{contract_id}/upload",
+        headers=owner_headers,
+        files={"file": ("contract.pdf", pdf_bytes, "application/pdf")},
+    )
+    assert up.status_code == 200, up.text
+
+    # List should include pdf_url
+    lst = client.get("/contracts/", headers=owner_headers)
+    assert lst.status_code == 200, lst.text
+    row = next(x for x in lst.json() if x["id"] == contract_id)
+    assert row.get("pdf_url") is not None
+    assert row["pdf_url"].startswith("/uploads/")
+
+    # /pdf should redirect to /uploads/...
+    redir = client.get(
+        f"/contracts/{contract_id}/pdf",
+        headers=owner_headers,
+        follow_redirects=False,
+    )
+    assert redir.status_code in (302, 307), redir.text
+    assert redir.headers["location"].startswith("/uploads/")
+
+    # Another owner must NOT be able to access /pdf
+    _, other_headers = register_and_login(
+        client, "l2_owner_other", "pw", "l2_owner_other@example.com", is_owner=True
+    )
+    forbidden = client.get(
+        f"/contracts/{contract_id}/pdf",
+        headers=other_headers,
+        follow_redirects=False,
+    )
+    assert forbidden.status_code == 403

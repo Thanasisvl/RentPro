@@ -3,6 +3,7 @@ from typing import List
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy.orm import Session
 
+from app.core.status_sync import sync_overdue_contracts_global, sync_property_status
 from app.core.utils import get_current_user, is_admin
 from app.crud import property as crud_property
 from app.db.session import get_db
@@ -40,7 +41,7 @@ def create_property(
     elif user.role == UserRole.ADMIN:
         if property.owner_id is None:
             raise HTTPException(
-                status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
                 detail="owner_id is required for admins",
             )
 
@@ -77,21 +78,24 @@ def list_properties(
 ):
     user = get_current_user(request, db)
 
-    # ADMIN: βλέπει όλα
     if user.role == UserRole.ADMIN:
-        return crud_property.get_properties(db=db, skip=skip, limit=limit)
+        items = crud_property.get_properties(db=db, skip=skip, limit=limit)
+        for p in items:
+            sync_property_status(db, p.id)
+        return items
 
-    # OWNER: βλέπει μόνο τα δικά του
     if user.role == UserRole.OWNER:
-        return (
+        items = (
             db.query(Property)
             .filter(Property.owner_id == user.id)
             .offset(skip)
             .limit(limit)
             .all()
         )
+        for p in items:
+            sync_property_status(db, p.id)
+        return items
 
-    # USER: δεν έχει λόγο να βλέπει “private list” (υπάρχει public /search)
     raise HTTPException(
         status_code=status.HTTP_403_FORBIDDEN,
         detail="Only owners or admins can list properties",
@@ -104,6 +108,9 @@ def search_properties(
     db: Session = Depends(get_db),
 ):
     # Public endpoint (UC-03): no auth required
+    # Ensure overdue ACTIVE contracts are expired so property availability is not stale.
+    sync_overdue_contracts_global(db)
+
     items, total = crud_property.search_properties(db=db, filters=filters)
     return {
         "meta": PropertySearchMeta(
@@ -126,7 +133,10 @@ def get_property(
     if not db_property:
         raise HTTPException(status_code=404, detail="Property not found")
 
-    # Public card: allow AVAILABLE without authentication
+    # A3: sync on access so expired contracts flip property to AVAILABLE immediately.
+    sync_property_status(db, property_id)
+    db.refresh(db_property)
+
     if db_property.status == PropertyStatus.AVAILABLE:
         return db_property
 

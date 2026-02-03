@@ -1,8 +1,9 @@
-import os
+from __future__ import annotations
+
 from datetime import date, datetime, timezone
-from typing import List
 
 from fastapi import APIRouter, Depends, File, HTTPException, Query, Request, UploadFile
+from fastapi.responses import RedirectResponse
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
@@ -17,9 +18,6 @@ from app.models.tenant import Tenant
 from app.schemas.contract import ContractCreate, ContractOut, ContractUpdate
 
 router = APIRouter()
-
-UPLOAD_DIR = "./uploads/contracts"
-os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 
 def _auto_expire_contracts(db: Session, *, owner_id: int | None = None) -> int:
@@ -48,11 +46,9 @@ def _auto_expire_contracts(db: Session, *, owner_id: int | None = None) -> int:
 
     expired_count = 0
     for c in overdue:
-        # expire contract
         c.status = ContractStatus.EXPIRED
         expired_count += 1
 
-        # free property only if there isn't another "current" ACTIVE contract
         other_current_active_exists = (
             db.query(Contract.id)
             .filter(
@@ -69,6 +65,29 @@ def _auto_expire_contracts(db: Session, *, owner_id: int | None = None) -> int:
 
     db.commit()
     return expired_count
+
+
+def _pdf_url(pdf_file: str | None) -> str | None:
+    """
+    pdf_file is stored as a relative path (e.g. "contracts/<file>.pdf") from upload_contract_pdf.
+    Public URL is served by StaticFiles: /uploads/<relative-path>
+    """
+    if not pdf_file:
+        return None
+
+    rel = pdf_file.lstrip("/").replace("\\", "/")
+
+    # Backward compatibility: if older rows store only filename
+    if "/" not in rel:
+        rel = f"contracts/{rel}"
+
+    return f"/uploads/{rel}"
+
+
+def _to_out(c: Contract) -> ContractOut:
+    dto = ContractOut.model_validate(c)
+    dto.pdf_url = _pdf_url(getattr(c, "pdf_file", None))
+    return dto
 
 
 @router.post("/", response_model=ContractOut)
@@ -98,12 +117,9 @@ def create_contract(
             status_code=403, detail="Tenant does not belong to current owner"
         )
 
-    # A3 anti-drift: normalize property status before checks
     sync_property_status(db, property_obj.id)
 
     today = date.today()
-
-    # A1: block if there is a running ACTIVE contract today (do NOT rely on property.status)
     running_exists = (
         db.query(Contract.id)
         .filter(
@@ -124,16 +140,16 @@ def create_contract(
         db_contract = crud_contract.create_contract(db, contract, created_by_id=user.id)
     except IntegrityError:
         db.rollback()
-        # DB-level unique partial index triggered
         raise HTTPException(
             status_code=409, detail="Property already has an ACTIVE contract"
         )
 
     sync_property_status(db, db_contract.property_id)
-    return db_contract
+    db.refresh(db_contract)
+    return _to_out(db_contract)
 
 
-@router.get("/", response_model=List[ContractOut])
+@router.get("/", response_model=list[ContractOut])
 def list_contracts(
     request: Request,
     db: Session = Depends(get_db),
@@ -143,18 +159,26 @@ def list_contracts(
     property_id: int | None = Query(default=None),
     tenant_id: int | None = Query(default=None),
     status: ContractStatus | None = Query(default=None),
-    running_today: bool | None = Query(
-        default=None, description="If true: start<=today<=end and status=ACTIVE"
+    running_today: bool = Query(
+        default=False, description="If true: start<=today<=end and status=ACTIVE"
     ),
-    skip: int = 0,
-    limit: int = 100,
+    skip: int = Query(default=0, ge=0),
+    limit: int = Query(default=100, ge=1, le=500),
 ):
     user = get_current_user(request, db)
     admin = is_admin(request, db)
 
-    effective_owner_id = owner_id if admin else user.id
+    if owner_id is not None and not admin:
+        raise HTTPException(status_code=403, detail="owner_id filter is admin-only")
 
-    return crud_contract.get_contracts(
+    effective_owner_id = (
+        owner_id if admin and owner_id is not None else (None if admin else user.id)
+    )
+
+    # Keep the list fresh (UC-05 A3): expire overdue contracts before listing
+    _auto_expire_contracts(db, owner_id=effective_owner_id)
+
+    items = crud_contract.get_contracts(
         db,
         skip=skip,
         limit=limit,
@@ -164,6 +188,7 @@ def list_contracts(
         status=status,
         running_today=running_today,
     )
+    return [_to_out(c) for c in items]
 
 
 @router.get("/{contract_id}", response_model=ContractOut)
@@ -182,7 +207,6 @@ def get_contract(
             status_code=403, detail="Not authorized to view this contract"
         )
 
-    # Gap #3: auto-expire on access (targeted)
     today = date.today()
     if db_contract.status == ContractStatus.ACTIVE and db_contract.end_date < today:
         db_contract.status = ContractStatus.EXPIRED
@@ -204,7 +228,7 @@ def get_contract(
         db.commit()
         db.refresh(db_contract)
 
-    return db_contract
+    return _to_out(db_contract)
 
 
 @router.put("/{contract_id}", response_model=ContractOut)
@@ -241,7 +265,6 @@ def update_contract(
             status_code=409, detail="Changing property_id is not allowed"
         )
 
-    # Single tenant-change check (dedup)
     if (
         getattr(contract, "tenant_id", None) is not None
         and contract.tenant_id != db_contract.tenant_id
@@ -266,37 +289,8 @@ def update_contract(
         raise HTTPException(status_code=404, detail="Contract not found")
 
     sync_property_status(db, updated.property_id)
-    return updated
-
-
-@router.delete("/{contract_id}")
-def delete_contract(
-    contract_id: int,
-    request: Request,
-    db: Session = Depends(get_db),
-):
-    db_contract = crud_contract.get_contract(db, contract_id)
-    if not db_contract:
-        raise HTTPException(status_code=404, detail="Contract not found")
-
-    user = get_current_user(request, db)
-    if not is_admin(request, db) and db_contract.property.owner_id != user.id:
-        raise HTTPException(status_code=403, detail="Not authorized")
-
-    if db_contract.status == ContractStatus.ACTIVE:
-        raise HTTPException(
-            status_code=409,
-            detail="Cannot delete ACTIVE contract; terminate it instead",
-        )
-
-    property_id = db_contract.property_id
-
-    db.delete(db_contract)
-    db.commit()
-
-    sync_property_status(db, property_id)
-
-    return {"ok": True}
+    db.refresh(updated)
+    return _to_out(updated)
 
 
 @router.post("/{contract_id}/terminate", response_model=ContractOut)
@@ -324,9 +318,8 @@ def terminate_contract(
     db.commit()
     db.refresh(db_contract)
 
-    # A3: derive property.status from contracts (don’t hard-set AVAILABLE here)
     sync_property_status(db, db_contract.property_id)
-    return db_contract
+    return _to_out(db_contract)
 
 
 @router.post("/{contract_id}/upload", response_model=ContractOut)
@@ -342,7 +335,6 @@ async def upload_contract_pdf(
     if not db_contract:
         raise HTTPException(status_code=404, detail="Contract not found")
 
-    # auth: owner of property or admin
     if (not is_admin(request, db)) and db_contract.property.owner_id != user.id:
         raise HTTPException(status_code=403, detail="Not authorized")
 
@@ -350,12 +342,66 @@ async def upload_contract_pdf(
         raise HTTPException(status_code=409, detail="PDF already uploaded")
 
     dest_abs, rel = contract_pdf_destination(contract_id)
-
     await save_pdf_upload(file, dest_abs_path=dest_abs)
 
-    # store relative path (stable + portable)
-    db_contract.pdf_file = rel
+    db_contract.pdf_file = rel  # e.g. "contracts/<file>.pdf"
     db_contract.updated_by_id = user.id
     db.commit()
     db.refresh(db_contract)
-    return db_contract
+    return _to_out(db_contract)
+
+
+@router.get("/{contract_id}/pdf")
+def get_contract_pdf_redirect(
+    request: Request,
+    contract_id: int,
+    db: Session = Depends(get_db),
+):
+    """
+    Auth-guarded PDF access:
+    - checks ownership/admin like GET /contracts/{id}
+    - redirects to the static /uploads/... URL
+    """
+    db_contract = crud_contract.get_contract(db, contract_id)
+    if not db_contract:
+        raise HTTPException(status_code=404, detail="Contract not found")
+
+    user = get_current_user(request, db)
+    if db_contract.property.owner_id != user.id and not is_admin(request, db):
+        raise HTTPException(status_code=403, detail="Not authorized")
+
+    url = _pdf_url(getattr(db_contract, "pdf_file", None))
+    if not url:
+        raise HTTPException(status_code=404, detail="No PDF uploaded for this contract")
+
+    return RedirectResponse(url=url, status_code=307)
+
+
+@router.delete("/{contract_id}")
+def delete_contract(
+    contract_id: int,
+    request: Request,
+    db: Session = Depends(get_db),
+):
+    db_contract = crud_contract.get_contract(db, contract_id)
+    if not db_contract:
+        raise HTTPException(status_code=404, detail="Contract not found")
+
+    user = get_current_user(request, db)
+    if (not is_admin(request, db)) and db_contract.property.owner_id != user.id:
+        raise HTTPException(status_code=403, detail="Not authorized")
+
+    # Policy: cannot delete ACTIVE; terminate it first
+    if db_contract.status == ContractStatus.ACTIVE:
+        raise HTTPException(
+            status_code=409,
+            detail="Cannot delete ACTIVE contract; terminate it first",
+        )
+
+    property_id = db_contract.property_id
+    db.delete(db_contract)
+    db.commit()
+
+    # Keep property status consistent (A3)
+    sync_property_status(db, property_id)
+    return {"ok": True}

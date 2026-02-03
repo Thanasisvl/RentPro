@@ -1,6 +1,6 @@
 from typing import List
 
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from sqlalchemy.orm import Session
 
 from app.core.utils import get_current_user, is_admin
@@ -28,12 +28,23 @@ def create_tenant(
 
 @router.get("/", response_model=List[TenantOut])
 def list_tenants(
-    request: Request, db: Session = Depends(get_db), skip: int = 0, limit: int = 100
+    request: Request,
+    db: Session = Depends(get_db),
+    skip: int = 0,
+    limit: int = 100,
+    owner_id: int | None = Query(
+        default=None, description="Admin-only filter by owner id"
+    ),
 ):
     user = get_current_user(request, db)
 
     if is_admin(request, db):
-        return crud_tenant.list_tenants(db, owner_id=None, skip=skip, limit=limit)
+        # admin can list all, and optionally filter by owner_id
+        return crud_tenant.list_tenants(db, owner_id=owner_id, skip=skip, limit=limit)
+
+    # non-admin cannot use owner_id filter
+    if owner_id is not None:
+        raise HTTPException(status_code=403, detail="owner_id filter is admin-only")
 
     return crud_tenant.list_tenants(db, owner_id=user.id, skip=skip, limit=limit)
 

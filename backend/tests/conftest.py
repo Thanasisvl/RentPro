@@ -1,16 +1,15 @@
 import os
 import sys
 
+# IMPORTANT: set test env BEFORE app/db/session.py is imported anywhere.
+# This prevents the SQLAlchemy engine from being created against the dev DB.
+os.environ.setdefault("RENTPRO_DATABASE_URL", "sqlite:///./test_test.db")
+os.environ.setdefault("ACCESS_TOKEN_EXPIRE_MINUTES", "60")
+
 from dotenv import load_dotenv
 
-
-def pytest_configure() -> None:
-    # Optional: load .env (if present)
-    load_dotenv()
-
-    # Ensure test defaults (CI can override)
-    os.environ.setdefault("RENTPRO_DATABASE_URL", "sqlite:///./test_test.db")
-    os.environ.setdefault("ACCESS_TOKEN_EXPIRE_MINUTES", "60")
+# Optional: load .env without overriding the test defaults above
+load_dotenv()
 
 
 # Ensure "backend/" is on sys.path so "import app.*" works during pytest collection.

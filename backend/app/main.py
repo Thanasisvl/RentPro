@@ -7,6 +7,7 @@ from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import ValidationError
 from sqlalchemy.exc import IntegrityError, OperationalError
+from pathlib import Path
 
 import app.models
 from app.core.jwt_middleware import JWTAuthMiddleware
@@ -92,9 +93,10 @@ app.add_middleware(JWTAuthMiddleware)
 
 app.include_router(api_router)
 
-app.mount(
-    "/uploads/contracts", StaticFiles(directory="uploads/contracts"), name="contracts"
-)
+BASE_DIR = Path(__file__).resolve().parent.parent
+UPLOADS_DIR = BASE_DIR / "uploads"
+
+app.mount("/uploads", StaticFiles(directory=str(UPLOADS_DIR)), name="uploads")
 
 
 @app.get("/")

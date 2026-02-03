@@ -1,4 +1,7 @@
+from __future__ import annotations
+
 from datetime import date, datetime
+from typing import Optional
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
@@ -43,12 +46,22 @@ class ContractUpdate(BaseModel):
         return self
 
 
-class ContractOut(ContractBase):
+class ContractOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: int
+
+    # Needed for tracking/listing
+    property_id: int
+    tenant_id: int
+    start_date: date
+    end_date: date
+    rent_amount: float
+
     status: ContractStatus
-    pdf_file: str | None = None
+    pdf_file: Optional[str] = None
+    pdf_url: Optional[str] = None
+
     terminated_at: datetime | None = None
     created_at: datetime | None = None
     updated_at: datetime | None = None

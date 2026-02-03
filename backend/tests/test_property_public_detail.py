@@ -1,12 +1,14 @@
-import os
+from __future__ import annotations
 
-from dotenv import load_dotenv
+from datetime import date, timedelta
+
 
 import pytest
 from fastapi.testclient import TestClient
 
-from app.db.session import Base, engine
+from app.db.session import Base, SessionLocal, engine
 from app.main import app
+from app.models.contract import Contract, ContractStatus
 from tests.utils import (
     create_property,
     login_headers,
@@ -15,9 +17,6 @@ from tests.utils import (
     seed_locked_criteria_for_tests,
     set_property_status,
 )
-
-os.environ["RENTPRO_DATABASE_URL"] = "sqlite:///./test_test.db"
-load_dotenv()
 
 client = TestClient(app)
 
@@ -50,7 +49,37 @@ def test_public_detail_available_is_accessible(owner_headers):
 
 def test_public_detail_rented_hidden_but_owner_can_view(owner_headers):
     p = create_property(client, owner_headers, address="Athens Center")
-    set_property_status(p["id"], "RENTED")
+
+    # Create tenant via API (so FK exists)
+    tenant_resp = client.post(
+        "/tenants/",
+        json={
+            "name": "Tenant Detail",
+            "afm": "123456789",
+            "phone": "2100000000",
+            "email": "tenant_detail@example.com",
+        },
+        headers=owner_headers,
+    )
+    assert tenant_resp.status_code == 200, tenant_resp.text
+    tenant_id = tenant_resp.json()["id"]
+
+    # Make it truly RENTED: create a running ACTIVE contract (sync-on-access will keep RENTED)
+    db = SessionLocal()
+    try:
+        db.add(
+            Contract(
+                property_id=p["id"],
+                tenant_id=tenant_id,
+                start_date=date.today() - timedelta(days=5),
+                end_date=date.today() + timedelta(days=5),
+                rent_amount=900.0,
+                status=ContractStatus.ACTIVE,
+            )
+        )
+        db.commit()
+    finally:
+        db.close()
 
     public_resp = client.get(f"/properties/{p['id']}")
     assert public_resp.status_code == 404
@@ -64,7 +93,6 @@ def test_admin_can_view_non_available_details(owner_headers):
     p = create_property(client, owner_headers)
     set_property_status(p["id"], "INACTIVE")
 
-    # create admin + fresh token
     register_and_login(
         client,
         "admin_detail",
