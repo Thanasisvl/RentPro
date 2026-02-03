@@ -66,8 +66,10 @@ def is_admin(request: Request, db: Session) -> bool:
 def require_admin(
     request: Request,
     db: Session = Depends(get_db),
-    ):
+):
     user = get_current_user(request, db)
     if user.role != UserRole.ADMIN:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Admin privileges required")
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail="Admin privileges required"
+        )
     return user

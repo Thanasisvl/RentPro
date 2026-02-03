@@ -4,15 +4,15 @@ from fastapi import APIRouter, Depends, Request
 from sqlalchemy.orm import Session
 
 from app.core.utils import get_current_user
+from app.crud import preference_profile as crud_pref
 from app.db.session import get_db
+from app.models.criterion import Criterion
 from app.schemas.preference_profile import (
     PairwiseComparisonBatchIn,
     PairwiseComparisonOut,
     PreferenceProfileOut,
     PreferenceProfileUpsert,
 )
-from app.crud import preference_profile as crud_pref
-from app.models.criterion import Criterion
 
 router = APIRouter()
 
@@ -39,12 +39,18 @@ def set_my_pairwise_comparisons(
     if profile is None:
         # explicit stage separation as you requested
         from fastapi import HTTPException
-        raise HTTPException(status_code=404, detail="Preference profile not found. Create it via PUT /preference-profiles/me")
+
+        raise HTTPException(
+            status_code=404,
+            detail="Preference profile not found. Create it via PUT /preference-profiles/me",
+        )
 
     rows = crud_pref.replace_pairwise_comparisons_for_profile(
         db,
         profile_id=profile.id,
-        comparisons=[(c.criterion_a_key, c.criterion_b_key, c.value) for c in body.comparisons],
+        comparisons=[
+            (c.criterion_a_key, c.criterion_b_key, c.value) for c in body.comparisons
+        ],
     )
 
     # Map ids -> keys for response

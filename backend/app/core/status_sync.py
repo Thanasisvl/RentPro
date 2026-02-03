@@ -1,13 +1,16 @@
 from __future__ import annotations
 
 from datetime import date
+
 from sqlalchemy.orm import Session
 
 from app.models.contract import Contract, ContractStatus
 from app.models.property import Property, PropertyStatus
 
 
-def sync_property_status(db: Session, property_id: int, *, today: date | None = None) -> PropertyStatus | None:
+def sync_property_status(
+    db: Session, property_id: int, *, today: date | None = None
+) -> PropertyStatus | None:
     """
     A3 policy:
       - RENTED  <=> exists ACTIVE contract with start_date <= today <= end_date

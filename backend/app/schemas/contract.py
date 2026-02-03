@@ -1,6 +1,9 @@
-from pydantic import BaseModel, ConfigDict, Field, model_validator
 from datetime import date, datetime
+
+from pydantic import BaseModel, ConfigDict, Field, model_validator
+
 from app.models.contract import ContractStatus
+
 
 class ContractBase(BaseModel):
     property_id: int

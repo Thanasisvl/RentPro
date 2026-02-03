@@ -20,7 +20,11 @@ class PropertyLocationFeatures(Base):
     # UC-04: area/location numeric score (π.χ. 1–10)
     area_score = Column(Float, nullable=True)
 
-    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    created_at = Column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
     updated_at = Column(DateTime(timezone=True), onupdate=func.now(), nullable=True)
 
-    property = relationship("Property", back_populates="location_features", uselist=False)
+    property = relationship(
+        "Property", back_populates="location_features", uselist=False
+    )

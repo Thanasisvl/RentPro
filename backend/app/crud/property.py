@@ -1,6 +1,8 @@
 from sqlalchemy.orm import Session
+
 from app.models.property import Property, PropertyStatus
-from app.schemas.property import PropertyCreate, PropertyUpdate, PropertySearchFilters
+from app.schemas.property import PropertyCreate, PropertySearchFilters, PropertyUpdate
+
 
 def create_property(db: Session, property: PropertyCreate, owner_id: int):
     data = property.model_dump()
@@ -12,11 +14,14 @@ def create_property(db: Session, property: PropertyCreate, owner_id: int):
     db.refresh(db_property)
     return db_property
 
+
 def get_properties(db: Session, skip: int = 0, limit: int = 100):
     return db.query(Property).offset(skip).limit(limit).all()
 
+
 def get_property(db: Session, property_id: int):
     return db.query(Property).filter(Property.id == property_id).first()
+
 
 def update_property(db: Session, property_id: int, property: PropertyUpdate):
     db_property = db.query(Property).filter(Property.id == property_id).first()
@@ -31,6 +36,7 @@ def update_property(db: Session, property_id: int, property: PropertyUpdate):
     db.refresh(db_property)
     return db_property
 
+
 def delete_property(db: Session, property_id: int):
     db_property = db.query(Property).filter(Property.id == property_id).first()
     if not db_property:
@@ -39,6 +45,7 @@ def delete_property(db: Session, property_id: int):
     db.delete(db_property)
     db.commit()
     return db_property
+
 
 def search_properties(db: Session, filters: PropertySearchFilters):
     """
@@ -66,9 +73,6 @@ def search_properties(db: Session, filters: PropertySearchFilters):
 
     total = q.count()
     items = (
-        q.order_by(Property.id.desc())
-        .offset(filters.offset)
-        .limit(filters.limit)
-        .all()
+        q.order_by(Property.id.desc()).offset(filters.offset).limit(filters.limit).all()
     )
     return items, total

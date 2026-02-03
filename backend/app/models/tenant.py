@@ -1,13 +1,21 @@
-from sqlalchemy import Column, Integer, String, ForeignKey, DateTime, UniqueConstraint, func
+from sqlalchemy import (
+    Column,
+    DateTime,
+    ForeignKey,
+    Integer,
+    String,
+    UniqueConstraint,
+    func,
+)
 from sqlalchemy.orm import relationship
+
 from app.db.session import Base
+
 
 class Tenant(Base):
     __tablename__ = "tenants"
 
-    __table_args__ = (
-        UniqueConstraint("owner_id", "afm", name="uq_tenants_owner_afm"),
-    )
+    __table_args__ = (UniqueConstraint("owner_id", "afm", name="uq_tenants_owner_afm"),)
 
     id = Column(Integer, primary_key=True, index=True)
 
@@ -18,8 +26,15 @@ class Tenant(Base):
     phone = Column(String, nullable=True)
     email = Column(String, nullable=True)
 
-    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
-    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
+    created_at = Column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+    updated_at = Column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        onupdate=func.now(),
+        nullable=False,
+    )
 
     created_by_id = Column(Integer, ForeignKey("users.id"), nullable=True)
     updated_by_id = Column(Integer, ForeignKey("users.id"), nullable=True)

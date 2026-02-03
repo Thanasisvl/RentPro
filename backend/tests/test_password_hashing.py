@@ -1,5 +1,6 @@
-from app.crud.user import get_password_hash
 from app.core.security import verify_password
+from app.crud.user import get_password_hash
+
 
 def test_password_hashing_and_verification():
     password = "supersecret"
@@ -7,6 +8,7 @@ def test_password_hashing_and_verification():
     assert hashed != password  # Hash should not be the same as the password
     assert verify_password(password, hashed)  # Should verify correctly
     assert not verify_password("wrongpassword", hashed)  # Wrong password should fail
+
 
 def test_hash_is_different_each_time():
     password = "anothersecret"

@@ -1,8 +1,8 @@
 from enum import Enum
 
-from sqlalchemy import Column, Integer, String, Float, ForeignKey, CheckConstraint
-from sqlalchemy.orm import relationship
+from sqlalchemy import CheckConstraint, Column, Float, ForeignKey, Integer, String
 from sqlalchemy import Enum as SAEnum
+from sqlalchemy.orm import relationship
 
 from app.db.session import Base
 

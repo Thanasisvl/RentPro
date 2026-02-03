@@ -1,18 +1,21 @@
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from sqlalchemy.orm import Session
+
+from app.core.jwt import create_access_token, create_refresh_token, verify_refresh_token
 from app.core.security import verify_password
 from app.db.session import get_db
 from app.models.user import User
-from app.schemas.user import UserLogin, Token
-from app.core.jwt import create_access_token, create_refresh_token, verify_refresh_token
+from app.schemas.user import Token, UserLogin
 
 router = APIRouter()
+
 
 def authenticate_user(db: Session, username: str, password: str):
     user = db.query(User).filter(User.username == username).first()
     if not user or not verify_password(password, user.hashed_password):
         return None
     return user
+
 
 @router.post("/login", response_model=Token)
 def login(user_in: UserLogin, response: Response, db: Session = Depends(get_db)):
@@ -37,8 +40,11 @@ def login(user_in: UserLogin, response: Response, db: Session = Depends(get_db))
     )
     return {"access_token": access_token, "token_type": "bearer"}
 
+
 @router.post("/auth/refresh", summary="Refresh access token")
-def refresh_access_token(request: Request, response: Response, db: Session = Depends(get_db)):
+def refresh_access_token(
+    request: Request, response: Response, db: Session = Depends(get_db)
+):
     token = request.cookies.get("refresh_token")
     if not token:
         raise HTTPException(
@@ -77,6 +83,7 @@ def refresh_access_token(request: Request, response: Response, db: Session = Dep
         "refresh_token", token, httponly=True, secure=False, samesite="lax"
     )
     return {"access_token": access_token, "token_type": "bearer"}
+
 
 @router.post("/logout", status_code=status.HTTP_200_OK)
 def logout(response: Response):

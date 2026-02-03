@@ -1,18 +1,21 @@
-import os
 import io
+import os
 import shutil
+
 import pytest
+
+from dotenv import load_dotenv
+
+from fastapi.testclient import TestClient
+
+from app.db.session import Base, engine
+from app.main import app
+from tests.utils import register_and_login, seed_locked_criteria_for_tests
 
 os.environ["RENTPRO_DATABASE_URL"] = "sqlite:///./test_test.db"
 os.environ["ACCESS_TOKEN_EXPIRE_MINUTES"] = "60"
-
-from dotenv import load_dotenv
 load_dotenv()
 
-from fastapi.testclient import TestClient
-from app.main import app
-from app.db.session import Base, engine
-from tests.utils import register_and_login, seed_locked_criteria_for_tests
 
 @pytest.fixture(autouse=True)
 def clean_db():
@@ -25,7 +28,9 @@ def clean_db():
         shutil.rmtree(upload_dir)
     os.makedirs(upload_dir, exist_ok=True)
 
+
 client = TestClient(app)
+
 
 def _create_tenant_for_owner(owner_headers):
     resp = client.post(
@@ -36,13 +41,16 @@ def _create_tenant_for_owner(owner_headers):
             "phone": "1234567890",
             "email": "tenant1@example.com",
         },
-        headers=owner_headers
+        headers=owner_headers,
     )
     assert resp.status_code == 200, resp.text
     return resp.json()["id"]
 
+
 def test_upload_contract_pdf():
-    owner, owner_headers = register_and_login(client, "owner1", "testpassword", "owner1@example.com", is_owner=True)
+    owner, owner_headers = register_and_login(
+        client, "owner1", "testpassword", "owner1@example.com", is_owner=True
+    )
 
     prop_resp = client.post(
         "/properties/",
@@ -71,7 +79,7 @@ def test_upload_contract_pdf():
             "rent_amount": 1200.0,
             # pdf_file omitted (upload endpoint)
         },
-        headers=owner_headers
+        headers=owner_headers,
     )
     assert contract_resp.status_code == 200, contract_resp.text
     contract_id = contract_resp.json()["id"]
@@ -79,9 +87,7 @@ def test_upload_contract_pdf():
     pdf_content = b"%PDF-1.4 test pdf content"
     files = {"file": ("test_contract.pdf", io.BytesIO(pdf_content), "application/pdf")}
     upload_resp = client.post(
-        f"/contracts/{contract_id}/upload",
-        files=files,
-        headers=owner_headers
+        f"/contracts/{contract_id}/upload", files=files, headers=owner_headers
     )
     assert upload_resp.status_code == 200, upload_resp.text
     data = upload_resp.json()
@@ -90,8 +96,11 @@ def test_upload_contract_pdf():
     # optional: ensure it is stored under contracts/ folder (relative path)
     assert "contracts/" in data["pdf_file"].replace("\\", "/")
 
+
 def test_contract_pdf_upload_edge_cases():
-    owner, owner_headers = register_and_login(client, "owner2", "pw", "owner2@example.com", is_owner=True)
+    owner, owner_headers = register_and_login(
+        client, "owner2", "pw", "owner2@example.com", is_owner=True
+    )
 
     prop_resp = client.post(
         "/properties/",
@@ -143,7 +152,9 @@ def test_contract_pdf_upload_edge_cases():
 
     # 3. Oversized file (~5MB) -> 413
     big_content = b"%" + b"A" * (5 * 1024 * 1024 + 1)
-    files_big = {"file": ("big_contract.pdf", io.BytesIO(big_content), "application/pdf")}
+    files_big = {
+        "file": ("big_contract.pdf", io.BytesIO(big_content), "application/pdf")
+    }
     resp_big = client.post(
         f"/contracts/{contract_id}/upload",
         files=files_big,

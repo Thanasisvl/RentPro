@@ -4,13 +4,20 @@ from sqlalchemy.orm import Session
 
 from app.models.criterion import Criterion
 
-
 DEFAULT_CRITERIA = [
     # UC-04 — TOPSIS criteria
-    {"key": "price", "label": "Price (€/month)", "is_benefit": False},         # cost
-    {"key": "size", "label": "Size (sqm)", "is_benefit": True},               # benefit
-    {"key": "property_type", "label": "Property type", "is_benefit": True},   # benefit (categorical->numeric later)
-    {"key": "area_score", "label": "Area score", "is_benefit": True},         # benefit (from PropertyLocationFeatures.area_score)
+    {"key": "price", "label": "Price (€/month)", "is_benefit": False},  # cost
+    {"key": "size", "label": "Size (sqm)", "is_benefit": True},  # benefit
+    {
+        "key": "property_type",
+        "label": "Property type",
+        "is_benefit": True,
+    },  # benefit (categorical->numeric later)
+    {
+        "key": "area_score",
+        "label": "Area score",
+        "is_benefit": True,
+    },  # benefit (from PropertyLocationFeatures.area_score)
 ]
 
 

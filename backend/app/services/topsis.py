@@ -15,8 +15,8 @@ class TopsisResultItem:
 
 def topsis_rank(
     decision_matrix: List[List[float]],  # m x n
-    weights: List[float],                # n
-    is_benefit: List[bool],              # n
+    weights: List[float],  # n
+    is_benefit: List[bool],  # n
 ) -> List[TopsisResultItem]:
     """
     Classical TOPSIS:
@@ -66,7 +66,9 @@ def topsis_rank(
         d_worst = sqrt(sum((v[i][j] - ideal_worst[j]) ** 2 for j in range(n)))
         denom = d_best + d_worst
         score = (d_worst / denom) if denom > 0 else 0.0
-        results.append(TopsisResultItem(index=i, score=score, d_best=d_best, d_worst=d_worst))
+        results.append(
+            TopsisResultItem(index=i, score=score, d_best=d_best, d_worst=d_worst)
+        )
 
     results.sort(key=lambda x: x.score, reverse=True)
     return results

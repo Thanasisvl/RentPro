@@ -1,16 +1,18 @@
 import os
 
 from tests.utils import seed_locked_criteria_for_tests
-os.environ["RENTPRO_DATABASE_URL"] = "sqlite:///./test_test.db"
+
 from dotenv import load_dotenv
-load_dotenv()
 
 import pytest
 from fastapi.testclient import TestClient
 from app.main import app
 from app.db.session import Base, engine
-from app.models.user import UserRole
 from app.core.jwt import create_refresh_token
+
+os.environ["RENTPRO_DATABASE_URL"] = "sqlite:///./test_test.db"
+load_dotenv()
+
 
 @pytest.fixture(autouse=True)
 def clean_db():
@@ -18,7 +20,9 @@ def clean_db():
     Base.metadata.create_all(bind=engine)
     seed_locked_criteria_for_tests()
 
+
 client = TestClient(app)
+
 
 def test_register_user_success():
     resp = client.post(
@@ -27,13 +31,14 @@ def test_register_user_success():
             "username": "newuser",
             "email": "newuser@example.com",
             "full_name": "New User",
-            "password": "securepassword"
-        }
+            "password": "securepassword",
+        },
     )
     assert resp.status_code == 200
     data = resp.json()
     assert data["username"] == "newuser"
     assert data["email"] == "newuser@example.com"
+
 
 def test_register_user_existing_username():
     client.post(
@@ -42,8 +47,8 @@ def test_register_user_existing_username():
             "username": "dupeuser",
             "email": "dupeuser1@example.com",
             "full_name": "Dupe User",
-            "password": "password"
-        }
+            "password": "password",
+        },
     )
     resp = client.post(
         "/users/register",
@@ -51,10 +56,11 @@ def test_register_user_existing_username():
             "username": "dupeuser",
             "email": "dupeuser2@example.com",
             "full_name": "Dupe User",
-            "password": "password"
-        }
+            "password": "password",
+        },
     )
     assert resp.status_code in (400, 409)
+
 
 def test_register_user_existing_email():
     client.post(
@@ -63,8 +69,8 @@ def test_register_user_existing_email():
             "username": "uniqueuser",
             "email": "dupeemail@example.com",
             "full_name": "Dupe Email",
-            "password": "password"
-        }
+            "password": "password",
+        },
     )
     resp = client.post(
         "/users/register",
@@ -72,10 +78,11 @@ def test_register_user_existing_email():
             "username": "anotheruser",
             "email": "dupeemail@example.com",
             "full_name": "Dupe Email",
-            "password": "password"
-        }
+            "password": "password",
+        },
     )
     assert resp.status_code in (400, 409)
+
 
 def test_register_user_missing_fields():
     resp = client.post(
@@ -83,9 +90,10 @@ def test_register_user_missing_fields():
         json={
             "username": "incomplete"
             # Missing email, full_name, password
-        }
+        },
     )
     assert resp.status_code == 422
+
 
 def test_login_success():
     client.post(
@@ -94,19 +102,16 @@ def test_login_success():
             "username": "loginuser",
             "email": "loginuser@example.com",
             "full_name": "Login User",
-            "password": "mypassword"
-        }
+            "password": "mypassword",
+        },
     )
     resp = client.post(
-        "/login",
-        json={
-            "username": "loginuser",
-            "password": "mypassword"
-        }
+        "/login", json={"username": "loginuser", "password": "mypassword"}
     )
     assert resp.status_code == 200
     data = resp.json()
     assert "access_token" in data
+
 
 def test_login_owner_success():
     # register owner
@@ -131,6 +136,7 @@ def test_login_owner_success():
     data = resp.json()
     assert "access_token" in data
 
+
 def test_login_wrong_password():
     client.post(
         "/users/register",
@@ -138,27 +144,21 @@ def test_login_wrong_password():
             "username": "wrongpass",
             "email": "wrongpass@example.com",
             "full_name": "Wrong Pass",
-            "password": "rightpassword"
-        }
+            "password": "rightpassword",
+        },
     )
     resp = client.post(
-        "/login",
-        json={
-            "username": "wrongpass",
-            "password": "wrongpassword"
-        }
+        "/login", json={"username": "wrongpass", "password": "wrongpassword"}
     )
     assert resp.status_code in (400, 401)
 
+
 def test_login_nonexistent_user():
     resp = client.post(
-        "/login",
-        json={
-            "username": "ghostuser",
-            "password": "doesntmatter"
-        }
+        "/login", json={"username": "ghostuser", "password": "doesntmatter"}
     )
     assert resp.status_code in (400, 401)
+
 
 def test_login_missing_fields():
     resp = client.post(
@@ -166,9 +166,10 @@ def test_login_missing_fields():
         json={
             "username": "nouser"
             # Missing password
-        }
+        },
     )
     assert resp.status_code == 422
+
 
 def test_refresh_ok():
     # create a real user first
@@ -191,16 +192,19 @@ def test_refresh_ok():
     assert "access_token" in body
     assert body["token_type"] == "bearer"
 
+
 def test_refresh_missing_cookie():
     client.cookies.clear()
     r = client.post("/auth/refresh")
     assert r.status_code == 401
+
 
 def test_refresh_invalid_token():
     client.cookies.clear()
     client.cookies.set("refresh_token", "bad.token.value")
     r = client.post("/auth/refresh")
     assert r.status_code == 401
+
 
 def test_refresh_access_token_success():
     # register user
@@ -232,12 +236,10 @@ def test_refresh_access_token_success():
 
 def test_refresh_access_token_missing_cookie():
     # new client without cookies
-    from fastapi.testclient import TestClient
-    from app.main import app
-
     no_cookie_client = TestClient(app)
     resp = no_cookie_client.post("/auth/refresh")
     assert resp.status_code == 401
+
 
 def test_logout_clears_refresh_and_blocks_refresh():
     # ξεκινάμε με καθαρά cookies

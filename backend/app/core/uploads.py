@@ -3,7 +3,8 @@ from __future__ import annotations
 import os
 from pathlib import Path
 from uuid import uuid4
-from fastapi import UploadFile, HTTPException
+
+from fastapi import HTTPException, UploadFile
 
 DEFAULT_MAX_UPLOAD_BYTES = 5 * 1024 * 1024  # 5MB
 

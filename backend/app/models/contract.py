@@ -1,7 +1,18 @@
 import enum
-from sqlalchemy import Column, Integer, ForeignKey, Date, Float, String, DateTime, func, Index
-from sqlalchemy.orm import relationship
+
+from sqlalchemy import (
+    Column,
+    Date,
+    DateTime,
+    Float,
+    ForeignKey,
+    Index,
+    Integer,
+    String,
+    func,
+)
 from sqlalchemy import Enum as SAEnum
+from sqlalchemy.orm import relationship
 
 from app.db.session import Base
 
@@ -17,7 +28,9 @@ class Contract(Base):
 
     id = Column(Integer, primary_key=True, index=True)
 
-    property_id = Column(Integer, ForeignKey("properties.id"), nullable=False, index=True)
+    property_id = Column(
+        Integer, ForeignKey("properties.id"), nullable=False, index=True
+    )
     tenant_id = Column(Integer, ForeignKey("tenants.id"), nullable=False, index=True)
 
     start_date = Column(Date, nullable=False)
@@ -35,14 +48,22 @@ class Contract(Base):
 
     terminated_at = Column(DateTime(timezone=True), nullable=True)
 
-    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
-    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
+    created_at = Column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+    updated_at = Column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        onupdate=func.now(),
+        nullable=False,
+    )
 
     created_by_id = Column(Integer, ForeignKey("users.id"), nullable=True)
     updated_by_id = Column(Integer, ForeignKey("users.id"), nullable=True)
 
     property = relationship("Property", back_populates="contracts")
     tenant = relationship("Tenant", back_populates="contracts")
+
 
 # DB-level: at most 1 ACTIVE contract per property (works on PostgreSQL + SQLite partial index)
 Index(

@@ -3,6 +3,7 @@ import re
 from fastapi import Request
 from fastapi.responses import JSONResponse
 from starlette.middleware.base import BaseHTTPMiddleware
+
 from app.core.jwt import decode_access_token
 
 PUBLIC_PATHS = [
@@ -18,6 +19,7 @@ PUBLIC_PATHS = [
 ]
 
 _PROPERTY_DETAIL_RE = re.compile(r"^/properties/\d+$")
+
 
 class JWTAuthMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
@@ -35,7 +37,9 @@ class JWTAuthMiddleware(BaseHTTPMiddleware):
                 token = auth_header.split(" ")[1]
                 payload = decode_access_token(token)
                 if not payload:
-                    return JSONResponse(status_code=401, content={"detail": "Invalid token"})
+                    return JSONResponse(
+                        status_code=401, content={"detail": "Invalid token"}
+                    )
                 request.state.user = payload
 
             return await call_next(request)
@@ -43,7 +47,9 @@ class JWTAuthMiddleware(BaseHTTPMiddleware):
         # All other routes require authentication
         auth_header = request.headers.get("Authorization")
         if not auth_header or not auth_header.startswith("Bearer "):
-            return JSONResponse(status_code=401, content={"detail": "Not authenticated"})
+            return JSONResponse(
+                status_code=401, content={"detail": "Not authenticated"}
+            )
 
         token = auth_header.split(" ")[1]
         payload = decode_access_token(token)

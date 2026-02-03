@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from uuid import uuid4
 from typing import Any
+from uuid import uuid4
 
 from fastapi import HTTPException, Request
 from fastapi.exceptions import RequestValidationError
@@ -38,10 +38,14 @@ def http_exception_handler(request: Request, exc: HTTPException) -> JSONResponse
         },
         "request_id": rid,
     }
-    return JSONResponse(status_code=exc.status_code, content=payload, headers={"X-Request-ID": rid})
+    return JSONResponse(
+        status_code=exc.status_code, content=payload, headers={"X-Request-ID": rid}
+    )
 
 
-def validation_exception_handler(request: Request, exc: RequestValidationError) -> JSONResponse:
+def validation_exception_handler(
+    request: Request, exc: RequestValidationError
+) -> JSONResponse:
     rid = _request_id(request)
     errors = exc.errors()
 

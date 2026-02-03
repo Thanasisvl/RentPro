@@ -4,7 +4,6 @@ from dataclasses import dataclass
 from math import prod
 from typing import Dict, Iterable, List, Tuple
 
-
 # Saaty Random Index (RI) for n=1..10
 _RI: Dict[int, float] = {
     1: 0.00,
@@ -35,7 +34,9 @@ class AHPResult:
 
 def _build_matrix(
     criteria_keys: List[str],
-    pairwise: Iterable[Tuple[str, str, float]],  # (a_key, b_key, value) where value = a over b
+    pairwise: Iterable[
+        Tuple[str, str, float]
+    ],  # (a_key, b_key, value) where value = a over b
 ) -> List[List[float]]:
     n = len(criteria_keys)
     index = {k: i for i, k in enumerate(criteria_keys)}

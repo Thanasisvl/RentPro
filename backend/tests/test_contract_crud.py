@@ -1,15 +1,25 @@
 import os
-os.environ["RENTPRO_DATABASE_URL"] = "sqlite:///./test_test.db"
-os.environ["ACCESS_TOKEN_EXPIRE_MINUTES"] = "60"
 from dotenv import load_dotenv
-load_dotenv()
+
+
+from datetime import date, timedelta
 
 import pytest
 from fastapi.testclient import TestClient
-from app.main import app
+
 from app.db.session import Base, engine
-from datetime import date, timedelta
-from tests.utils import make_admin, register_and_login, login_headers, seed_locked_criteria_for_tests
+from app.main import app
+from tests.utils import (
+    login_headers,
+    make_admin,
+    register_and_login,
+    seed_locked_criteria_for_tests,
+)
+
+load_dotenv()
+os.environ["RENTPRO_DATABASE_URL"] = "sqlite:///./test_test.db"
+os.environ["ACCESS_TOKEN_EXPIRE_MINUTES"] = "60"
+
 
 @pytest.fixture(autouse=True)
 def clean_db():
@@ -17,11 +27,15 @@ def clean_db():
     Base.metadata.create_all(bind=engine)
     seed_locked_criteria_for_tests()
 
+
 client = TestClient(app)
+
 
 @pytest.fixture
 def owner_and_property():
-    user, headers = register_and_login(client, "owner1", "testpassword", "owner1@example.com", is_owner=True)
+    user, headers = register_and_login(
+        client, "owner1", "testpassword", "owner1@example.com", is_owner=True
+    )
 
     resp = client.post(
         "/properties/",
@@ -40,6 +54,7 @@ def owner_and_property():
 
     return user, headers, property_id
 
+
 @pytest.fixture
 def owner_tenant(owner_and_property):
     owner, owner_headers, _ = owner_and_property
@@ -51,10 +66,11 @@ def owner_tenant(owner_and_property):
             "phone": "1234567890",
             "email": "tenant1@example.com",
         },
-        headers=owner_headers
+        headers=owner_headers,
     )
     assert resp.status_code == 200, resp.text
     return owner, owner_headers, resp.json()["id"]
+
 
 @pytest.fixture
 def contract_id(owner_and_property, owner_tenant):
@@ -72,10 +88,11 @@ def contract_id(owner_and_property, owner_tenant):
             "rent_amount": 1200.0,
             # pdf_file optional
         },
-        headers=owner_headers
+        headers=owner_headers,
     )
     assert resp.status_code == 200, resp.text
     return resp.json()["id"]
+
 
 def test_create_contract(owner_and_property, owner_tenant):
     _, owner_headers, property_id = owner_and_property
@@ -91,7 +108,7 @@ def test_create_contract(owner_and_property, owner_tenant):
             "end_date": end_date,
             "rent_amount": 1200.0,
         },
-        headers=owner_headers
+        headers=owner_headers,
     )
     assert resp.status_code == 200, resp.text
     contract = resp.json()
@@ -99,17 +116,20 @@ def test_create_contract(owner_and_property, owner_tenant):
     assert contract["tenant_id"] == tenant_id
     assert contract["rent_amount"] == 1200.0
 
+
 def test_get_contract(owner_and_property, contract_id):
     _, owner_headers, _ = owner_and_property
     resp = client.get(f"/contracts/{contract_id}", headers=owner_headers)
     assert resp.status_code == 200, resp.text
     assert resp.json()["id"] == contract_id
 
+
 def test_get_contracts(owner_and_property, contract_id):
     _, owner_headers, _ = owner_and_property
     resp = client.get("/contracts/", headers=owner_headers)
     assert resp.status_code == 200, resp.text
     assert any(c["id"] == contract_id for c in resp.json())
+
 
 def test_update_contract(owner_and_property, contract_id):
     _, owner_headers, _ = owner_and_property
@@ -131,6 +151,7 @@ def test_update_contract(owner_and_property, contract_id):
     # pdf_file is NOT updatable via PUT (upload endpoint only)
     assert contract.get("pdf_file") in (None, "")
 
+
 def test_update_contract_rejects_pdf_file(owner_and_property, contract_id):
     _, owner_headers, _ = owner_and_property
     today = str(date.today())
@@ -149,11 +170,14 @@ def test_update_contract_rejects_pdf_file(owner_and_property, contract_id):
     assert resp.status_code == 409, resp.text
     assert "pdf_file" in resp.text
 
+
 def test_delete_contract(owner_and_property, contract_id):
     _, owner_headers, _ = owner_and_property
 
     # terminate first (policy: cannot delete ACTIVE)
-    term_resp = client.post(f"/contracts/{contract_id}/terminate", headers=owner_headers)
+    term_resp = client.post(
+        f"/contracts/{contract_id}/terminate", headers=owner_headers
+    )
     assert term_resp.status_code == 200, term_resp.text
 
     # now delete
@@ -162,6 +186,7 @@ def test_delete_contract(owner_and_property, contract_id):
 
     resp = client.get(f"/contracts/{contract_id}", headers=owner_headers)
     assert resp.status_code == 404
+
 
 def test_update_contract_not_found(owner_and_property, owner_tenant):
     _, owner_headers, _ = owner_and_property
@@ -175,14 +200,16 @@ def test_update_contract_not_found(owner_and_property, owner_tenant):
             "end_date": end_date,
             "rent_amount": 1500.0,
         },
-        headers=owner_headers
+        headers=owner_headers,
     )
     assert resp.status_code == 404, resp.text
+
 
 def test_delete_contract_not_found(owner_and_property):
     _, owner_headers, _ = owner_and_property
     resp = client.delete("/contracts/99999", headers=owner_headers)
     assert resp.status_code == 404
+
 
 def test_cross_user_contract_access(owner_and_property, owner_tenant):
     # Owner1 creates contract
@@ -199,14 +226,18 @@ def test_cross_user_contract_access(owner_and_property, owner_tenant):
             "end_date": end_date,
             "rent_amount": 1200.0,
         },
-        headers=owner1_headers
+        headers=owner1_headers,
     )
     assert resp.status_code == 200, resp.text
     contract_id = resp.json()["id"]
 
     # Owner2 cannot access
-    _, owner2_headers = register_and_login(client, "owner2", "pw", "owner2@example.com", is_owner=True)
-    assert client.get(f"/contracts/{contract_id}", headers=owner2_headers).status_code in (403, 404)
+    _, owner2_headers = register_and_login(
+        client, "owner2", "pw", "owner2@example.com", is_owner=True
+    )
+    assert client.get(
+        f"/contracts/{contract_id}", headers=owner2_headers
+    ).status_code in (403, 404)
     assert client.put(
         f"/contracts/{contract_id}",
         json={
@@ -214,31 +245,43 @@ def test_cross_user_contract_access(owner_and_property, owner_tenant):
             "end_date": end_date,
             "rent_amount": 1300.0,
         },
-        headers=owner2_headers
+        headers=owner2_headers,
     ).status_code in (403, 404)
-    assert client.delete(f"/contracts/{contract_id}", headers=owner2_headers).status_code in (403, 404)
+    assert client.delete(
+        f"/contracts/{contract_id}", headers=owner2_headers
+    ).status_code in (403, 404)
 
     # Admin can access
     register_and_login(client, "admin2", "pw", "admin2@example.com")
     make_admin("admin2")
     admin_headers = login_headers(client, "admin2", "pw")
 
-    assert client.get(f"/contracts/{contract_id}", headers=admin_headers).status_code == 200
-    assert client.put(
-        f"/contracts/{contract_id}",
-        json={
-            "start_date": today,
-            "end_date": end_date,
-            "rent_amount": 1400.0,
-        },
-        headers=admin_headers
-    ).status_code == 200
+    assert (
+        client.get(f"/contracts/{contract_id}", headers=admin_headers).status_code
+        == 200
+    )
+    assert (
+        client.put(
+            f"/contracts/{contract_id}",
+            json={
+                "start_date": today,
+                "end_date": end_date,
+                "rent_amount": 1400.0,
+            },
+            headers=admin_headers,
+        ).status_code
+        == 200
+    )
 
     # Policy: cannot delete ACTIVE; terminate first then delete
     term = client.post(f"/contracts/{contract_id}/terminate", headers=admin_headers)
     assert term.status_code == 200, term.text
 
-    assert client.delete(f"/contracts/{contract_id}", headers=admin_headers).status_code == 200
+    assert (
+        client.delete(f"/contracts/{contract_id}", headers=admin_headers).status_code
+        == 200
+    )
+
 
 def test_contract_negative_zero_rent(owner_and_property, owner_tenant):
     _, owner_headers, property_id = owner_and_property
@@ -248,17 +291,30 @@ def test_contract_negative_zero_rent(owner_and_property, owner_tenant):
 
     resp_zero = client.post(
         "/contracts/",
-        json={"property_id": property_id, "tenant_id": tenant_id, "start_date": today, "end_date": end_date, "rent_amount": 0.0},
-        headers=owner_headers
+        json={
+            "property_id": property_id,
+            "tenant_id": tenant_id,
+            "start_date": today,
+            "end_date": end_date,
+            "rent_amount": 0.0,
+        },
+        headers=owner_headers,
     )
     assert resp_zero.status_code in (400, 422)
 
     resp_negative = client.post(
         "/contracts/",
-        json={"property_id": property_id, "tenant_id": tenant_id, "start_date": today, "end_date": end_date, "rent_amount": -100.0},
-        headers=owner_headers
+        json={
+            "property_id": property_id,
+            "tenant_id": tenant_id,
+            "start_date": today,
+            "end_date": end_date,
+            "rent_amount": -100.0,
+        },
+        headers=owner_headers,
     )
     assert resp_negative.status_code in (400, 422)
+
 
 def test_contract_invalid_dates(owner_and_property, owner_tenant):
     _, owner_headers, property_id = owner_and_property
@@ -268,12 +324,21 @@ def test_contract_invalid_dates(owner_and_property, owner_tenant):
 
     resp = client.post(
         "/contracts/",
-        json={"property_id": property_id, "tenant_id": tenant_id, "start_date": today, "end_date": yesterday, "rent_amount": 1200.0},
-        headers=owner_headers
+        json={
+            "property_id": property_id,
+            "tenant_id": tenant_id,
+            "start_date": today,
+            "end_date": yesterday,
+            "rent_amount": 1200.0,
+        },
+        headers=owner_headers,
     )
     assert resp.status_code in (400, 422)
 
-def test_property_status_becomes_rented_on_contract_creation(owner_and_property, owner_tenant):
+
+def test_property_status_becomes_rented_on_contract_creation(
+    owner_and_property, owner_tenant
+):
     _, owner_headers, property_id = owner_and_property
     _, _, tenant_id = owner_tenant
 
@@ -286,7 +351,13 @@ def test_property_status_becomes_rented_on_contract_creation(owner_and_property,
 
     resp = client.post(
         "/contracts/",
-        json={"property_id": property_id, "tenant_id": tenant_id, "start_date": today, "end_date": end_date, "rent_amount": 1200.0},
+        json={
+            "property_id": property_id,
+            "tenant_id": tenant_id,
+            "start_date": today,
+            "end_date": end_date,
+            "rent_amount": 1200.0,
+        },
         headers=owner_headers,
     )
     assert resp.status_code == 200, resp.text
@@ -295,7 +366,10 @@ def test_property_status_becomes_rented_on_contract_creation(owner_and_property,
     assert prop_after.status_code == 200
     assert prop_after.json()["status"] == "RENTED"
 
-def test_property_status_becomes_available_on_contract_deletion(owner_and_property, owner_tenant):
+
+def test_property_status_becomes_available_on_contract_deletion(
+    owner_and_property, owner_tenant
+):
     _, owner_headers, property_id = owner_and_property
     _, _, tenant_id = owner_tenant
 
@@ -304,7 +378,13 @@ def test_property_status_becomes_available_on_contract_deletion(owner_and_proper
 
     create_resp = client.post(
         "/contracts/",
-        json={"property_id": property_id, "tenant_id": tenant_id, "start_date": today, "end_date": end_date, "rent_amount": 1200.0},
+        json={
+            "property_id": property_id,
+            "tenant_id": tenant_id,
+            "start_date": today,
+            "end_date": end_date,
+            "rent_amount": 1200.0,
+        },
         headers=owner_headers,
     )
     assert create_resp.status_code == 200, create_resp.text
@@ -321,7 +401,10 @@ def test_property_status_becomes_available_on_contract_deletion(owner_and_proper
     assert prop_available.status_code == 200
     assert prop_available.json()["status"] == "AVAILABLE"
 
-def test_cannot_create_contract_when_property_already_rented(owner_and_property, owner_tenant):
+
+def test_cannot_create_contract_when_property_already_rented(
+    owner_and_property, owner_tenant
+):
     _, owner_headers, property_id = owner_and_property
     _, _, tenant_id = owner_tenant
 
@@ -330,21 +413,36 @@ def test_cannot_create_contract_when_property_already_rented(owner_and_property,
 
     resp1 = client.post(
         "/contracts/",
-        json={"property_id": property_id, "tenant_id": tenant_id, "start_date": today, "end_date": end_date, "rent_amount": 1200.0},
+        json={
+            "property_id": property_id,
+            "tenant_id": tenant_id,
+            "start_date": today,
+            "end_date": end_date,
+            "rent_amount": 1200.0,
+        },
         headers=owner_headers,
     )
     assert resp1.status_code == 200
 
     resp2 = client.post(
         "/contracts/",
-        json={"property_id": property_id, "tenant_id": tenant_id, "start_date": today, "end_date": end_date, "rent_amount": 1300.0},
+        json={
+            "property_id": property_id,
+            "tenant_id": tenant_id,
+            "start_date": today,
+            "end_date": end_date,
+            "rent_amount": 1300.0,
+        },
         headers=owner_headers,
     )
     assert resp2.status_code == 409
 
+
 def test_admin_can_list_all_properties_from_properties_endpoint():
     # Owner1 creates property
-    _, owner1_headers = register_and_login(client, "owner_admin_list_1", "testpassword", "oal1@example.com", is_owner=True)
+    _, owner1_headers = register_and_login(
+        client, "owner_admin_list_1", "testpassword", "oal1@example.com", is_owner=True
+    )
     resp1 = client.post(
         "/properties/",
         json={
@@ -360,7 +458,9 @@ def test_admin_can_list_all_properties_from_properties_endpoint():
     assert resp1.status_code == 200
 
     # Owner2 creates property
-    _, owner2_headers = register_and_login(client, "owner_admin_list_2", "testpassword", "oal2@example.com", is_owner=True)
+    _, owner2_headers = register_and_login(
+        client, "owner_admin_list_2", "testpassword", "oal2@example.com", is_owner=True
+    )
     resp2 = client.post(
         "/properties/",
         json={
@@ -376,7 +476,9 @@ def test_admin_can_list_all_properties_from_properties_endpoint():
     assert resp2.status_code == 200
 
     # Admin lists all via /properties
-    register_and_login(client, "admin_list", "testpassword", "admin_list@example.com", is_owner=False)
+    register_and_login(
+        client, "admin_list", "testpassword", "admin_list@example.com", is_owner=False
+    )
     make_admin("admin_list")
     admin_headers = login_headers(client, "admin_list", "testpassword")
 
@@ -386,7 +488,10 @@ def test_admin_can_list_all_properties_from_properties_endpoint():
     assert "Owner1 Property" in titles
     assert "Owner2 Property" in titles
 
-def test_terminate_contract_sets_property_available_and_contract_terminated(owner_and_property, owner_tenant):
+
+def test_terminate_contract_sets_property_available_and_contract_terminated(
+    owner_and_property, owner_tenant
+):
     _, owner_headers, property_id = owner_and_property
     _, _, tenant_id = owner_tenant
 
@@ -395,7 +500,13 @@ def test_terminate_contract_sets_property_available_and_contract_terminated(owne
 
     create_resp = client.post(
         "/contracts/",
-        json={"property_id": property_id, "tenant_id": tenant_id, "start_date": today, "end_date": end_date, "rent_amount": 1200.0},
+        json={
+            "property_id": property_id,
+            "tenant_id": tenant_id,
+            "start_date": today,
+            "end_date": end_date,
+            "rent_amount": 1200.0,
+        },
         headers=owner_headers,
     )
     assert create_resp.status_code == 200, create_resp.text
@@ -405,13 +516,16 @@ def test_terminate_contract_sets_property_available_and_contract_terminated(owne
     assert prop_rented.status_code == 200
     assert prop_rented.json()["status"] == "RENTED"
 
-    term_resp = client.post(f"/contracts/{contract_id}/terminate", headers=owner_headers)
+    term_resp = client.post(
+        f"/contracts/{contract_id}/terminate", headers=owner_headers
+    )
     assert term_resp.status_code == 200, term_resp.text
     assert term_resp.json()["status"] == "TERMINATED"
 
     prop_available = client.get(f"/properties/{property_id}", headers=owner_headers)
     assert prop_available.status_code == 200
     assert prop_available.json()["status"] == "AVAILABLE"
+
 
 def test_update_contract_invalid_dates_returns_422(owner_and_property, contract_id):
     _, owner_headers, _ = owner_and_property
@@ -425,7 +539,10 @@ def test_update_contract_invalid_dates_returns_422(owner_and_property, contract_
     )
     assert resp.status_code == 422, resp.text
 
-def test_update_contract_end_before_existing_start_returns_422(owner_and_property, contract_id):
+
+def test_update_contract_end_before_existing_start_returns_422(
+    owner_and_property, contract_id
+):
     # καλύπτει partial update: δίνω μόνο end_date και πρέπει να συγκριθεί με το υπάρχον start_date
     _, owner_headers, _ = owner_and_property
     very_old = str(date.today() - timedelta(days=3650))
@@ -437,6 +554,7 @@ def test_update_contract_end_before_existing_start_returns_422(owner_and_propert
     )
     assert resp.status_code == 422, resp.text
 
+
 def test_update_contract_zero_rent_returns_422(owner_and_property, contract_id):
     _, owner_headers, _ = owner_and_property
 
@@ -446,6 +564,7 @@ def test_update_contract_zero_rent_returns_422(owner_and_property, contract_id):
         headers=owner_headers,
     )
     assert resp.status_code == 422, resp.text
+
 
 def test_owner_cannot_update_contract_to_other_owners_tenant():
     """
@@ -459,7 +578,12 @@ def test_owner_cannot_update_contract_to_other_owners_tenant():
     # Tenant owned by owner1
     t1 = client.post(
         "/tenants/",
-        json={"name": "T1", "afm": "111111111", "phone": "6900000001", "email": "t1@example.com"},
+        json={
+            "name": "T1",
+            "afm": "111111111",
+            "phone": "6900000001",
+            "email": "t1@example.com",
+        },
         headers=owner1_headers,
     )
     assert t1.status_code == 200, t1.text
@@ -504,7 +628,12 @@ def test_owner_cannot_update_contract_to_other_owners_tenant():
     )
     t2 = client.post(
         "/tenants/",
-        json={"name": "T2", "afm": "222222222", "phone": "6900000002", "email": "t2@example.com"},
+        json={
+            "name": "T2",
+            "afm": "222222222",
+            "phone": "6900000002",
+            "email": "t2@example.com",
+        },
         headers=owner2_headers,
     )
     assert t2.status_code == 200, t2.text
@@ -519,12 +648,16 @@ def test_owner_cannot_update_contract_to_other_owners_tenant():
     assert resp.status_code == 403, resp.text
     assert "Tenant does not belong" in resp.text
 
+
 def test_cannot_delete_active_contract(owner_and_property, contract_id):
     _, owner_headers, _ = owner_and_property
     resp = client.delete(f"/contracts/{contract_id}", headers=owner_headers)
     assert resp.status_code == 409, resp.text
 
-def test_property_status_follows_running_active_contract_rule(owner_and_property, owner_tenant):
+
+def test_property_status_follows_running_active_contract_rule(
+    owner_and_property, owner_tenant
+):
     """
     A3 policy:
       Property = RENTED  <=> exists ACTIVE contract with start_date <= today <= end_date
@@ -570,12 +703,22 @@ def test_property_status_follows_running_active_contract_rule(owner_and_property
     assert prop2.status_code == 200, prop2.text
     assert prop2.json()["status"] == "RENTED"
 
+
 def test_admin_can_list_all_contracts_and_filter_by_owner():
     # Owner1 -> property + tenant + contract
-    owner1, owner1_headers = register_and_login(client, "a4_owner1", "pw", "a4_owner1@example.com", is_owner=True)
+    owner1, owner1_headers = register_and_login(
+        client, "a4_owner1", "pw", "a4_owner1@example.com", is_owner=True
+    )
     p1 = client.post(
         "/properties/",
-        json={"title": "P1", "description": "d", "address": "a", "type": "APARTMENT", "size": 50.0, "price": 1000.0},
+        json={
+            "title": "P1",
+            "description": "d",
+            "address": "a",
+            "type": "APARTMENT",
+            "size": 50.0,
+            "price": 1000.0,
+        },
         headers=owner1_headers,
     )
     assert p1.status_code == 200, p1.text
@@ -583,7 +726,12 @@ def test_admin_can_list_all_contracts_and_filter_by_owner():
 
     t1 = client.post(
         "/tenants/",
-        json={"name": "T1", "afm": "333333333", "phone": "6900000003", "email": "t1_a4@example.com"},
+        json={
+            "name": "T1",
+            "afm": "333333333",
+            "phone": "6900000003",
+            "email": "t1_a4@example.com",
+        },
         headers=owner1_headers,
     )
     assert t1.status_code == 200, t1.text
@@ -603,10 +751,19 @@ def test_admin_can_list_all_contracts_and_filter_by_owner():
     assert c1.status_code == 200, c1.text
 
     # Owner2 -> property + tenant + contract
-    owner2, owner2_headers = register_and_login(client, "a4_owner2", "pw", "a4_owner2@example.com", is_owner=True)
+    owner2, owner2_headers = register_and_login(
+        client, "a4_owner2", "pw", "a4_owner2@example.com", is_owner=True
+    )
     p2 = client.post(
         "/properties/",
-        json={"title": "P2", "description": "d", "address": "a2", "type": "APARTMENT", "size": 60.0, "price": 1100.0},
+        json={
+            "title": "P2",
+            "description": "d",
+            "address": "a2",
+            "type": "APARTMENT",
+            "size": 60.0,
+            "price": 1100.0,
+        },
         headers=owner2_headers,
     )
     assert p2.status_code == 200, p2.text
@@ -614,7 +771,12 @@ def test_admin_can_list_all_contracts_and_filter_by_owner():
 
     t2 = client.post(
         "/tenants/",
-        json={"name": "T2", "afm": "444444444", "phone": "6900000004", "email": "t2_a4@example.com"},
+        json={
+            "name": "T2",
+            "afm": "444444444",
+            "phone": "6900000004",
+            "email": "t2_a4@example.com",
+        },
         headers=owner2_headers,
     )
     assert t2.status_code == 200, t2.text
@@ -643,11 +805,14 @@ def test_admin_can_list_all_contracts_and_filter_by_owner():
     assert len(all_resp.json()) >= 2
 
     # Admin filters by owner_id (should only include owner1's contract(s))
-    filt_resp = client.get(f"/contracts/?owner_id={owner1['id']}", headers=admin_headers)
+    filt_resp = client.get(
+        f"/contracts/?owner_id={owner1['id']}", headers=admin_headers
+    )
     assert filt_resp.status_code == 200, filt_resp.text
     for row in filt_resp.json():
         # contract belongs to owner1 via property.owner_id (implicit)
         assert row["property_id"] == prop1_id
+
 
 def test_owner_cannot_create_contract_with_other_owners_tenant(owner_and_property):
     """

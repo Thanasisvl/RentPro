@@ -6,15 +6,19 @@ from fastapi import HTTPException
 from sqlalchemy.orm import Session
 
 from app.models.criterion import Criterion
-from app.models.preference_profile import PreferenceProfile
 from app.models.pairwise_comparison import PairwiseComparison
+from app.models.preference_profile import PreferenceProfile
 
 
 def get_profile_by_user_id(db: Session, user_id: int) -> PreferenceProfile | None:
-    return db.query(PreferenceProfile).filter(PreferenceProfile.user_id == user_id).first()
+    return (
+        db.query(PreferenceProfile).filter(PreferenceProfile.user_id == user_id).first()
+    )
 
 
-def upsert_profile_for_user(db: Session, user_id: int, name: str | None) -> PreferenceProfile:
+def upsert_profile_for_user(
+    db: Session, user_id: int, name: str | None
+) -> PreferenceProfile:
     profile = get_profile_by_user_id(db, user_id=user_id)
     if profile is None:
         profile = PreferenceProfile(user_id=user_id, name=name or "My preferences")
@@ -52,7 +56,9 @@ def replace_pairwise_comparisons_for_profile(
     active_keys = sorted(criteria_map.keys())
 
     if len(active_keys) < 2:
-        raise HTTPException(status_code=409, detail="Not enough active criteria to compare")
+        raise HTTPException(
+            status_code=409, detail="Not enough active criteria to compare"
+        )
 
     # Validate completeness (locked criteria => tight consistency)
     expected = _expected_pairs(active_keys)
@@ -60,7 +66,9 @@ def replace_pairwise_comparisons_for_profile(
 
     for a_key, b_key, _ in comparisons:
         if a_key not in criteria_map or b_key not in criteria_map:
-            raise HTTPException(status_code=422, detail=f"Unknown criterion key(s): {a_key}, {b_key}")
+            raise HTTPException(
+                status_code=422, detail=f"Unknown criterion key(s): {a_key}, {b_key}"
+            )
         provided_pairs.add(frozenset([a_key, b_key]))
 
     if provided_pairs != expected:
@@ -85,7 +93,9 @@ def replace_pairwise_comparisons_for_profile(
         a_id, b_id = a.id, b.id
 
         if a_id == b_id:
-            raise HTTPException(status_code=422, detail="Self-comparisons are not allowed")
+            raise HTTPException(
+                status_code=422, detail="Self-comparisons are not allowed"
+            )
 
         if a_id > b_id:
             a_id, b_id = b_id, a_id
@@ -93,11 +103,15 @@ def replace_pairwise_comparisons_for_profile(
 
         key = (a_id, b_id)
         if key in canonical:
-            raise HTTPException(status_code=422, detail="Duplicate pairwise comparison in payload")
+            raise HTTPException(
+                status_code=422, detail="Duplicate pairwise comparison in payload"
+            )
         canonical[key] = value
 
     # Replace all existing comparisons (simple, consistent)
-    db.query(PairwiseComparison).filter(PairwiseComparison.profile_id == profile_id).delete()
+    db.query(PairwiseComparison).filter(
+        PairwiseComparison.profile_id == profile_id
+    ).delete()
     db.commit()
 
     rows: List[PairwiseComparison] = []

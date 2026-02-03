@@ -1,15 +1,23 @@
 import os
-os.environ["RENTPRO_DATABASE_URL"] = "sqlite:///./test_test.db"
+
 from dotenv import load_dotenv
-load_dotenv()
 
 import pytest
 from fastapi.testclient import TestClient
-from app.main import app
-from app.db.session import Base, engine
-from tests.utils import make_admin, register_and_login, set_property_status, seed_locked_criteria_for_tests
-from starlette import status
 from starlette.status import HTTP_422_UNPROCESSABLE_CONTENT
+
+from app.db.session import Base, engine
+from app.main import app
+from tests.utils import (
+    make_admin,
+    register_and_login,
+    seed_locked_criteria_for_tests,
+    set_property_status,
+)
+
+os.environ["RENTPRO_DATABASE_URL"] = "sqlite:///./test_test.db"
+load_dotenv()
+
 
 @pytest.fixture(autouse=True)
 def clean_db():
@@ -17,12 +25,17 @@ def clean_db():
     Base.metadata.create_all(bind=engine)
     seed_locked_criteria_for_tests()
 
+
 client = TestClient(app)
+
 
 @pytest.fixture
 def owner_headers():
-    _, headers = register_and_login(client, "owner1", "testpassword", "owner1@example.com", is_owner=True)
+    _, headers = register_and_login(
+        client, "owner1", "testpassword", "owner1@example.com", is_owner=True
+    )
     return headers
+
 
 def test_create_property(owner_headers):
     resp = client.post(
@@ -33,9 +46,9 @@ def test_create_property(owner_headers):
             "address": "123 Main St",
             "type": "APARTMENT",
             "size": 100.0,
-            "price": 1200.0
+            "price": 1200.0,
         },
-        headers=owner_headers
+        headers=owner_headers,
     )
     assert resp.status_code == 200
     prop = resp.json()
@@ -43,6 +56,7 @@ def test_create_property(owner_headers):
     assert prop["address"] == "123 Main St"
     assert prop["size"] == 100.0
     assert prop["price"] == 1200.0
+
 
 def test_get_property(owner_headers):
     # Create property first
@@ -54,9 +68,9 @@ def test_get_property(owner_headers):
             "address": "123 Main St",
             "type": "APARTMENT",
             "size": 100.0,
-            "price": 1200.0
+            "price": 1200.0,
         },
-        headers=owner_headers
+        headers=owner_headers,
     )
     prop = resp.json()
     prop_id = prop["id"]
@@ -65,6 +79,7 @@ def test_get_property(owner_headers):
     data = response.json()
     assert data["title"] == "Test Property"
     assert data["id"] == prop_id
+
 
 def test_get_properties(owner_headers):
     # Create two properties
@@ -76,9 +91,9 @@ def test_get_properties(owner_headers):
             "address": "123 Main St",
             "type": "APARTMENT",
             "size": 100.0,
-            "price": 1200.0
+            "price": 1200.0,
         },
-        headers=owner_headers
+        headers=owner_headers,
     )
     client.post(
         "/properties/",
@@ -88,9 +103,9 @@ def test_get_properties(owner_headers):
             "address": "456 Side St",
             "type": "DETACHED_HOUSE",
             "size": 150.0,
-            "price": 2000.0
+            "price": 2000.0,
         },
-        headers=owner_headers
+        headers=owner_headers,
     )
     response = client.get("/properties/", headers=owner_headers)
     assert response.status_code == 200
@@ -99,6 +114,7 @@ def test_get_properties(owner_headers):
     titles = [p["title"] for p in data]
     assert "Test Property" in titles
     assert "Second Property" in titles
+
 
 def test_update_property(owner_headers):
     # Create property first
@@ -110,9 +126,9 @@ def test_update_property(owner_headers):
             "address": "123 Main St",
             "type": "APARTMENT",
             "size": 100.0,
-            "price": 1200.0
+            "price": 1200.0,
         },
-        headers=owner_headers
+        headers=owner_headers,
     )
     prop = resp.json()
     prop_id = prop["id"]
@@ -124,9 +140,9 @@ def test_update_property(owner_headers):
             "address": "789 New St",
             "type": "STUDIO",
             "size": 80.0,
-            "price": 900.0
+            "price": 900.0,
         },
-        headers=owner_headers
+        headers=owner_headers,
     )
     assert response.status_code == 200
     data = response.json()
@@ -135,6 +151,7 @@ def test_update_property(owner_headers):
     assert data["type"] == "STUDIO"
     assert data["size"] == 80.0
     assert data["price"] == 900.0
+
 
 def test_delete_property(owner_headers):
     # Create property first
@@ -146,9 +163,9 @@ def test_delete_property(owner_headers):
             "address": "123 Main St",
             "type": "APARTMENT",
             "size": 100.0,
-            "price": 1200.0
+            "price": 1200.0,
         },
-        headers=owner_headers
+        headers=owner_headers,
     )
     prop = resp.json()
     prop_id = prop["id"]
@@ -158,6 +175,7 @@ def test_delete_property(owner_headers):
     response = client.get(f"/properties/{prop_id}", headers=owner_headers)
     assert response.status_code == 404
 
+
 def test_create_property_missing_fields(owner_headers):
     resp = client.post(
         "/properties/",
@@ -165,7 +183,7 @@ def test_create_property_missing_fields(owner_headers):
             "title": "Incomplete Property"
             # Missing description, address, type, size, price
         },
-        headers=owner_headers
+        headers=owner_headers,
     )
     assert resp.status_code == HTTP_422_UNPROCESSABLE_CONTENT
 
@@ -173,6 +191,7 @@ def test_create_property_missing_fields(owner_headers):
 def test_get_properties_unauthenticated():
     resp = client.get("/properties/")
     assert resp.status_code == 401
+
 
 def test_create_property_unauthenticated():
     resp = client.post(
@@ -183,10 +202,11 @@ def test_create_property_unauthenticated():
             "address": "No Auth",
             "type": "APARTMENT",
             "size": 50.0,
-            "price": 1000.0
-        }
+            "price": 1000.0,
+        },
     )
     assert resp.status_code == 401
+
 
 def test_update_nonexistent_property(owner_headers):
     resp = client.put(
@@ -197,15 +217,17 @@ def test_update_nonexistent_property(owner_headers):
             "address": "Nowhere",
             "type": "DETACHED_HOUSE",
             "size": 100.0,
-            "price": 1000.0
+            "price": 1000.0,
         },
-        headers=owner_headers
+        headers=owner_headers,
     )
     assert resp.status_code == 404
+
 
 def test_delete_nonexistent_property(owner_headers):
     resp = client.delete("/properties/99999", headers=owner_headers)
     assert resp.status_code == 404
+
 
 def test_update_property_invalid_data(owner_headers):
     # Create property first
@@ -217,9 +239,9 @@ def test_update_property_invalid_data(owner_headers):
             "address": "addr",
             "type": "APARTMENT",
             "size": 100.0,
-            "price": 1200.0
+            "price": 1200.0,
         },
-        headers=owner_headers
+        headers=owner_headers,
     )
     prop_id = resp.json()["id"]
     # Try to update with invalid data
@@ -231,11 +253,12 @@ def test_update_property_invalid_data(owner_headers):
             "address": "addr",
             "type": "APARTMENT",
             "size": -10.0,
-            "price": -500.0
+            "price": -500.0,
         },
-        headers=owner_headers
+        headers=owner_headers,
     )
     assert resp.status_code == HTTP_422_UNPROCESSABLE_CONTENT
+
 
 def test_update_property_not_owner(owner_headers):
     # Create property as owner1
@@ -247,14 +270,19 @@ def test_update_property_not_owner(owner_headers):
             "address": "addr",
             "type": "APARTMENT",
             "size": 100.0,
-            "price": 1200.0
+            "price": 1200.0,
         },
-        headers=owner_headers
+        headers=owner_headers,
     )
     prop_id = resp.json()["id"]
     # Register and login as another user
     _, other_headers = register_and_login(
-        client, username="owner2", password="testpassword", email="owner2@example.com", is_owner=True)
+        client,
+        username="owner2",
+        password="testpassword",
+        email="owner2@example.com",
+        is_owner=True,
+    )
     # Try to update property as owner2
     resp = client.put(
         f"/properties/{prop_id}",
@@ -264,11 +292,12 @@ def test_update_property_not_owner(owner_headers):
             "address": "addr",
             "type": "APARTMENT",
             "size": 100.0,
-            "price": 1200.0
+            "price": 1200.0,
         },
-        headers=other_headers
+        headers=other_headers,
     )
     assert resp.status_code in (403, 404)
+
 
 def test_cross_user_property_access(owner_headers):
     # Owner1 creates property
@@ -280,9 +309,9 @@ def test_cross_user_property_access(owner_headers):
             "address": "addr",
             "type": "APARTMENT",
             "size": 100.0,
-            "price": 1200.0
+            "price": 1200.0,
         },
-        headers=owner_headers
+        headers=owner_headers,
     )
     prop_id = resp.json()["id"]
 
@@ -291,51 +320,92 @@ def test_cross_user_property_access(owner_headers):
 
     # Register and login as another owner
     _, other_headers = register_and_login(
-        client, username="owner2", password="testpassword", email="owner2@example.com", is_owner=True)
+        client,
+        username="owner2",
+        password="testpassword",
+        email="owner2@example.com",
+        is_owner=True,
+    )
 
     # Try to GET/UPDATE/DELETE as owner2
-    assert client.get(f"/properties/{prop_id}", headers=other_headers).status_code in (403, 404)
-    assert client.put(f"/properties/{prop_id}", json={
-        "title": "Hacked",
-        "description": "desc",
-        "address": "addr",
-        "type": "APARTMENT",
-        "size": 100.0,
-        "price": 1200.0
-    }, headers=other_headers).status_code in (403, 404)
-    assert client.delete(f"/properties/{prop_id}", headers=other_headers).status_code in (403, 404)
+    assert client.get(f"/properties/{prop_id}", headers=other_headers).status_code in (
+        403,
+        404,
+    )
+    assert client.put(
+        f"/properties/{prop_id}",
+        json={
+            "title": "Hacked",
+            "description": "desc",
+            "address": "addr",
+            "type": "APARTMENT",
+            "size": 100.0,
+            "price": 1200.0,
+        },
+        headers=other_headers,
+    ).status_code in (403, 404)
+    assert client.delete(
+        f"/properties/{prop_id}", headers=other_headers
+    ).status_code in (403, 404)
 
     # Admin can access
-    _, _ = register_and_login(client, username="admin1", password="testpassword", email="admin1@example.com")
+    _, _ = register_and_login(
+        client, username="admin1", password="testpassword", email="admin1@example.com"
+    )
     make_admin("admin1")
-    login_resp = client.post("/login", json={"username": "admin1", "password": "testpassword"})
+    login_resp = client.post(
+        "/login", json={"username": "admin1", "password": "testpassword"}
+    )
     admin_token = login_resp.json()["access_token"]
     admin_headers = {"Authorization": f"Bearer {admin_token}"}
 
-    assert client.get(f"/properties/{prop_id}", headers=admin_headers).status_code == 200
-    assert client.put(f"/properties/{prop_id}", json={
-        "title": "Admin Updated",
-        "description": "desc",
-        "address": "addr",
-        "type": "APARTMENT",
-        "size": 100.0,
-        "price": 1200.0
-    }, headers=admin_headers).status_code == 200
-    assert client.delete(f"/properties/{prop_id}", headers=admin_headers).status_code == 200
+    assert (
+        client.get(f"/properties/{prop_id}", headers=admin_headers).status_code == 200
+    )
+    assert (
+        client.put(
+            f"/properties/{prop_id}",
+            json={
+                "title": "Admin Updated",
+                "description": "desc",
+                "address": "addr",
+                "type": "APARTMENT",
+                "size": 100.0,
+                "price": 1200.0,
+            },
+            headers=admin_headers,
+        ).status_code
+        == 200
+    )
+    assert (
+        client.delete(f"/properties/{prop_id}", headers=admin_headers).status_code
+        == 200
+    )
+
 
 def test_admin_create_property_for_owner_success():
     # Create target OWNER
     owner, _ = register_and_login(
-        client, "owner_target", "testpassword", "owner_target@example.com", is_owner=True
+        client,
+        "owner_target",
+        "testpassword",
+        "owner_target@example.com",
+        is_owner=True,
     )
 
     # Create ADMIN
     _, _ = register_and_login(
-        client, "admin_creator", "testpassword", "admin_creator@example.com", is_owner=False
+        client,
+        "admin_creator",
+        "testpassword",
+        "admin_creator@example.com",
+        is_owner=False,
     )
     make_admin("admin_creator")
 
-    login_resp = client.post("/login", json={"username": "admin_creator", "password": "testpassword"})
+    login_resp = client.post(
+        "/login", json={"username": "admin_creator", "password": "testpassword"}
+    )
     assert login_resp.status_code == 200
     admin_token = login_resp.json()["access_token"]
     admin_headers = {"Authorization": f"Bearer {admin_token}"}
@@ -361,11 +431,17 @@ def test_admin_create_property_for_owner_success():
 
 def test_admin_create_property_missing_owner_id_returns_422():
     _, _ = register_and_login(
-        client, "admin_missing_owner", "testpassword", "admin_missing_owner@example.com", is_owner=False
+        client,
+        "admin_missing_owner",
+        "testpassword",
+        "admin_missing_owner@example.com",
+        is_owner=False,
     )
     make_admin("admin_missing_owner")
 
-    login_resp = client.post("/login", json={"username": "admin_missing_owner", "password": "testpassword"})
+    login_resp = client.post(
+        "/login", json={"username": "admin_missing_owner", "password": "testpassword"}
+    )
     assert login_resp.status_code == 200
     admin_token = login_resp.json()["access_token"]
     admin_headers = {"Authorization": f"Bearer {admin_token}"}
@@ -387,11 +463,17 @@ def test_admin_create_property_missing_owner_id_returns_422():
 
 def test_admin_create_property_owner_not_found_returns_404():
     _, _ = register_and_login(
-        client, "admin_owner_not_found", "testpassword", "admin_owner_not_found@example.com", is_owner=False
+        client,
+        "admin_owner_not_found",
+        "testpassword",
+        "admin_owner_not_found@example.com",
+        is_owner=False,
     )
     make_admin("admin_owner_not_found")
 
-    login_resp = client.post("/login", json={"username": "admin_owner_not_found", "password": "testpassword"})
+    login_resp = client.post(
+        "/login", json={"username": "admin_owner_not_found", "password": "testpassword"}
+    )
     assert login_resp.status_code == 200
     admin_token = login_resp.json()["access_token"]
     admin_headers = {"Authorization": f"Bearer {admin_token}"}
@@ -420,11 +502,18 @@ def test_admin_create_property_owner_id_must_point_to_owner_returns_422():
 
     # Create ADMIN
     _, _ = register_and_login(
-        client, "admin_wrong_owner_role", "testpassword", "admin_wrong_owner_role@example.com", is_owner=False
+        client,
+        "admin_wrong_owner_role",
+        "testpassword",
+        "admin_wrong_owner_role@example.com",
+        is_owner=False,
     )
     make_admin("admin_wrong_owner_role")
 
-    login_resp = client.post("/login", json={"username": "admin_wrong_owner_role", "password": "testpassword"})
+    login_resp = client.post(
+        "/login",
+        json={"username": "admin_wrong_owner_role", "password": "testpassword"},
+    )
     assert login_resp.status_code == 200
     admin_token = login_resp.json()["access_token"]
     admin_headers = {"Authorization": f"Bearer {admin_token}"}
@@ -492,6 +581,7 @@ def test_owner_create_property_with_owner_id_self_is_allowed():
     assert data["owner_id"] == owner["id"]
     assert data["title"] == "Self owner_id"
 
+
 def test_create_property_invalid_data(owner_headers):
     resp = client.post(
         "/properties/",
@@ -501,11 +591,12 @@ def test_create_property_invalid_data(owner_headers):
             "address": "123 Main St",
             "type": "APARTMENT",
             "size": -50.0,
-            "price": -100.0
+            "price": -100.0,
         },
-        headers=owner_headers
+        headers=owner_headers,
     )
     assert resp.status_code == HTTP_422_UNPROCESSABLE_CONTENT
+
 
 def test_create_property_rejects_blank_strings_after_strip(owner_headers):
     # title/address/type are required and must not be blank after stripping whitespace
@@ -517,8 +608,8 @@ def test_create_property_rejects_blank_strings_after_strip(owner_headers):
             "address": "  ",
             "type": "\t",
             "size": 50.0,
-            "price": 1000.0
+            "price": 1000.0,
         },
-        headers=owner_headers
+        headers=owner_headers,
     )
     assert resp.status_code == HTTP_422_UNPROCESSABLE_CONTENT

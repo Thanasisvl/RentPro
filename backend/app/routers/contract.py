@@ -1,24 +1,26 @@
-from fastapi import APIRouter, Depends, HTTPException, Request, UploadFile, File, Query
-from sqlalchemy.orm import Session
-from datetime import datetime, timezone, date
 import os
+from datetime import date, datetime, timezone
 from typing import List
-from sqlalchemy.exc import IntegrityError
 
-from app.schemas.contract import ContractCreate, ContractUpdate, ContractOut
-from app.models.property import Property, PropertyStatus
-from app.models.contract import Contract, ContractStatus
-from app.models.tenant import Tenant
-from app.crud import contract as crud_contract
-from app.core.utils import get_current_user, is_admin
-from app.db.session import get_db
+from fastapi import APIRouter, Depends, File, HTTPException, Query, Request, UploadFile
+from sqlalchemy.exc import IntegrityError
+from sqlalchemy.orm import Session
+
 from app.core.status_sync import sync_property_status
 from app.core.uploads import contract_pdf_destination, save_pdf_upload
+from app.core.utils import get_current_user, is_admin
+from app.crud import contract as crud_contract
+from app.db.session import get_db
+from app.models.contract import Contract, ContractStatus
+from app.models.property import Property, PropertyStatus
+from app.models.tenant import Tenant
+from app.schemas.contract import ContractCreate, ContractOut, ContractUpdate
 
 router = APIRouter()
 
 UPLOAD_DIR = "./uploads/contracts"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
+
 
 def _auto_expire_contracts(db: Session, *, owner_id: int | None = None) -> int:
     """
@@ -68,23 +70,33 @@ def _auto_expire_contracts(db: Session, *, owner_id: int | None = None) -> int:
     db.commit()
     return expired_count
 
+
 @router.post("/", response_model=ContractOut)
-def create_contract(request: Request, contract: ContractCreate, db: Session = Depends(get_db)):
+def create_contract(
+    request: Request, contract: ContractCreate, db: Session = Depends(get_db)
+):
     user = get_current_user(request, db)
 
-    property_obj = db.query(Property).filter(Property.id == contract.property_id).first()
+    property_obj = (
+        db.query(Property).filter(Property.id == contract.property_id).first()
+    )
     if not property_obj:
         raise HTTPException(status_code=404, detail="Property not found")
 
     if property_obj.owner_id != user.id and not is_admin(request, db):
-        raise HTTPException(status_code=403, detail="Not authorized to create contract for this property")
+        raise HTTPException(
+            status_code=403,
+            detail="Not authorized to create contract for this property",
+        )
 
     tenant_obj = db.query(Tenant).filter(Tenant.id == contract.tenant_id).first()
     if not tenant_obj:
         raise HTTPException(status_code=404, detail="Tenant not found")
 
     if (not is_admin(request, db)) and tenant_obj.owner_id != user.id:
-        raise HTTPException(status_code=403, detail="Tenant does not belong to current owner")
+        raise HTTPException(
+            status_code=403, detail="Tenant does not belong to current owner"
+        )
 
     # A3 anti-drift: normalize property status before checks
     sync_property_status(db, property_obj.id)
@@ -104,27 +116,36 @@ def create_contract(request: Request, contract: ContractCreate, db: Session = De
         is not None
     )
     if running_exists:
-        raise HTTPException(status_code=409, detail="Property already has an active running contract")
+        raise HTTPException(
+            status_code=409, detail="Property already has an active running contract"
+        )
 
     try:
         db_contract = crud_contract.create_contract(db, contract, created_by_id=user.id)
     except IntegrityError:
         db.rollback()
         # DB-level unique partial index triggered
-        raise HTTPException(status_code=409, detail="Property already has an ACTIVE contract")
+        raise HTTPException(
+            status_code=409, detail="Property already has an ACTIVE contract"
+        )
 
     sync_property_status(db, db_contract.property_id)
     return db_contract
+
 
 @router.get("/", response_model=List[ContractOut])
 def list_contracts(
     request: Request,
     db: Session = Depends(get_db),
-    owner_id: int | None = Query(default=None, description="Admin-only filter by property owner id"),
+    owner_id: int | None = Query(
+        default=None, description="Admin-only filter by property owner id"
+    ),
     property_id: int | None = Query(default=None),
     tenant_id: int | None = Query(default=None),
     status: ContractStatus | None = Query(default=None),
-    running_today: bool | None = Query(default=None, description="If true: start<=today<=end and status=ACTIVE"),
+    running_today: bool | None = Query(
+        default=None, description="If true: start<=today<=end and status=ACTIVE"
+    ),
     skip: int = 0,
     limit: int = 100,
 ):
@@ -144,6 +165,7 @@ def list_contracts(
         running_today=running_today,
     )
 
+
 @router.get("/{contract_id}", response_model=ContractOut)
 def get_contract(
     request: Request,
@@ -156,7 +178,9 @@ def get_contract(
 
     user = get_current_user(request, db)
     if db_contract.property.owner_id != user.id and not is_admin(request, db):
-        raise HTTPException(status_code=403, detail="Not authorized to view this contract")
+        raise HTTPException(
+            status_code=403, detail="Not authorized to view this contract"
+        )
 
     # Gap #3: auto-expire on access (targeted)
     today = date.today()
@@ -182,8 +206,14 @@ def get_contract(
 
     return db_contract
 
+
 @router.put("/{contract_id}", response_model=ContractOut)
-def update_contract(contract_id: int, contract: ContractUpdate, request: Request, db: Session = Depends(get_db)):
+def update_contract(
+    contract_id: int,
+    contract: ContractUpdate,
+    request: Request,
+    db: Session = Depends(get_db),
+):
     user = get_current_user(request, db)
 
     db_contract = crud_contract.get_contract(db, contract_id)
@@ -194,33 +224,50 @@ def update_contract(contract_id: int, contract: ContractUpdate, request: Request
         raise HTTPException(status_code=403, detail="Not authorized")
 
     if db_contract.status != ContractStatus.ACTIVE:
-        raise HTTPException(status_code=409, detail="Only ACTIVE contracts can be updated")
+        raise HTTPException(
+            status_code=409, detail="Only ACTIVE contracts can be updated"
+        )
 
     if contract.pdf_file is not None:
-        raise HTTPException(status_code=409, detail="pdf_file cannot be updated via PUT")
+        raise HTTPException(
+            status_code=409, detail="pdf_file cannot be updated via PUT"
+        )
 
-    if getattr(contract, "property_id", None) is not None and contract.property_id != db_contract.property_id:
-        raise HTTPException(status_code=409, detail="Changing property_id is not allowed")
+    if (
+        getattr(contract, "property_id", None) is not None
+        and contract.property_id != db_contract.property_id
+    ):
+        raise HTTPException(
+            status_code=409, detail="Changing property_id is not allowed"
+        )
 
     # Single tenant-change check (dedup)
-    if getattr(contract, "tenant_id", None) is not None and contract.tenant_id != db_contract.tenant_id:
+    if (
+        getattr(contract, "tenant_id", None) is not None
+        and contract.tenant_id != db_contract.tenant_id
+    ):
         tenant_obj = db.query(Tenant).filter(Tenant.id == contract.tenant_id).first()
         if not tenant_obj:
             raise HTTPException(status_code=404, detail="Tenant not found")
         if (not is_admin(request, db)) and tenant_obj.owner_id != user.id:
-            raise HTTPException(status_code=403, detail="Tenant does not belong to current owner")
+            raise HTTPException(
+                status_code=403, detail="Tenant does not belong to current owner"
+            )
 
     new_start = contract.start_date or db_contract.start_date
     new_end = contract.end_date or db_contract.end_date
     if new_end <= new_start:
         raise HTTPException(status_code=422, detail="end_date must be after start_date")
 
-    updated = crud_contract.update_contract(db, contract_id, contract, updated_by_id=user.id)
+    updated = crud_contract.update_contract(
+        db, contract_id, contract, updated_by_id=user.id
+    )
     if not updated:
         raise HTTPException(status_code=404, detail="Contract not found")
 
     sync_property_status(db, updated.property_id)
     return updated
+
 
 @router.delete("/{contract_id}")
 def delete_contract(
@@ -237,7 +284,10 @@ def delete_contract(
         raise HTTPException(status_code=403, detail="Not authorized")
 
     if db_contract.status == ContractStatus.ACTIVE:
-        raise HTTPException(status_code=409, detail="Cannot delete ACTIVE contract; terminate it instead")
+        raise HTTPException(
+            status_code=409,
+            detail="Cannot delete ACTIVE contract; terminate it instead",
+        )
 
     property_id = db_contract.property_id
 
@@ -248,8 +298,11 @@ def delete_contract(
 
     return {"ok": True}
 
+
 @router.post("/{contract_id}/terminate", response_model=ContractOut)
-def terminate_contract(contract_id: int, request: Request, db: Session = Depends(get_db)):
+def terminate_contract(
+    contract_id: int, request: Request, db: Session = Depends(get_db)
+):
     user = get_current_user(request, db)
 
     db_contract = crud_contract.get_contract(db, contract_id)
@@ -257,7 +310,9 @@ def terminate_contract(contract_id: int, request: Request, db: Session = Depends
         raise HTTPException(status_code=404, detail="Contract not found")
 
     if db_contract.property.owner_id != user.id and not is_admin(request, db):
-        raise HTTPException(status_code=403, detail="Not authorized to terminate this contract")
+        raise HTTPException(
+            status_code=403, detail="Not authorized to terminate this contract"
+        )
 
     if db_contract.status != ContractStatus.ACTIVE:
         raise HTTPException(status_code=409, detail="Contract is not active")
@@ -272,6 +327,7 @@ def terminate_contract(contract_id: int, request: Request, db: Session = Depends
     # A3: derive property.status from contracts (don’t hard-set AVAILABLE here)
     sync_property_status(db, db_contract.property_id)
     return db_contract
+
 
 @router.post("/{contract_id}/upload", response_model=ContractOut)
 async def upload_contract_pdf(

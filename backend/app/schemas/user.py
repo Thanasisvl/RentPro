@@ -1,6 +1,7 @@
 from pydantic import BaseModel, ConfigDict, EmailStr, field_validator
+
 from app.models.role import UserRole
-from app.schemas.property import PropertyCreate, PropertyOut
+
 
 class UserCreate(BaseModel):
     username: str
@@ -17,11 +18,13 @@ class UserCreate(BaseModel):
             raise ValueError("Cannot register as ADMIN")
         return v
 
+
 class UserUpdate(BaseModel):
     username: str | None = None
     email: EmailStr | None = None
     full_name: str | None = None
     role: UserRole | None = None
+
 
 class UserOut(BaseModel):
     id: int
@@ -32,9 +35,11 @@ class UserOut(BaseModel):
 
     model_config = ConfigDict(from_attributes=True)
 
+
 class UserLogin(BaseModel):
     username: str
     password: str
+
 
 class Token(BaseModel):
     access_token: str

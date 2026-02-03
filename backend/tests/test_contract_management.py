@@ -1,37 +1,40 @@
 import os
-os.environ["RENTPRO_DATABASE_URL"] = "sqlite:///./test_test.db"
-os.environ["ACCESS_TOKEN_EXPIRE_MINUTES"] = "60"
 
 from dotenv import load_dotenv
-load_dotenv()
 
-import pytest
 from datetime import date, timedelta
 from io import BytesIO
 
+import pytest
 from fastapi.testclient import TestClient
 
+from app.db.session import Base, SessionLocal, engine
 from app.main import app
-from app.db.session import Base, engine, SessionLocal
-from app.models.tenant import Tenant
-from app.models.property import Property, PropertyStatus
 from app.models.contract import Contract
-
+from app.models.property import Property, PropertyStatus
+from app.models.tenant import Tenant
 from tests.utils import (
-    seed_locked_criteria_for_tests,
-    register_and_login,
+    create_property,
     login_headers,
     make_admin,
-    create_property,
+    register_and_login,
+    seed_locked_criteria_for_tests,
 )
 
+os.environ["RENTPRO_DATABASE_URL"] = "sqlite:///./test_test.db"
+os.environ["ACCESS_TOKEN_EXPIRE_MINUTES"] = "60"
+load_dotenv()
+
+
 client = TestClient(app)
+
 
 @pytest.fixture(autouse=True)
 def clean_db():
     Base.metadata.drop_all(bind=engine)
     Base.metadata.create_all(bind=engine)
     seed_locked_criteria_for_tests()
+
 
 def _create_tenant_db(owner_id: int, afm: str = "123456789") -> int:
     db = SessionLocal()
@@ -50,6 +53,7 @@ def _create_tenant_db(owner_id: int, afm: str = "123456789") -> int:
     finally:
         db.close()
 
+
 def _get_property_status_db(property_id: int) -> str:
     db = SessionLocal()
     try:
@@ -58,6 +62,7 @@ def _get_property_status_db(property_id: int) -> str:
         return p.status.value if hasattr(p.status, "value") else str(p.status)
     finally:
         db.close()
+
 
 def _get_contract_db(contract_id: int) -> Contract:
     db = SessionLocal()
@@ -68,8 +73,11 @@ def _get_contract_db(contract_id: int) -> Contract:
     finally:
         db.close()
 
+
 def test_uc05_create_contract_sets_property_rented():
-    owner, owner_headers = register_and_login(client, "uc05_owner_a", "pw", "uc05_owner_a@example.com", is_owner=True)
+    owner, owner_headers = register_and_login(
+        client, "uc05_owner_a", "pw", "uc05_owner_a@example.com", is_owner=True
+    )
     prop = create_property(client, owner_headers, title="UC05 P1")
     tenant_id = _create_tenant_db(owner_id=owner["id"], afm="111111111")
 
@@ -88,8 +96,11 @@ def test_uc05_create_contract_sets_property_rented():
 
     assert _get_property_status_db(prop["id"]) == PropertyStatus.RENTED.value
 
+
 def test_uc05_already_rented_conflict_409():
-    owner, owner_headers = register_and_login(client, "uc05_owner_b", "pw", "uc05_owner_b@example.com", is_owner=True)
+    owner, owner_headers = register_and_login(
+        client, "uc05_owner_b", "pw", "uc05_owner_b@example.com", is_owner=True
+    )
     prop = create_property(client, owner_headers, title="UC05 P2")
     tenant_id = _create_tenant_db(owner_id=owner["id"], afm="222222222")
 
@@ -107,9 +118,14 @@ def test_uc05_already_rented_conflict_409():
     r2 = client.post("/contracts/", json=payload, headers=owner_headers)
     assert r2.status_code == 409, r2.text
 
+
 def test_uc05_owner_scoped_tenant_enforced_403():
-    owner1, owner1_headers = register_and_login(client, "uc05_owner_c1", "pw", "uc05_owner_c1@example.com", is_owner=True)
-    owner2, owner2_headers = register_and_login(client, "uc05_owner_c2", "pw", "uc05_owner_c2@example.com", is_owner=True)
+    owner1, owner1_headers = register_and_login(
+        client, "uc05_owner_c1", "pw", "uc05_owner_c1@example.com", is_owner=True
+    )
+    owner2, owner2_headers = register_and_login(
+        client, "uc05_owner_c2", "pw", "uc05_owner_c2@example.com", is_owner=True
+    )
 
     prop1 = create_property(client, owner1_headers, title="UC05 P3")
     tenant2_id = _create_tenant_db(owner_id=owner2["id"], afm="333333333")
@@ -127,9 +143,14 @@ def test_uc05_owner_scoped_tenant_enforced_403():
     )
     assert r.status_code == 403, r.text
 
+
 def test_uc05_admin_can_list_all_contracts_gap2():
-    o1, h1 = register_and_login(client, "uc05_owner_d1", "pw", "uc05_owner_d1@example.com", is_owner=True)
-    o2, h2 = register_and_login(client, "uc05_owner_d2", "pw", "uc05_owner_d2@example.com", is_owner=True)
+    o1, h1 = register_and_login(
+        client, "uc05_owner_d1", "pw", "uc05_owner_d1@example.com", is_owner=True
+    )
+    o2, h2 = register_and_login(
+        client, "uc05_owner_d2", "pw", "uc05_owner_d2@example.com", is_owner=True
+    )
 
     p1 = create_property(client, h1, title="UC05 P4a")
     p2 = create_property(client, h2, title="UC05 P4b")
@@ -139,20 +160,34 @@ def test_uc05_admin_can_list_all_contracts_gap2():
 
     c1 = client.post(
         "/contracts/",
-        json={"property_id": p1["id"], "tenant_id": t1, "start_date": str(date.today()), "end_date": str(date.today() + timedelta(days=30)), "rent_amount": 1000.0},
+        json={
+            "property_id": p1["id"],
+            "tenant_id": t1,
+            "start_date": str(date.today()),
+            "end_date": str(date.today() + timedelta(days=30)),
+            "rent_amount": 1000.0,
+        },
         headers=h1,
     )
     assert c1.status_code == 200
 
     c2 = client.post(
         "/contracts/",
-        json={"property_id": p2["id"], "tenant_id": t2, "start_date": str(date.today()), "end_date": str(date.today() + timedelta(days=30)), "rent_amount": 1100.0},
+        json={
+            "property_id": p2["id"],
+            "tenant_id": t2,
+            "start_date": str(date.today()),
+            "end_date": str(date.today() + timedelta(days=30)),
+            "rent_amount": 1100.0,
+        },
         headers=h2,
     )
     assert c2.status_code == 200
 
     # make an admin user (promote after register)
-    register_and_login(client, "uc05_admin", "pw", "uc05_admin@example.com", is_owner=False)
+    register_and_login(
+        client, "uc05_admin", "pw", "uc05_admin@example.com", is_owner=False
+    )
     make_admin("uc05_admin")
     admin_headers = login_headers(client, "uc05_admin", "pw")
 
@@ -162,8 +197,11 @@ def test_uc05_admin_can_list_all_contracts_gap2():
     assert c1.json()["id"] in ids
     assert c2.json()["id"] in ids
 
+
 def test_uc05_terminate_sets_property_available():
-    owner, owner_headers = register_and_login(client, "uc05_owner_e", "pw", "uc05_owner_e@example.com", is_owner=True)
+    owner, owner_headers = register_and_login(
+        client, "uc05_owner_e", "pw", "uc05_owner_e@example.com", is_owner=True
+    )
     prop = create_property(client, owner_headers, title="UC05 P5")
     tenant_id = _create_tenant_db(owner_id=owner["id"], afm="666666666")
 
@@ -187,8 +225,11 @@ def test_uc05_terminate_sets_property_available():
     assert term.json()["status"] == "TERMINATED"
     assert _get_property_status_db(prop["id"]) == "AVAILABLE"
 
+
 def test_uc05_delete_sets_property_available():
-    owner, owner_headers = register_and_login(client, "uc05_owner_f", "pw", "uc05_owner_f@example.com", is_owner=True)
+    owner, owner_headers = register_and_login(
+        client, "uc05_owner_f", "pw", "uc05_owner_f@example.com", is_owner=True
+    )
     prop = create_property(client, owner_headers, title="UC05 P6")
     tenant_id = _create_tenant_db(owner_id=owner["id"], afm="777777777")
 
@@ -215,8 +256,11 @@ def test_uc05_delete_sets_property_available():
     assert d.status_code == 200, d.text
     assert _get_property_status_db(prop["id"]) == "AVAILABLE"
 
+
 def test_uc05_upload_pdf_only_and_size_limit():
-    owner, owner_headers = register_and_login(client, "uc05_owner_g", "pw", "uc05_owner_g@example.com", is_owner=True)
+    owner, owner_headers = register_and_login(
+        client, "uc05_owner_g", "pw", "uc05_owner_g@example.com", is_owner=True
+    )
     prop = create_property(client, owner_headers, title="UC05 P7")
     tenant_id = _create_tenant_db(owner_id=owner["id"], afm="888888888")
 
@@ -251,8 +295,11 @@ def test_uc05_upload_pdf_only_and_size_limit():
     )
     assert too_big.status_code == 413
 
+
 def test_gap3_auto_expire_on_list_sets_expired_and_frees_property():
-    owner, owner_headers = register_and_login(client, "uc05_owner_h", "pw", "uc05_owner_h@example.com", is_owner=True)
+    owner, owner_headers = register_and_login(
+        client, "uc05_owner_h", "pw", "uc05_owner_h@example.com", is_owner=True
+    )
     prop = create_property(client, owner_headers, title="UC05 P8")
     tenant_id = _create_tenant_db(owner_id=owner["id"], afm="999999999")
 

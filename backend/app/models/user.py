@@ -1,7 +1,10 @@
-from sqlalchemy import Column, Integer, String, Enum as SqlEnum
+from sqlalchemy import Column, Integer, String
+from sqlalchemy import Enum as SqlEnum
 from sqlalchemy.orm import relationship
+
 from app.db.session import Base
 from app.models.role import UserRole
+
 
 class User(Base):
     __tablename__ = "users"
