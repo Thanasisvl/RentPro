@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState } from "react";
 import {
   Box,
   Paper,
@@ -9,35 +9,44 @@ import {
   CircularProgress,
   Alert,
   Button,
-} from '@mui/material';
+  Stack,
+  TextField,
+} from "@mui/material";
 import { Link as RouterLink } from "react-router-dom";
-import api from '../api';
+import api, { getUserRole } from "../api";
 
 function TenantList() {
   const [tenants, setTenants] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
+
+  const isAdmin = getUserRole() === "ADMIN";
+  const [ownerId, setOwnerId] = useState("");
+
+  const fetchTenants = async () => {
+    setLoading(true);
+    setError("");
+    try {
+      const params = {};
+      if (isAdmin && ownerId) params.owner_id = Number(ownerId);
+
+      const res = await api.get("/tenants", { params });
+      setTenants(res.data || []);
+    } catch (err) {
+      console.error("Failed to load tenants", err);
+      if (err.response && err.response.status === 401) {
+        setError("Η συνεδρία έληξε. Κάνε ξανά login.");
+      } else {
+        setError("Αποτυχία φόρτωσης ενοικιαστών.");
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const fetchTenants = async () => {
-      setLoading(true);
-      setError('');
-      try {
-        const res = await api.get('/tenants');
-        setTenants(res.data);
-      } catch (err) {
-        console.error('Failed to load tenants', err);
-        if (err.response && err.response.status === 401) {
-          setError('Η συνεδρία έληξε. Κάνε ξανά login.');
-        } else {
-          setError('Αποτυχία φόρτωσης ενοικιαστών.');
-        }
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchTenants();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   if (loading) {
@@ -50,25 +59,41 @@ function TenantList() {
 
   return (
     <Box mt={4} display="flex" justifyContent="center">
-      <Paper sx={{ p: 3, width: '80%' }}>
+      <Paper sx={{ p: 3, width: "80%" }}>
         <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
-          <Typography variant="h5">
-            Ενοικιαστές
-          </Typography>
+          <Typography variant="h5">Ενοικιαστές</Typography>
 
           <Button variant="contained" component={RouterLink} to="/tenants/new">
             Νέος Ενοικιαστής
           </Button>
         </Box>
 
+        {isAdmin && (
+          <Paper variant="outlined" sx={{ p: 2, mb: 2 }}>
+            <Stack direction={{ xs: "column", sm: "row" }} spacing={2} alignItems="center">
+              <TextField
+                label="Owner ID (admin)"
+                value={ownerId}
+                onChange={(e) => setOwnerId(e.target.value)}
+                size="small"
+                sx={{ minWidth: 200 }}
+              />
+              <Button variant="outlined" onClick={fetchTenants}>
+                Αναζήτηση
+              </Button>
+            </Stack>
+          </Paper>
+        )}
+
         {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
+
         {!error && (
           <List>
             {tenants.map((t) => (
               <ListItem key={t.id} divider>
                 <ListItemText
                   primary={t.name || `Tenant #${t.id}`}
-                  secondary={t.email || t.phone}
+                  secondary={`${t.afm}${t.email ? ` • ${t.email}` : ""}${t.phone ? ` • ${t.phone}` : ""}`}
                 />
               </ListItem>
             ))}

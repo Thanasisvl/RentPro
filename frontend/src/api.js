@@ -18,6 +18,29 @@ export function clearAccessToken() {
   localStorage.removeItem(ACCESS_TOKEN_KEY);
 }
 
+// NEW: role helper (decode JWT payload)
+function parseJwt(token) {
+  try {
+    const base64Url = token.split(".")[1];
+    const base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/");
+    const jsonPayload = decodeURIComponent(
+      atob(base64)
+        .split("")
+        .map((c) => "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2))
+        .join("")
+    );
+    return JSON.parse(jsonPayload);
+  } catch {
+    return null;
+  }
+}
+
+export function getUserRole() {
+  const token = getAccessToken();
+  if (!token) return "";
+  return parseJwt(token)?.role || "";
+}
+
 // Κύριος axios client
 const api = axios.create({
   baseURL: API_BASE_URL,
