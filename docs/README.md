@@ -1,22 +1,23 @@
-# 📋 README for Housing Service Application
+# 📋 README for RentPro (Housing / Rental Management)
 
 ## Εισαγωγή
 
-Αυτή η εφαρμογή είναι μια διαδικτυακή πλατφόρμα διαχείρισης μισθώσεων ακινήτων, σχεδιασμένη για να διευκολύνει την αλληλεπίδραση μεταξύ ιδιοκτητών και ενοικιαστών. Περιλαμβάνει λειτουργίες όπως η αυθεντικοποίηση χρηστών, η διαχείριση ακινήτων και συμβολαίων, καθώς και ένα σύστημα συστάσεων για την εύρεση κατάλληλων ακινήτων.
+Το **RentPro** είναι μια διαδικτυακή πλατφόρμα διαχείρισης μισθώσεων ακινήτων, σχεδιασμένη για να διευκολύνει την αλληλεπίδραση μεταξύ ιδιοκτητών και ενοικιαστών. Περιλαμβάνει λειτουργίες όπως αυθεντικοποίηση χρηστών, διαχείριση ακινήτων και συμβολαίων (UC‑05), καθώς και πρόσθετους κανόνες/ελέγχους (owner scoping, admin εποπτεία).
 
 ## Τεχνολογίες
 
 - **Frontend**: React.js
-- **Backend**: Python (FastAPI ή Flask)
-- **Database**: PostgreSQL
-- **Containerization**: Docker & Docker Compose
+- **Backend**: Python (FastAPI)
+- **Database**: SQLite (tests/dev) / PostgreSQL (prod-ready)
+- **Tooling**: pytest, ruff, black
+- **Containerization**: Docker & Docker Compose (optional)
 
 ## Ρύθμιση Περιβάλλοντος
 
 1. **Clone the repository**:
    ```bash
    git clone <repository-url>
-   cd HousingService
+   cd RentPro
    ```
 
 2. **Backend Setup**:

@@ -1,4 +1,5 @@
 from app.db.session import engine, Base
-from app.models import user, property, tenant, contract  # ensure all tables are registered
+
+import app.models  # noqa: F401  # ensure all models/tables are registered
 
 Base.metadata.create_all(bind=engine)

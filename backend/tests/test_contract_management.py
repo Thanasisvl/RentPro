@@ -234,13 +234,13 @@ def test_uc05_upload_pdf_only_and_size_limit():
     assert c.status_code == 200, c.text
     contract_id = c.json()["id"]
 
-    # not a pdf -> 400
+    # not a pdf -> 415
     bad = client.post(
         f"/contracts/{contract_id}/upload",
         headers=owner_headers,
         files={"file": ("x.txt", BytesIO(b"hello"), "text/plain")},
     )
-    assert bad.status_code == 400
+    assert bad.status_code == 415, bad.text
 
     # too large pdf -> 413
     big = BytesIO(b"a" * (5 * 1024 * 1024 + 1))

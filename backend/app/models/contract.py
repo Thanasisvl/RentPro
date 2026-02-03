@@ -1,5 +1,5 @@
 import enum
-from sqlalchemy import Column, Integer, ForeignKey, Date, Float, String, DateTime, func
+from sqlalchemy import Column, Integer, ForeignKey, Date, Float, String, DateTime, func, Index
 from sqlalchemy.orm import relationship
 from sqlalchemy import Enum as SAEnum
 
@@ -43,3 +43,12 @@ class Contract(Base):
 
     property = relationship("Property", back_populates="contracts")
     tenant = relationship("Tenant", back_populates="contracts")
+
+# DB-level: at most 1 ACTIVE contract per property (works on PostgreSQL + SQLite partial index)
+Index(
+    "uq_contracts_one_active_per_property",
+    Contract.property_id,
+    unique=True,
+    sqlite_where=(Contract.status == ContractStatus.ACTIVE),
+    postgresql_where=(Contract.status == ContractStatus.ACTIVE),
+)

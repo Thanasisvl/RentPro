@@ -1,9 +1,9 @@
 from fastapi import APIRouter, Depends, HTTPException, Request, UploadFile, File, Query
-from uuid import uuid4
 from sqlalchemy.orm import Session
 from datetime import datetime, timezone, date
 import os
 from typing import List
+from sqlalchemy.exc import IntegrityError
 
 from app.schemas.contract import ContractCreate, ContractUpdate, ContractOut
 from app.models.property import Property, PropertyStatus
@@ -13,6 +13,7 @@ from app.crud import contract as crud_contract
 from app.core.utils import get_current_user, is_admin
 from app.db.session import get_db
 from app.core.status_sync import sync_property_status
+from app.core.uploads import contract_pdf_destination, save_pdf_upload
 
 router = APIRouter()
 
@@ -105,7 +106,12 @@ def create_contract(request: Request, contract: ContractCreate, db: Session = De
     if running_exists:
         raise HTTPException(status_code=409, detail="Property already has an active running contract")
 
-    db_contract = crud_contract.create_contract(db, contract, created_by_id=user.id)
+    try:
+        db_contract = crud_contract.create_contract(db, contract, created_by_id=user.id)
+    except IntegrityError:
+        db.rollback()
+        # DB-level unique partial index triggered
+        raise HTTPException(status_code=409, detail="Property already has an ACTIVE contract")
 
     sync_property_status(db, db_contract.property_id)
     return db_contract
@@ -267,35 +273,33 @@ def terminate_contract(contract_id: int, request: Request, db: Session = Depends
     sync_property_status(db, db_contract.property_id)
     return db_contract
 
-@router.post("/{contract_id}/upload")
+@router.post("/{contract_id}/upload", response_model=ContractOut)
 async def upload_contract_pdf(
-    request: Request,
     contract_id: int,
+    request: Request,
     file: UploadFile = File(...),
     db: Session = Depends(get_db),
 ):
     user = get_current_user(request, db)
+
     db_contract = crud_contract.get_contract(db, contract_id)
     if not db_contract:
         raise HTTPException(status_code=404, detail="Contract not found")
 
-    if db_contract.property.owner_id != user.id and not is_admin(request, db):
-        raise HTTPException(status_code=403, detail="Not authorized to upload for this contract")
+    # auth: owner of property or admin
+    if (not is_admin(request, db)) and db_contract.property.owner_id != user.id:
+        raise HTTPException(status_code=403, detail="Not authorized")
 
-    if not file.filename.lower().endswith(".pdf"):
-        raise HTTPException(status_code=400, detail="Only PDF files allowed")
+    if db_contract.pdf_file and not is_admin(request, db):
+        raise HTTPException(status_code=409, detail="PDF already uploaded")
 
-    content = await file.read()
-    MAX_FILE_SIZE = 5 * 1024 * 1024  # 5 MB
-    if len(content) > MAX_FILE_SIZE:
-        raise HTTPException(status_code=413, detail="File too large")
+    dest_abs, rel = contract_pdf_destination(contract_id)
 
-    filename = f"{contract_id}_{uuid4().hex}.pdf"
-    file_path = os.path.join(UPLOAD_DIR, filename)
-    with open(file_path, "wb") as f:
-        f.write(content)
+    await save_pdf_upload(file, dest_abs_path=dest_abs)
 
-    db_contract.pdf_file = f"/uploads/contracts/{filename}"
+    # store relative path (stable + portable)
+    db_contract.pdf_file = rel
+    db_contract.updated_by_id = user.id
     db.commit()
     db.refresh(db_contract)
-    return {"filename": filename, "url": db_contract.pdf_file}
+    return db_contract

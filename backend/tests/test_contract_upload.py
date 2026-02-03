@@ -85,8 +85,10 @@ def test_upload_contract_pdf():
     )
     assert upload_resp.status_code == 200, upload_resp.text
     data = upload_resp.json()
-    assert data["filename"].endswith(".pdf")
-    assert os.path.exists(f"./uploads/contracts/{data['filename']}")
+    assert data["pdf_file"] is not None
+    assert data["pdf_file"].endswith(".pdf")
+    # optional: ensure it is stored under contracts/ folder (relative path)
+    assert "contracts/" in data["pdf_file"].replace("\\", "/")
 
 def test_contract_pdf_upload_edge_cases():
     owner, owner_headers = register_and_login(client, "owner2", "pw", "owner2@example.com", is_owner=True)
@@ -128,18 +130,18 @@ def test_contract_pdf_upload_edge_cases():
         files={},
         headers=owner_headers,
     )
-    assert resp_missing.status_code in (400, 422)
+    assert resp_missing.status_code in (400, 422), resp_missing.text
 
-    # 2. Wrong file type
+    # 2. Wrong file type -> 415 (unsupported media type)
     files_wrong_type = {"file": ("test.txt", io.BytesIO(b"not a pdf"), "text/plain")}
     resp_wrong_type = client.post(
         f"/contracts/{contract_id}/upload",
         files=files_wrong_type,
         headers=owner_headers,
     )
-    assert resp_wrong_type.status_code in (400, 422)
+    assert resp_wrong_type.status_code == 415, resp_wrong_type.text
 
-    # 3. Oversized file (~5MB)
+    # 3. Oversized file (~5MB) -> 413
     big_content = b"%" + b"A" * (5 * 1024 * 1024 + 1)
     files_big = {"file": ("big_contract.pdf", io.BytesIO(big_content), "application/pdf")}
     resp_big = client.post(
@@ -147,4 +149,4 @@ def test_contract_pdf_upload_edge_cases():
         files=files_big,
         headers=owner_headers,
     )
-    assert resp_big.status_code in (400, 413, 422)
+    assert resp_big.status_code == 413, resp_big.text
