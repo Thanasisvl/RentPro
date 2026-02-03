@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { Link as RouterLink, useNavigate, useParams } from "react-router-dom";
 import {
   Box,
   Paper,
@@ -194,6 +194,15 @@ function ContractEditForm() {
           </Stack>
 
           <Stack direction="row" spacing={2} mt={3}>
+            <Button
+              variant="outlined"
+              component={RouterLink}
+              to={`/contracts/${id}`}
+              disabled={submitting}
+            >
+              View
+            </Button>
+
             <Button type="submit" variant="contained" disabled={submitting}>
               {submitting ? "Αποθήκευση..." : "Αποθήκευση"}
             </Button>

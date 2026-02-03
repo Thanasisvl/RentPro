@@ -20,6 +20,7 @@ import TenantForm from "./components/TenantForm";
 import ContractForm from "./components/ContractForm";
 import ContractEditForm from "./components/ContractEditForm";
 import ContractList from "./components/ContractList";
+import ContractDetails from "./components/ContractDetails";
 
 function App() {
   const isAuthenticated = !!localStorage.getItem("token");
@@ -159,6 +160,7 @@ function App() {
               </RequireAuth>
             }
           />
+
           <Route
             path="/contracts/new"
             element={
@@ -167,6 +169,16 @@ function App() {
               </RequireAuth>
             }
           />
+
+          <Route
+            path="/contracts/:id"
+            element={
+              <RequireAuth>
+                <ContractDetails />
+              </RequireAuth>
+            }
+          />
+
           <Route
             path="/contracts/:id/edit"
             element={

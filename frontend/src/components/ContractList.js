@@ -256,6 +256,16 @@ function ContractList() {
                         <Button
                           size="small"
                           variant="outlined"
+                          component={RouterLink}
+                          to={`/contracts/${c.id}`}
+                          disabled={disabled}
+                        >
+                          View
+                        </Button>
+
+                        <Button
+                          size="small"
+                          variant="outlined"
                           color="warning"
                           disabled={disabled || !canTerminate}
                           onClick={() => terminateContract(c.id)}
