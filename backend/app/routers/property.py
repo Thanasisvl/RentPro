@@ -55,7 +55,7 @@ def create_property(
             )
         if owner.role != UserRole.OWNER:
             raise HTTPException(
-                status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
                 detail="owner_id must refer to a user with role OWNER",
             )
 

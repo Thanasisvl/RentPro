@@ -21,6 +21,7 @@ import ContractForm from "./components/ContractForm";
 import ContractEditForm from "./components/ContractEditForm";
 import ContractList from "./components/ContractList";
 import ContractDetails from "./components/ContractDetails";
+import ProfilePage from "./components/ProfilePage";
 
 function App() {
   const isAuthenticated = !!localStorage.getItem("token");
