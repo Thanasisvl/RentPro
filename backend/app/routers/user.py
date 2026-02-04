@@ -47,6 +47,44 @@ def list_users(
     return crud_user.get_users(db=db, skip=skip, limit=limit)
 
 
+@router.get("/me", response_model=UserOut)
+def get_me(request: Request, db: Session = Depends(get_db)):
+    # request.state.user -> payload (από JWTAuthMiddleware)
+    # get_current_user -> φορτώνει User από DB με βάση sub=username
+    return get_current_user(request, db)
+
+
+@router.put("/me", response_model=UserOut)
+def update_me(request: Request, user: UserUpdate, db: Session = Depends(get_db)):
+    current_user = get_current_user(request, db)
+
+    # Reject forbidden updates explicitly (prototype constraint)
+    forbidden = []
+    if user.username is not None:
+        forbidden.append("username")
+    if user.role is not None:
+        forbidden.append("role")
+
+    if forbidden:
+        detail = (
+            f"{forbidden[0]} cannot be updated"
+            if len(forbidden) == 1
+            else f"{' and '.join(forbidden)} cannot be updated"
+        )
+        raise HTTPException(status_code=400, detail=detail)
+
+    # Allow only email/full_name
+    user_data = user.model_dump(exclude_unset=True)
+    user_data.pop("role", None)
+    user_data.pop("username", None)
+
+    safe_update = UserUpdate(**user_data)
+    updated = crud_user.update_user(db, current_user.id, safe_update)
+    if not updated:
+        raise HTTPException(status_code=404, detail="User not found")
+    return updated
+
+
 @router.get("/{user_id}", response_model=UserOut)
 def get_user(request: Request, user_id: int, db: Session = Depends(get_db)):
     current_user = get_current_user(request, db)
@@ -70,7 +108,28 @@ def update_user(
         raise HTTPException(
             status_code=403, detail="Not authorized to update this user"
         )
-    db_user = crud_user.update_user(db, user_id, user)
+    # Reject forbidden updates explicitly (prototype constraint)
+    forbidden = []
+    if user.username is not None:
+        forbidden.append("username")
+    if user.role is not None:
+        forbidden.append("role")
+
+    if forbidden:
+        detail = (
+            f"{forbidden[0]} cannot be updated"
+            if len(forbidden) == 1
+            else f"{' and '.join(forbidden)} cannot be updated"
+        )
+        raise HTTPException(status_code=400, detail=detail)
+
+    # Allow only email/full_name
+    user_data = user.model_dump(exclude_unset=True)
+    user_data.pop("role", None)
+    user_data.pop("username", None)
+
+    safe_update = UserUpdate(**user_data)
+    db_user = crud_user.update_user(db, user_id, safe_update)
     return db_user
 
 

@@ -115,7 +115,6 @@ def test_update_user():
     response = client.put(
         f"/users/{user_id}",
         json={
-            "username": "testuser",
             "email": "updated@example.com",
             "full_name": "Updated User",
         },
@@ -290,7 +289,6 @@ def test_update_user_invalid_email():
     response = client.put(
         f"/users/{user_id}",
         json={
-            "username": "invalidemail",
             "email": "not-an-email",
             "full_name": "Invalid Email",
         },
@@ -377,3 +375,89 @@ def test_list_users_admin_only():
     resp = client.get("/users/", headers=admin_headers)
     assert resp.status_code == 200
     assert isinstance(resp.json(), list)
+
+
+def test_get_me():
+    user, headers = register_and_login(
+        client, username="meuser", password="testpassword", email="me@example.com"
+    )
+
+    resp = client.get("/users/me", headers=headers)
+    assert resp.status_code == 200
+    data = resp.json()
+
+    assert data["id"] == user["id"]
+    assert data["username"] == user["username"]
+    assert data["email"] == user["email"]
+    assert "full_name" in data
+    assert "role" in data
+
+
+def test_update_me():
+    user, headers = register_and_login(
+        client, username="meupdate", password="testpassword", email="old@example.com"
+    )
+
+    resp = client.put(
+        "/users/me",
+        json={"email": "new@example.com", "full_name": "New Name"},
+        headers=headers,
+    )
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["email"] == "new@example.com"
+    assert data["full_name"] == "New Name"
+
+    # Optional: confirm via GET
+    resp2 = client.get("/users/me", headers=headers)
+    assert resp2.status_code == 200
+    assert resp2.json()["email"] == "new@example.com"
+
+
+def test_update_me_rejects_role_and_username():
+    _, headers = register_and_login(
+        client,
+        username="meimmut",
+        password="testpassword",
+        email="immut@example.com",
+        is_owner=False,
+    )
+
+    resp = client.put(
+        "/users/me",
+        json={
+            "email": "immut2@example.com",
+            "full_name": "Updated",
+            "username": "hackedname",
+            "role": "OWNER",
+        },
+        headers=headers,
+    )
+
+    assert resp.status_code == 400
+    assert resp.json()["detail"] == "username and role cannot be updated"
+
+
+def test_update_user_rejects_role_and_username():
+    user, headers = register_and_login(
+        client,
+        username="uimmut",
+        password="testpassword",
+        email="uimmut@example.com",
+        is_owner=True,  # initial role=OWNER
+    )
+    user_id = user["id"]
+
+    resp = client.put(
+        f"/users/{user_id}",
+        json={
+            "email": "changed@example.com",
+            "full_name": "Changed Name",
+            "username": "newusername_should_fail",
+            "role": "USER",
+        },
+        headers=headers,
+    )
+
+    assert resp.status_code == 400
+    assert resp.json()["detail"] == "username and role cannot be updated"

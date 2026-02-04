@@ -4,6 +4,10 @@ __pycache__/
 *.pyo
 *.pyd
 *.pyc
+build/
+dist/
+*.egg-info/
+.eggs/
 
 # Virtual environments
 venv/
@@ -16,19 +20,18 @@ venv/
 # SQLite database files
 *.db
 *.sqlite3
-```
-# OS files
-.DS_Store
-Thumbs.db```
 
 #VS Code
 .vscode/
 
-# Pytest cache
-.pytest_cache/
-
 # Migrations (if using Alembic, adjust as needed)
 alembic/versions/
+
+# Type-checker / linter caches
+.mypy_cache/
+.ruff_cache/
+.pyright/
+.pytype/
 
 # Logs
 *.log
@@ -43,5 +46,29 @@ docs/modelEntities.md
 docs/useCases.md
 docs/nextSteps.md
 
-./idea
-.coverage
+# Test/coverage artifacts
+htmlcov/
+.coverage.*
+.pytest_cache/
+
+.idea/
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+# macOS filesystem metadata
+._*
+.Spotlight-V100
+.Trashes
+.fseventsd
+
+# Environments / tooling
+.tox/
+.nox/
+.python-version
+
+# Frontend caches (optional)
+frontend/.eslintcache
+frontend/.cache/
+node_modules/

@@ -61,6 +61,10 @@ function App() {
                 Contracts
               </Button>
 
+              <Button color="inherit" component={Link} to="/profile">
+                Profile
+              </Button>
+
               <LogoutButton />
             </>
           ) : (
@@ -135,6 +139,15 @@ function App() {
             }
           />
 
+          <Route
+            path="/profile"
+            element={
+              <RequireAuth>
+                <ProfilePage />
+              </RequireAuth>
+            }
+          />
+          
           <Route
             path="/tenants"
             element={

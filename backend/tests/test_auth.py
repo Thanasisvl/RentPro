@@ -24,6 +24,16 @@ def clean_db():
 client = TestClient(app)
 
 
+@pytest.fixture(autouse=True)
+def clean_cookies():
+    """
+    Ensure tests are isolated from each other's client cookie jar.
+    DB is reset per test, so stale refresh cookies from previous tests
+    would otherwise reference users that no longer exist.
+    """
+    client.cookies.clear()
+
+
 def test_register_user_success():
     resp = client.post(
         "/users/register",
