@@ -148,10 +148,13 @@ function explainTopBullets({ it, idx, criteriaOrder, weights, isBenefit, vRow, i
   if (bullets.length === 0) {
     const meta = CRITERIA_META.price;
     const p = meta?.format(values?.price, it);
-    return [
-      `Συνδυασμός κριτηρίων βάσει βαρών (AHP).`,
-      p ? `Τιμή: ${p}` : `Επανέλεγξε τα βάρη σου για πιο καθαρή διαφοροποίηση.`,
-    ];
+    return {
+      title: `Γιατί είναι #${idx + 1}`,
+      bullets: [
+        "Συνδυασμός κριτηρίων βάσει βαρών (AHP).",
+        p ? `Τιμή: ${p}` : "Επανέλεγξε τα βάρη σου για πιο καθαρή διαφοροποίηση.",
+      ],
+    };
   }
 
   const title = `Γιατί είναι #${idx + 1}`;
@@ -460,7 +463,12 @@ export default function RecommendationsPage() {
                       <PropertyCard
                         property={it.property}
                         viewTo={`/search/properties/${it.property?.id}`}
-                        score={whatIf && whatIfRanking ? Number(whatIfRanking[idx]?.score ?? it.score) : Number(it.score)}
+                        rank={idx + 1} // NEW
+                        score={
+                          whatIf && whatIfRanking
+                            ? Number(whatIfRanking[idx]?.score ?? it.score)
+                            : Number(it.score)
+                        }
                         saved={savedIds.includes(Number(it.property?.id))}
                         inCompare={compareIds.includes(Number(it.property?.id))}
                         onToggleSave={toggleSaved}
@@ -473,7 +481,7 @@ export default function RecommendationsPage() {
                             {explainPack.title}
                           </Typography>
                           <List dense sx={{ m: 0, p: 0 }}>
-                            {explainPack.bullets.slice(0, 3).map((b, bi) => (
+                            {explainPack.bullets.slice(0, 2).map((b, bi) => (
                               <ListItem key={bi} sx={{ py: 0.25 }}>
                                 <ListItemText primaryTypographyProps={{ variant: "body2" }} primary={b} />
                               </ListItem>

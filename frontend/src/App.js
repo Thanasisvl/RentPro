@@ -1,6 +1,19 @@
 import React from "react";
-import { BrowserRouter as Router, Routes, Route, Link, Navigate } from "react-router-dom";
-import { AppBar, Toolbar, Typography, Box, Button } from "@mui/material";
+import {
+  BrowserRouter as Router,
+  Routes,
+  Route,
+  NavLink,
+  Navigate,
+} from "react-router-dom";
+import {
+  AppBar,
+  Toolbar,
+  Typography,
+  Box,
+  Button,
+  Stack,
+} from "@mui/material";
 
 import LandingPage from "./components/LandingPage";
 import LoginForm from "./components/LoginForm";
@@ -28,11 +41,13 @@ import OwnerDashboard from "./components/dashboards/OwnerDashboard";
 import AdminDashboard from "./components/dashboards/AdminDashboard";
 import AdminUsersPage from "./components/AdminUsersPage";
 
+// NEW: logo asset (put it under src/assets)
+import logo from "./assets/rentpro-mark.png";
+
 function normalizeRole(raw) {
   const r = String(raw || "").toUpperCase().trim();
   if (r === "ADMIN") return "ADMIN";
   if (r === "OWNER") return "OWNER";
-  // backend might use USER/TENANT; treat unknown as tenant for UX
   return "TENANT";
 }
 
@@ -52,92 +67,188 @@ function RoleHomeRedirect() {
 function RequireRole({ allowed, children }) {
   const role = normalizeRole(getUserRole());
   const ok = Array.isArray(allowed) && allowed.includes(role);
-  if (!ok) {
-    return <Navigate to="/app" replace />;
-  }
+  if (!ok) return <Navigate to="/app" replace />;
   return children;
 }
+
+// NEW: shared styles for active nav
+const navBtnSx = {
+  textTransform: "none",
+  borderRadius: 999,
+  px: 1.5,
+  py: 0.75,
+  color: "text.primary",
+  "&.active": {
+    bgcolor: "action.selected",
+    fontWeight: 800,
+  },
+};
 
 function App() {
   const isAuthenticated = !!getAccessToken();
   const role = normalizeRole(getUserRole());
+
   const homeTo = isAuthenticated ? "/app" : "/";
-  const homeLabel = isAuthenticated ? "Πίνακας" : "Αρχική";
-  const homeLabelWithRole = isAuthenticated ? `Πίνακας · ${roleLabel(role)}` : homeLabel;
+  const homeLabel = isAuthenticated ? `Πίνακας · ${roleLabel(role)}` : "Αρχική";
 
   return (
     <Router>
       <AppBar
-        position="static"
-        color="transparent"
+        position="sticky"
         elevation={0}
+        color="default"
         sx={{
-          bgcolor: "background.paper",
+          top: 0,
           borderBottom: 1,
           borderColor: "divider",
+          bgcolor: "rgba(255,255,255,0.72)",
+          backdropFilter: "blur(10px)",
+          zIndex: (t) => t.zIndex.drawer + 1,
         }}
       >
-        <Toolbar>
-          <Typography variant="h6" sx={{ flexGrow: 1 }}>
-            RentPro
-          </Typography>
+        <Toolbar sx={{ gap: 2 }}>
+          {/* Brand / logo (left) */}
+          <Stack
+            direction="row"
+            spacing={1}
+            alignItems="center"
+            component={NavLink}
+            to={homeTo}
+            style={{ textDecoration: "none", color: "inherit" }}
+          >
+            <Box
+              component="img"
+              src={logo}
+              alt="RentPro"
+              sx={{ width: 40, height: 40, objectFit: "contain" }}
+            />
+            <Typography variant="h6" sx={{ fontWeight: 900, letterSpacing: 0.2 }}>
+              RentPro
+            </Typography>
+          </Stack>
 
-          <Button color="inherit" component={Link} to={homeTo}>
-            {homeLabelWithRole}
-          </Button>
+          {/* Nav (center) */}
+          <Stack direction="row" spacing={0.5} sx={{ flex: 1, overflowX: "auto" }}>
+            <Button
+              component={NavLink}
+              to={homeTo}
+              end
+              className={({ isActive }) => (isActive ? "active" : "")}
+              sx={navBtnSx}
+            >
+              {homeLabel}
+            </Button>
 
-          {isAuthenticated ? (
-            <>
-              {role === "TENANT" ? (
+            {isAuthenticated ? (
+              role === "TENANT" ? (
                 <>
-                  <Button color="inherit" component={Link} to="/search">
+                  <Button
+                    component={NavLink}
+                    to="/search"
+                    className={({ isActive }) => (isActive ? "active" : "")}
+                    sx={navBtnSx}
+                  >
                     Αναζήτηση
                   </Button>
-                  <Button color="inherit" component={Link} to="/preferences">
+                  <Button
+                    component={NavLink}
+                    to="/preferences"
+                    className={({ isActive }) => (isActive ? "active" : "")}
+                    sx={navBtnSx}
+                  >
                     Προτιμήσεις
                   </Button>
-                  <Button color="inherit" component={Link} to="/recommendations">
+                  <Button
+                    component={NavLink}
+                    to="/recommendations"
+                    className={({ isActive }) => (isActive ? "active" : "")}
+                    sx={navBtnSx}
+                  >
                     Προτάσεις
                   </Button>
                 </>
               ) : (
                 <>
-                  <Button color="inherit" component={Link} to="/properties">
+                  <Button
+                    component={NavLink}
+                    to="/properties"
+                    className={({ isActive }) => (isActive ? "active" : "")}
+                    sx={navBtnSx}
+                  >
                     Ακίνητα
                   </Button>
-                  <Button color="inherit" component={Link} to="/tenants">
+                  <Button
+                    component={NavLink}
+                    to="/tenants"
+                    className={({ isActive }) => (isActive ? "active" : "")}
+                    sx={navBtnSx}
+                  >
                     Ενοικιαστές
                   </Button>
-                  <Button color="inherit" component={Link} to="/contracts">
+                  <Button
+                    component={NavLink}
+                    to="/contracts"
+                    className={({ isActive }) => (isActive ? "active" : "")}
+                    sx={navBtnSx}
+                  >
                     Συμβόλαια
                   </Button>
                   {role === "ADMIN" ? (
-                    <Button color="inherit" component={Link} to="/app/admin">
+                    <Button
+                      component={NavLink}
+                      to="/app/admin"
+                      className={({ isActive }) => (isActive ? "active" : "")}
+                      sx={navBtnSx}
+                    >
                       Διαχείριση
                     </Button>
                   ) : null}
                 </>
-              )}
+              )
+            ) : (
+              <>
+                <Button
+                  component={NavLink}
+                  to="/search"
+                  className={({ isActive }) => (isActive ? "active" : "")}
+                  sx={navBtnSx}
+                >
+                  Αναζήτηση
+                </Button>
+                <Button
+                  component={NavLink}
+                  to="/login"
+                  className={({ isActive }) => (isActive ? "active" : "")}
+                  sx={navBtnSx}
+                >
+                  Σύνδεση
+                </Button>
+                <Button
+                  component={NavLink}
+                  to="/register"
+                  className={({ isActive }) => (isActive ? "active" : "")}
+                  sx={navBtnSx}
+                >
+                  Εγγραφή
+                </Button>
+              </>
+            )}
+          </Stack>
 
-              <Button color="inherit" component={Link} to="/profile">
+          {/* Right side */}
+          {isAuthenticated ? (
+            <Stack direction="row" spacing={1} alignItems="center">
+              <Button
+                component={NavLink}
+                to="/profile"
+                className={({ isActive }) => (isActive ? "active" : "")}
+                sx={navBtnSx}
+              >
                 Προφίλ
               </Button>
-
               <LogoutButton />
-            </>
-          ) : (
-            <>
-              <Button color="inherit" component={Link} to="/search">
-                Αναζήτηση
-              </Button>
-              <Button color="inherit" component={Link} to="/login">
-                Σύνδεση
-              </Button>
-              <Button color="inherit" component={Link} to="/register">
-                Εγγραφή
-              </Button>
-            </>
-          )}
+            </Stack>
+          ) : null}
         </Toolbar>
       </AppBar>
 
@@ -275,7 +386,7 @@ function App() {
               </RequireAuth>
             }
           />
-          
+
           <Route
             path="/tenants"
             element={
@@ -307,7 +418,6 @@ function App() {
               </RequireAuth>
             }
           />
-
           <Route
             path="/contracts/new"
             element={
@@ -318,7 +428,6 @@ function App() {
               </RequireAuth>
             }
           />
-
           <Route
             path="/contracts/:id"
             element={
@@ -329,7 +438,6 @@ function App() {
               </RequireAuth>
             }
           />
-
           <Route
             path="/contracts/:id/edit"
             element={

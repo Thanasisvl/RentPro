@@ -50,6 +50,7 @@ docs/nextSteps.md
 htmlcov/
 .coverage.*
 .pytest_cache/
+backend/.coverage
 
 .idea/
 
