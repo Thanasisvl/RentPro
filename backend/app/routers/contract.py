@@ -1,14 +1,15 @@
 from __future__ import annotations
 
 from datetime import date, datetime, timezone
+from pathlib import Path
 
 from fastapi import APIRouter, Depends, File, HTTPException, Query, Request, UploadFile
-from fastapi.responses import RedirectResponse
+from fastapi.responses import FileResponse
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.core.status_sync import sync_property_status
-from app.core.uploads import contract_pdf_destination, save_pdf_upload
+from app.core.uploads import contract_pdf_destination, get_upload_root, save_pdf_upload
 from app.core.utils import get_current_user, is_admin
 from app.crud import contract as crud_contract
 from app.db.session import get_db
@@ -82,6 +83,28 @@ def _pdf_url(pdf_file: str | None) -> str | None:
         rel = f"contracts/{rel}"
 
     return f"/uploads/{rel}"
+
+
+def _pdf_abs_path(pdf_file: str | None) -> Path | None:
+    """
+    Resolve the stored relative path into an absolute filesystem path under the upload root.
+    """
+    if not pdf_file:
+        return None
+
+    rel = pdf_file.lstrip("/").replace("\\", "/")
+    if "/" not in rel:
+        rel = f"contracts/{rel}"
+
+    root = get_upload_root()
+    abs_path = (root / Path(rel)).resolve()
+
+    # Security: prevent path traversal / escape from upload root
+    root_resolved = root.resolve()
+    if root_resolved not in abs_path.parents and abs_path != root_resolved:
+        raise HTTPException(status_code=400, detail="Invalid PDF path")
+
+    return abs_path
 
 
 def _to_out(c: Contract) -> ContractOut:
@@ -352,7 +375,7 @@ async def upload_contract_pdf(
 
 
 @router.get("/{contract_id}/pdf")
-def get_contract_pdf_redirect(
+def get_contract_pdf_inline(
     request: Request,
     contract_id: int,
     db: Session = Depends(get_db),
@@ -360,7 +383,7 @@ def get_contract_pdf_redirect(
     """
     Auth-guarded PDF access:
     - checks ownership/admin like GET /contracts/{id}
-    - redirects to the static /uploads/... URL
+    - serves the PDF directly (FileResponse) for robust inline viewing
     """
     db_contract = crud_contract.get_contract(db, contract_id)
     if not db_contract:
@@ -370,11 +393,21 @@ def get_contract_pdf_redirect(
     if db_contract.property.owner_id != user.id and not is_admin(request, db):
         raise HTTPException(status_code=403, detail="Not authorized")
 
-    url = _pdf_url(getattr(db_contract, "pdf_file", None))
-    if not url:
+    abs_path = _pdf_abs_path(getattr(db_contract, "pdf_file", None))
+    if not abs_path:
         raise HTTPException(status_code=404, detail="No PDF uploaded for this contract")
 
-    return RedirectResponse(url=url, status_code=307)
+    if not abs_path.exists() or not abs_path.is_file():
+        raise HTTPException(status_code=404, detail="PDF file missing on server")
+
+    # Inline display in browser tab (content-disposition: inline)
+    filename = abs_path.name
+    return FileResponse(
+        path=str(abs_path),
+        media_type="application/pdf",
+        filename=filename,
+        content_disposition_type="inline",
+    )
 
 
 @router.delete("/{contract_id}")

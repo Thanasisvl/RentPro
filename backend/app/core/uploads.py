@@ -10,8 +10,19 @@ DEFAULT_MAX_UPLOAD_BYTES = 5 * 1024 * 1024  # 5MB
 
 
 def get_upload_root() -> Path:
-    root = os.getenv("RENTPRO_UPLOAD_DIR", "./uploads")
-    return Path(root).resolve()
+    """
+    Absolute directory for uploads (contracts PDFs, etc).
+
+    - If RENTPRO_UPLOAD_DIR is set, it wins.
+    - Otherwise default to "<repo>/backend/uploads" (same location mounted by app).
+    """
+    root = os.getenv("RENTPRO_UPLOAD_DIR")
+    if root:
+        return Path(root).resolve()
+
+    # backend/app/core/uploads.py -> backend/
+    backend_dir = Path(__file__).resolve().parent.parent.parent
+    return (backend_dir / "uploads").resolve()
 
 
 def _ensure_within_root(root: Path, target: Path) -> None:

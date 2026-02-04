@@ -10,6 +10,7 @@ from sqlalchemy.exc import IntegrityError, OperationalError
 from pathlib import Path
 
 import app.models
+from app.core.uploads import get_upload_root
 from app.core.jwt_middleware import JWTAuthMiddleware
 from app.db.session import Base, engine
 from app.routers import api_router
@@ -94,7 +95,7 @@ app.add_middleware(JWTAuthMiddleware)
 app.include_router(api_router)
 
 BASE_DIR = Path(__file__).resolve().parent.parent
-UPLOADS_DIR = BASE_DIR / "uploads"
+UPLOADS_DIR = get_upload_root()
 
 UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
 

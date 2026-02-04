@@ -365,7 +365,7 @@ def test_l2_contract_list_filters_running_today_and_status():
     assert c2_id in ids2
 
 
-def test_l2_pdf_url_in_list_and_pdf_redirect_with_auth():
+def test_l2_pdf_url_in_list_and_pdf_inline_with_auth():
     owner, owner_headers = register_and_login(
         client, "l2_owner_pdf", "pw", "l2_owner_pdf@example.com", is_owner=True
     )
@@ -410,14 +410,16 @@ def test_l2_pdf_url_in_list_and_pdf_redirect_with_auth():
     assert row.get("pdf_url") is not None
     assert row["pdf_url"].startswith("/uploads/")
 
-    # /pdf should redirect to /uploads/...
-    redir = client.get(
+    # /pdf should serve PDF inline (no redirect)
+    pdf = client.get(
         f"/contracts/{contract_id}/pdf",
         headers=owner_headers,
         follow_redirects=False,
     )
-    assert redir.status_code in (302, 307), redir.text
-    assert redir.headers["location"].startswith("/uploads/")
+    assert pdf.status_code == 200, pdf.text
+    assert "application/pdf" in (pdf.headers.get("content-type") or "")
+    assert (pdf.headers.get("content-disposition") or "").startswith("inline")
+    assert pdf.content.startswith(b"%PDF-")
 
     # Another owner must NOT be able to access /pdf
     _, other_headers = register_and_login(
