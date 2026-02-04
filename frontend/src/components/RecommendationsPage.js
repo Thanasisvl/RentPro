@@ -208,6 +208,87 @@ export default function RecommendationsPage() {
     };
   }, []);
 
+  // Derived values (must be defined before any early return; hooks must not be conditional)
+  const items = useMemo(
+    () => (Array.isArray(data?.items) ? data.items : []),
+    [data]
+  );
+  const meta = useMemo(
+    () => (data?.meta && typeof data.meta === "object" ? data.meta : {}),
+    [data]
+  );
+  const ahp = items[0]?.explain?.ahp;
+  const criteriaOrder = useMemo(
+    () =>
+      Array.isArray(meta.criteria_order)
+        ? meta.criteria_order
+        : ["price", "size", "property_type", "area_score"],
+    [meta.criteria_order]
+  );
+  const criteriaOrderKey = useMemo(
+    () => criteriaOrder.join("|"),
+    [criteriaOrder]
+  );
+  const isBenefit = useMemo(
+    () =>
+      Array.isArray(meta.is_benefit)
+        ? meta.is_benefit
+        : [false, true, true, true],
+    [meta.is_benefit]
+  );
+
+  const weightsBase = useMemo(
+    () => normalizeWeightsFromDict(criteriaOrder, ahp?.weights || {}),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [criteriaOrderKey, ahp?.weights]
+  );
+  const weightsActive = whatIf
+    ? applyPriceBoost(criteriaOrder, weightsBase, priceBoost)
+    : weightsBase;
+
+  const decisionMatrix = useMemo(() => {
+    const m = [];
+    for (const it of items) {
+      const v = it?.explain?.topsis?.criteria_values;
+      if (!v) return null;
+      const row = criteriaOrder.map((k) => Number(v?.[k] ?? NaN));
+      if (row.some((x) => !Number.isFinite(x))) return null;
+      m.push(row);
+    }
+    return m;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [items, criteriaOrderKey]);
+
+  const whatIfRanking = useMemo(() => {
+    if (!whatIf || !decisionMatrix) return null;
+    const { scores, v, idealBest, idealWorst } = topsisCompute(
+      decisionMatrix,
+      weightsActive,
+      isBenefit
+    );
+    const mapped = items.map((it, i) => ({
+      it,
+      score: scores[i]?.score ?? 0,
+      vRow: v[i],
+      idealBest,
+      idealWorst,
+    }));
+    mapped.sort((a, b) => b.score - a.score);
+    return mapped;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [whatIf, decisionMatrix, weightsActive, isBenefit, items]);
+
+  const baseExplain = useMemo(() => {
+    if (!decisionMatrix) return null;
+    const { v, idealBest, idealWorst } = topsisCompute(
+      decisionMatrix,
+      weightsBase,
+      isBenefit
+    );
+    return { v, idealBest, idealWorst };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [decisionMatrix, weightsBase, isBenefit]);
+
   if (loading) {
     return (
       <Box sx={{ p: 3, display: "flex", alignItems: "center", gap: 2 }}>
@@ -282,55 +363,6 @@ export default function RecommendationsPage() {
       </PageContainer>
     );
   }
-
-  const items = data?.items || [];
-  const meta = data?.meta || {};
-  const ahp = items[0]?.explain?.ahp;
-  const criteriaOrder = Array.isArray(meta.criteria_order)
-    ? meta.criteria_order
-    : ["price", "size", "property_type", "area_score"];
-  const isBenefit = Array.isArray(meta.is_benefit) ? meta.is_benefit : [false, true, true, true];
-  const weightsBase = useMemo(
-    () => normalizeWeightsFromDict(criteriaOrder, ahp?.weights || {}),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [criteriaOrder.join("|"), ahp?.weights]
-  );
-  const weightsActive = whatIf ? applyPriceBoost(criteriaOrder, weightsBase, priceBoost) : weightsBase;
-
-  const decisionMatrix = useMemo(() => {
-    const m = [];
-    for (const it of items) {
-      const v = it?.explain?.topsis?.criteria_values;
-      if (!v) return null;
-      const row = criteriaOrder.map((k) => Number(v?.[k] ?? NaN));
-      if (row.some((x) => !Number.isFinite(x))) return null;
-      m.push(row);
-    }
-    return m;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [items, criteriaOrder.join("|")]);
-
-  const whatIfRanking = useMemo(() => {
-    if (!whatIf || !decisionMatrix) return null;
-    const { scores, v, idealBest, idealWorst } = topsisCompute(decisionMatrix, weightsActive, isBenefit);
-    const mapped = items.map((it, i) => ({
-      it,
-      score: scores[i]?.score ?? 0,
-      vRow: v[i],
-      idealBest,
-      idealWorst,
-    }));
-    mapped.sort((a, b) => b.score - a.score);
-    return mapped;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [whatIf, decisionMatrix, weightsActive, isBenefit, items]);
-
-  const baseExplain = useMemo(() => {
-    if (!decisionMatrix) return null;
-    const { v, idealBest, idealWorst } = topsisCompute(decisionMatrix, weightsBase, isBenefit);
-    return { v, idealBest, idealWorst };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [decisionMatrix, weightsBase, isBenefit]);
 
   const toggleSaved = (p) => {
     const id = Number(p?.id);

@@ -1,6 +1,6 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
-import { Paper, Typography, Button, Stack } from "@mui/material";
+import { Paper, Button, Stack } from "@mui/material";
 import PageContainer from "./layout/PageContainer";
 import PageHeader from "./layout/PageHeader";
 import { getAccessToken, getUserRole } from "../api";
@@ -9,14 +9,6 @@ function LandingPage() {
   const navigate = useNavigate();
   const isAuthenticated = !!getAccessToken();
   const role = String(getUserRole() || "").toUpperCase().trim();
-
-  const go = (path) => {
-    if (!isAuthenticated) {
-      navigate("/login");
-      return;
-    }
-    navigate(path);
-  };
 
   return (
     <PageContainer>

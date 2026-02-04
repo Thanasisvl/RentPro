@@ -11,6 +11,7 @@ function AdminDashboard() {
   const [stats, setStats] = React.useState({
     loading: true,
     error: "",
+    users: 0,
     properties: 0,
     tenants: 0,
     contracts: 0,
@@ -20,7 +21,8 @@ function AdminDashboard() {
     let mounted = true;
     async function load() {
       try {
-        const [pRes, tRes, cRes] = await Promise.all([
+        const [uRes, pRes, tRes, cRes] = await Promise.all([
+          api.get("/users/"),
           api.get("/properties/"),
           api.get("/tenants"),
           api.get("/contracts/"),
@@ -29,6 +31,7 @@ function AdminDashboard() {
         setStats({
           loading: false,
           error: "",
+          users: Array.isArray(uRes.data) ? uRes.data.length : 0,
           properties: Array.isArray(pRes.data) ? pRes.data.length : 0,
           tenants: Array.isArray(tRes.data) ? tRes.data.length : 0,
           contracts: Array.isArray(cRes.data) ? cRes.data.length : 0,
@@ -62,7 +65,20 @@ function AdminDashboard() {
       ) : null}
 
       <Grid container spacing={2} sx={{ mb: 2 }}>
-        <Grid item xs={12} md={4}>
+        <Grid item xs={12} sm={6} md={3}>
+          <StatCard
+            title="Χρήστες (όλοι)"
+            value={stats.users}
+            subtitle="Σύνολο χρηστών"
+            loading={stats.loading}
+            actions={
+              <Button variant="contained" onClick={() => navigate("/app/admin/users")}>
+                Άνοιξε
+              </Button>
+            }
+          />
+        </Grid>
+        <Grid item xs={12} sm={6} md={3}>
           <StatCard
             title="Ακίνητα (όλα)"
             value={stats.properties}
@@ -75,7 +91,7 @@ function AdminDashboard() {
             }
           />
         </Grid>
-        <Grid item xs={12} md={4}>
+        <Grid item xs={12} sm={6} md={3}>
           <StatCard
             title="Ενοικιαστές (όλοι)"
             value={stats.tenants}
@@ -88,7 +104,7 @@ function AdminDashboard() {
             }
           />
         </Grid>
-        <Grid item xs={12} md={4}>
+        <Grid item xs={12} sm={6} md={3}>
           <StatCard
             title="Συμβόλαια (όλα)"
             value={stats.contracts}

@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 from app.core.utils import get_current_user, is_admin
 from app.crud import tenant as crud_tenant
 from app.db.session import get_db
+from app.models.contract import Contract, ContractStatus
 from app.schemas.tenant import TenantCreate, TenantOut, TenantUpdate
 
 router = APIRouter()
@@ -96,6 +97,22 @@ def delete_tenant(request: Request, tenant_id: int, db: Session = Depends(get_db
     if (not is_admin(request, db)) and t.owner_id != user.id:
         raise HTTPException(
             status_code=403, detail="Not authorized to delete this tenant"
+        )
+
+    # UC-06 A2: prevent deletion when tenant participates in an ACTIVE contract.
+    active_contract_exists = (
+        db.query(Contract.id)
+        .filter(
+            Contract.tenant_id == tenant_id,
+            Contract.status == ContractStatus.ACTIVE,
+        )
+        .first()
+        is not None
+    )
+    if active_contract_exists:
+        raise HTTPException(
+            status_code=409,
+            detail="Cannot delete tenant with an ACTIVE contract",
         )
 
     deleted = crud_tenant.delete_tenant(db, tenant_id)

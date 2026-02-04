@@ -25,7 +25,6 @@ import {
 } from "@mui/material";
 import SearchOffOutlinedIcon from "@mui/icons-material/SearchOffOutlined";
 import ErrorOutlineOutlinedIcon from "@mui/icons-material/ErrorOutlineOutlined";
-import { useNavigate } from "react-router-dom";
 import PropertyCard from "./PropertyCard";
 import PageContainer from "./layout/PageContainer";
 import PageHeader from "./layout/PageHeader";
@@ -196,7 +195,6 @@ function parse422(detail) {
 }
 
 function PropertySearchPage() {
-  const navigate = useNavigate();
   const abortRef = useRef(null);
   const firstRenderRef = useRef(true);
   const suppressAutoSearchRef = useRef(false);
@@ -348,16 +346,6 @@ function PropertySearchPage() {
     setLimit(newLimit);
     setOffset(0);
     await runSearch({ nextOffset: 0, nextLimit: newLimit });
-  };
-
-  const onPrev = async () => {
-    const next = Math.max(0, offset - limit);
-    await runSearch({ nextOffset: next, nextLimit: limit });
-  };
-
-  const onNext = async () => {
-    const next = offset + limit;
-    await runSearch({ nextOffset: next, nextLimit: limit });
   };
 
   const pageStart = total === 0 ? 0 : offset + 1;

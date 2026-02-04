@@ -1,12 +1,14 @@
+from datetime import date
 from typing import List
 
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy.orm import Session
 
 from app.core.status_sync import sync_overdue_contracts_global, sync_property_status
 from app.core.utils import get_current_user, is_admin
 from app.crud import property as crud_property
 from app.db.session import get_db
+from app.models.contract import Contract, ContractStatus
 from app.models.property import Property, PropertyStatus
 from app.models.role import UserRole
 from app.schemas.property import (
@@ -74,17 +76,28 @@ def create_property(
 
 @router.get("/", response_model=List[PropertyOut])
 def list_properties(
-    request: Request, skip: int = 0, limit: int = 100, db: Session = Depends(get_db)
+    request: Request,
+    db: Session = Depends(get_db),
+    skip: int = Query(default=0, ge=0),
+    limit: int = Query(default=100, ge=1, le=500),
+    owner_id: int | None = Query(
+        default=None, description="Admin-only filter by property owner id"
+    ),
 ):
     user = get_current_user(request, db)
 
     if user.role == UserRole.ADMIN:
-        items = crud_property.get_properties(db=db, skip=skip, limit=limit)
+        q = db.query(Property)
+        if owner_id is not None:
+            q = q.filter(Property.owner_id == owner_id)
+        items = q.order_by(Property.id.desc()).offset(skip).limit(limit).all()
         for p in items:
             sync_property_status(db, p.id)
         return items
 
     if user.role == UserRole.OWNER:
+        if owner_id is not None:
+            raise HTTPException(status_code=403, detail="owner_id filter is admin-only")
         items = (
             db.query(Property)
             .filter(Property.owner_id == user.id)
@@ -191,5 +204,24 @@ def delete_property(request: Request, property_id: int, db: Session = Depends(ge
         raise HTTPException(
             status_code=403, detail="Not authorized to delete this property"
         )
+
+    # UC-06 A2: prevent deletion when there is an active association (ACTIVE contract).
+    # Sync status first so overdue ACTIVE contracts become EXPIRED.
+    sync_property_status(db, property_id, today=date.today())
+    active_contract_exists = (
+        db.query(Contract.id)
+        .filter(
+            Contract.property_id == property_id,
+            Contract.status == ContractStatus.ACTIVE,
+        )
+        .first()
+        is not None
+    )
+    if active_contract_exists:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Cannot delete property with an ACTIVE contract",
+        )
+
     db_property = crud_property.delete_property(db, property_id)
     return db_property

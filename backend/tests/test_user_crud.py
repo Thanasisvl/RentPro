@@ -377,6 +377,62 @@ def test_list_users_admin_only():
     assert isinstance(resp.json(), list)
 
 
+def test_list_users_supports_pagination_and_filters():
+    # Create admin and patch role
+    register_and_login(
+        client, username="admin_filter", password="pw", email="admin_filter@example.com"
+    )
+    from app.db.session import SessionLocal
+    from app.models.user import User, UserRole
+
+    db = SessionLocal()
+    db_user = db.query(User).filter_by(username="admin_filter").first()
+    db_user.role = UserRole.ADMIN
+    db.commit()
+    db.close()
+
+    login_resp = client.post(
+        "/login", json={"username": "admin_filter", "password": "pw"}
+    )
+    admin_token = login_resp.json()["access_token"]
+    admin_headers = {"Authorization": f"Bearer {admin_token}"}
+
+    # Seed a few users
+    register_and_login(
+        client, username="alpha_user", password="pw", email="alpha_user@example.com"
+    )
+    register_and_login(
+        client,
+        username="beta_owner",
+        password="pw",
+        email="beta_owner@example.com",
+        is_owner=True,
+    )
+    register_and_login(
+        client, username="gamma_user", password="pw", email="gamma_user@example.com"
+    )
+
+    # role filter
+    r_role = client.get("/users/?role=OWNER", headers=admin_headers)
+    assert r_role.status_code == 200
+    assert r_role.headers.get("x-total-count") is not None
+    assert all(u["role"] == "OWNER" for u in r_role.json())
+
+    # q filter
+    r_q = client.get("/users/?q=gamma", headers=admin_headers)
+    assert r_q.status_code == 200
+    data = r_q.json()
+    assert any("gamma_user" == u["username"] for u in data)
+
+    # pagination: limit=1 should return one row, with total >= 1
+    r_page = client.get("/users/?skip=0&limit=1", headers=admin_headers)
+    assert r_page.status_code == 200
+    assert isinstance(r_page.json(), list)
+    assert len(r_page.json()) == 1
+    total = int(r_page.headers.get("x-total-count") or "0")
+    assert total >= 1
+
+
 def test_get_me():
     user, headers = register_and_login(
         client, username="meuser", password="testpassword", email="me@example.com"

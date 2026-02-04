@@ -3,7 +3,8 @@ import { Link as RouterLink } from 'react-router-dom';
 import {
   Box,
   Paper,
-  Typography,
+  Stack,
+  TextField,
   List,
   ListItem,
   ListItemText,
@@ -17,13 +18,12 @@ import {
   DialogContentText,
   DialogActions,
   Button,
-  Stack,
 } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
 import EditIcon from '@mui/icons-material/Edit';
 import VisibilityIcon from '@mui/icons-material/Visibility';
 import AddIcon from '@mui/icons-material/Add';
-import api from '../api';
+import api, { getUserRole } from '../api';
 import StatusChip from "./StatusChip";
 import PageContainer from "./layout/PageContainer";
 import PageHeader from "./layout/PageHeader";
@@ -33,31 +33,39 @@ function PropertyList() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
+  const isAdmin = getUserRole() === "ADMIN";
+  const [ownerId, setOwnerId] = useState("");
+
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [propertyToDelete, setPropertyToDelete] = useState(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [deleteError, setDeleteError] = useState('');
 
-  useEffect(() => {
-    const fetchProperties = async () => {
-      setLoading(true);
-      setError('');
-      try {
-        const res = await api.get('/properties/');
-        setProperties(res.data);
-      } catch (err) {
-        console.error('Failed to load properties', err);
-        if (err.response && err.response.status === 401) {
-          setError('Η συνεδρία έληξε. Κάνε ξανά login.');
-        } else {
-          setError('Αποτυχία φόρτωσης ιδιοκτησιών.');
-        }
-      } finally {
-        setLoading(false);
+  const fetchProperties = async () => {
+    setLoading(true);
+    setError('');
+    try {
+      const params = {};
+      if (isAdmin && ownerId) params.owner_id = Number(ownerId);
+      const res = await api.get('/properties/', { params });
+      setProperties(res.data);
+    } catch (err) {
+      console.error('Failed to load properties', err);
+      if (err.response && err.response.status === 401) {
+        setError('Η συνεδρία έληξε. Κάνε ξανά login.');
+      } else if (err.response && err.response.status === 403) {
+        setError('Δεν έχεις δικαίωμα πρόσβασης.');
+      } else {
+        setError('Αποτυχία φόρτωσης ιδιοκτησιών.');
       }
-    };
+    } finally {
+      setLoading(false);
+    }
+  };
 
+  useEffect(() => {
     fetchProperties();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const openDeleteConfirm = (p) => {
@@ -89,6 +97,8 @@ function PropertyList() {
         setDeleteError('Η συνεδρία έληξε. Κάνε ξανά login.');
       } else if (err.response && err.response.status === 403) {
         setDeleteError('Δεν έχεις δικαίωμα να διαγράψεις αυτή την ιδιοκτησία.');
+      } else if (err.response && err.response.status === 409) {
+        setDeleteError('Δεν μπορείς να διαγράψεις ακίνητο που έχει ενεργό συμβόλαιο.');
       } else if (err.response && err.response.status === 404) {
         setDeleteError('Η ιδιοκτησία δεν βρέθηκε (ίσως έχει ήδη διαγραφεί).');
       } else {
@@ -125,6 +135,23 @@ function PropertyList() {
       />
 
       <Paper sx={{ p: 3 }}>
+        {isAdmin ? (
+          <Paper variant="outlined" sx={{ p: 2, mb: 2 }}>
+            <Stack direction={{ xs: "column", sm: "row" }} spacing={2} alignItems="center">
+              <TextField
+                label="Owner ID (admin)"
+                value={ownerId}
+                onChange={(e) => setOwnerId(e.target.value)}
+                size="small"
+                sx={{ minWidth: 200 }}
+              />
+              <Button variant="outlined" onClick={fetchProperties}>
+                Αναζήτηση
+              </Button>
+            </Stack>
+          </Paper>
+        ) : null}
+
         {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
 
         {!error && (

@@ -2,7 +2,6 @@ import React, { useEffect, useMemo, useState } from "react";
 import {
   Box,
   Paper,
-  Typography,
   Alert,
   CircularProgress,
   Table,

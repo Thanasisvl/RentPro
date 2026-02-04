@@ -1,11 +1,13 @@
 from typing import List
 
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response
+from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
 from app.core.utils import get_current_user, is_admin, require_admin
 from app.crud import user as crud_user
 from app.db.session import get_db
+from app.models.role import UserRole
 from app.schemas.user import UserCreate, UserOut, UserUpdate
 
 router = APIRouter()
@@ -39,12 +41,37 @@ def register_user(user: UserCreate, db: Session = Depends(get_db)):
 
 @router.get("/", response_model=List[UserOut])
 def list_users(
+    response: Response,
     _: dict = Depends(require_admin),  # 403 αν δεν είναι admin
-    skip: int = 0,
-    limit: int = 100,
+    skip: int = Query(default=0, ge=0),
+    limit: int = Query(default=100, ge=1, le=500),
+    q: str | None = Query(
+        default=None,
+        description="Optional search query (username/email/full_name contains, case-insensitive)",
+    ),
+    role: UserRole | None = Query(default=None, description="Optional role filter"),
     db: Session = Depends(get_db),
 ):
-    return crud_user.get_users(db=db, skip=skip, limit=limit)
+    query = db.query(crud_user.User)
+
+    if role is not None:
+        query = query.filter(crud_user.User.role == role)
+
+    if q is not None and str(q).strip():
+        term = f"%{str(q).strip()}%"
+        query = query.filter(
+            or_(
+                crud_user.User.username.ilike(term),
+                crud_user.User.email.ilike(term),
+                crud_user.User.full_name.ilike(term),
+            )
+        )
+
+    total = query.count()
+    response.headers["X-Total-Count"] = str(total)
+
+    items = query.order_by(crud_user.User.id.asc()).offset(skip).limit(limit).all()
+    return items
 
 
 @router.get("/me", response_model=UserOut)

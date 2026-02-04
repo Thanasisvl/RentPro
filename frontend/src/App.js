@@ -26,6 +26,7 @@ import ProfilePage from "./components/ProfilePage";
 import TenantDashboard from "./components/dashboards/TenantDashboard";
 import OwnerDashboard from "./components/dashboards/OwnerDashboard";
 import AdminDashboard from "./components/dashboards/AdminDashboard";
+import AdminUsersPage from "./components/AdminUsersPage";
 
 function normalizeRole(raw) {
   const r = String(raw || "").toUpperCase().trim();
@@ -189,6 +190,16 @@ function App() {
               <RequireAuth>
                 <RequireRole allowed={["ADMIN"]}>
                   <AdminDashboard />
+                </RequireRole>
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/app/admin/users"
+            element={
+              <RequireAuth>
+                <RequireRole allowed={["ADMIN"]}>
+                  <AdminUsersPage />
                 </RequireRole>
               </RequireAuth>
             }

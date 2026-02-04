@@ -1,4 +1,5 @@
 import os
+from datetime import date, timedelta
 from dotenv import load_dotenv
 
 import pytest
@@ -6,6 +7,7 @@ from fastapi.testclient import TestClient
 
 from app.db.session import Base, engine
 from app.main import app
+from tests.utils import create_property
 from tests.utils import (
     login_headers,
     make_admin,
@@ -235,3 +237,64 @@ def test_cross_owner_tenant_access_and_admin_access():
     assert (
         client.delete(f"/tenants/{tenant_id}", headers=admin_headers).status_code == 200
     )
+
+
+def test_uc06_prevent_delete_tenant_with_active_contract_409():
+    """
+    UC-06 A2: If a tenant is associated with an ACTIVE contract, deletion must be blocked.
+    """
+    owner, owner_headers = register_and_login(
+        client,
+        "uc06_owner_del_tenant",
+        "pw",
+        "uc06_owner_del_tenant@example.com",
+        is_owner=True,
+    )
+
+    # Create tenant
+    t_resp = client.post(
+        "/tenants/",
+        json={
+            "name": "Tenant With Contract",
+            "afm": "555666777",
+            "phone": "2100000000",
+            "email": "tenant_contract@example.com",
+        },
+        headers=owner_headers,
+    )
+    assert t_resp.status_code == 200, t_resp.text
+    tenant_id = t_resp.json()["id"]
+
+    # Create property
+    prop = create_property(client, owner_headers, title="UC06 P (tenant delete)")
+
+    # Create ACTIVE contract referencing that tenant
+    c_resp = client.post(
+        "/contracts/",
+        json={
+            "property_id": prop["id"],
+            "tenant_id": tenant_id,
+            "start_date": str(date.today()),
+            "end_date": str(date.today() + timedelta(days=30)),
+            "rent_amount": 900.0,
+        },
+        headers=owner_headers,
+    )
+    assert c_resp.status_code == 200, c_resp.text
+
+    # Deleting tenant should be blocked (owner)
+    d_owner = client.delete(f"/tenants/{tenant_id}", headers=owner_headers)
+    assert d_owner.status_code == 409, d_owner.text
+
+    # Deleting tenant should also be blocked (admin)
+    register_and_login(
+        client,
+        username="uc06_admin_del_tenant",
+        password="pw",
+        email="uc06_admin_del_tenant@example.com",
+    )
+    make_admin("uc06_admin_del_tenant")
+    admin_headers = login_headers(client, "uc06_admin_del_tenant", "pw")
+
+    d_admin = client.delete(f"/tenants/{tenant_id}", headers=admin_headers)
+    assert d_admin.status_code == 409, d_admin.text
