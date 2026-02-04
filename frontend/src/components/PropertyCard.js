@@ -29,10 +29,35 @@ function formatSize(v) {
   return `${n} τ.μ.`;
 }
 
+// NEW: enum label helpers (backend enums -> Greek labels)
+function normalizeEnum(v) {
+  if (v == null) return "";
+  return String(v).trim().toUpperCase();
+}
+
+const PROPERTY_TYPE_LABELS = {
+  STUDIO: "Γκαρσονιέρα",
+  APARTMENT: "Διαμέρισμα",
+  MAISONETTE: "Μεζονέτα",
+  DETACHED_HOUSE: "Μονοκατοικία",
+};
+
+const PROPERTY_STATUS_LABELS = {
+  AVAILABLE: "Διαθέσιμο",
+  RENTED: "Ενοικιασμένο",
+  INACTIVE: "Ανενεργό",
+};
+
+function labelFrom(map, raw) {
+  const key = normalizeEnum(raw);
+  return map[key] || raw || "";
+}
+
 export default function PropertyCard({
   property,
   viewTo,
   score,
+  rank,
   saved = false,
   inCompare = false,
   onToggleSave,
@@ -42,6 +67,26 @@ export default function PropertyCard({
   const address = property?.address || "";
   const type = property?.type || "";
   const status = property?.status || "";
+
+  const typeLabel = labelFrom(PROPERTY_TYPE_LABELS, type);
+  const statusLabel = labelFrom(PROPERTY_STATUS_LABELS, status);
+
+  const scorePct =
+    typeof score === "number" && Number.isFinite(score)
+      ? Math.round(Math.max(0, Math.min(1, score)) * 100)
+      : null;
+
+  // NEW: color scale for score
+  const scoreColor =
+    scorePct == null
+      ? "default"
+      : scorePct >= 80
+        ? "success"
+        : scorePct >= 60
+          ? "info"
+          : scorePct >= 40
+            ? "warning"
+            : "error";
 
   return (
     <Card
@@ -77,15 +122,20 @@ export default function PropertyCard({
 
         <CardContent>
           <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap">
-            {type && <Chip size="small" label={type} variant="outlined" />}
-            {status && <Chip size="small" label={status} variant="outlined" />}
-            {typeof score === "number" && Number.isFinite(score) && (
+            {typeof rank === "number" && Number.isFinite(rank) && rank > 0 ? (
+              <Chip size="small" color="primary" label={`Κατάταξη #${rank}`} />
+            ) : null}
+
+            {typeLabel && <Chip size="small" label={typeLabel} variant="outlined" />}
+            {statusLabel && <Chip size="small" label={statusLabel} variant="outlined" />}
+
+            {scorePct != null ? (
               <Chip
                 size="small"
-                color="secondary"
-                label={`Score: ${score.toFixed(4)}`}
+                color={scoreColor}
+                label={`Σκορ: ${scorePct}/100`}
               />
-            )}
+            ) : null}
           </Stack>
 
           <Typography variant="h6" sx={{ mt: 1 }}>
