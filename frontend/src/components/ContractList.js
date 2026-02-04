@@ -16,9 +16,16 @@ import {
   MenuItem,
   FormControlLabel,
   Checkbox,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogContentText,
+  DialogActions,
 } from "@mui/material";
 import { Link as RouterLink } from "react-router-dom";
 import api, { getUserRole } from "../api";
+import PageContainer from "./layout/PageContainer";
+import PageHeader from "./layout/PageHeader";
 
 const STATUS_OPTIONS = ["", "ACTIVE", "EXPIRED", "TERMINATED"];
 
@@ -27,6 +34,7 @@ function ContractList() {
   const [loading, setLoading] = useState(true);
   const [busyId, setBusyId] = useState(null);
   const [error, setError] = useState("");
+  const [confirm, setConfirm] = useState(null); // { type: "delete"|"terminate", id }
 
   const isAdmin = getUserRole() === "ADMIN";
 
@@ -84,9 +92,19 @@ function ContractList() {
     }
   };
 
-  const deleteContract = async (id) => {
-    const ok = window.confirm("Σίγουρα θέλεις διαγραφή συμβολαίου;");
-    if (!ok) return;
+  const requestDelete = (id) => setConfirm({ type: "delete", id });
+  const requestTerminate = (id) => setConfirm({ type: "terminate", id });
+
+  const runConfirmed = async () => {
+    if (!confirm?.id || !confirm?.type) return;
+    const id = confirm.id;
+    const type = confirm.type;
+    setConfirm(null);
+
+    if (type === "terminate") {
+      await terminateContract(id);
+      return;
+    }
 
     setBusyId(id);
     setError("");
@@ -96,7 +114,8 @@ function ContractList() {
     } catch (e) {
       const status = e?.response?.status;
       if (status === 403) setError("Δεν επιτρέπεται η ενέργεια.");
-      else if (status === 409) setError("Δεν μπορείς να διαγράψεις ACTIVE συμβόλαιο (κάνε terminate).");
+      else if (status === 409)
+        setError("Δεν μπορείς να διαγράψεις ACTIVE συμβόλαιο (κάνε τερματισμό).");
       else setError("Αποτυχία διαγραφής συμβολαίου.");
     } finally {
       setBusyId(null);
@@ -132,14 +151,18 @@ function ContractList() {
   }
 
   return (
-    <Box mt={4} display="flex" justifyContent="center">
-      <Paper sx={{ p: 3, width: "95%", maxWidth: 1200 }}>
-        <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
-          <Typography variant="h5">Συμβόλαια</Typography>
+    <PageContainer>
+      <PageHeader
+        title="Συμβόλαια"
+        description="Καταχώριση, προβολή και διαχείριση μισθώσεων (UC‑05)."
+        actions={
           <Button variant="contained" component={RouterLink} to="/contracts/new">
             Νέο Συμβόλαιο
           </Button>
-        </Box>
+        }
+      />
+
+      <Paper sx={{ p: 3 }}>
 
         {error && (
           <Alert severity="error" sx={{ mb: 2 }}>
@@ -152,7 +175,7 @@ function ContractList() {
           <Stack direction={{ xs: "column", md: "row" }} spacing={2} alignItems="center">
             <TextField
               select
-              label="Status"
+              label="Κατάσταση"
               value={status}
               onChange={(e) => setStatus(e.target.value)}
               size="small"
@@ -160,13 +183,13 @@ function ContractList() {
             >
               {STATUS_OPTIONS.map((s) => (
                 <MenuItem key={s} value={s}>
-                  {s || "ALL"}
+                  {s || "ΟΛΑ"}
                 </MenuItem>
               ))}
             </TextField>
 
             <TextField
-              label="Property ID"
+              label="Κωδικός ακινήτου (Property ID)"
               value={propertyId}
               onChange={(e) => setPropertyId(e.target.value)}
               size="small"
@@ -174,7 +197,7 @@ function ContractList() {
             />
 
             <TextField
-              label="Tenant ID"
+              label="Κωδικός ενοικιαστή (Tenant ID)"
               value={tenantId}
               onChange={(e) => setTenantId(e.target.value)}
               size="small"
@@ -188,12 +211,12 @@ function ContractList() {
                   onChange={(e) => setRunningToday(e.target.checked)}
                 />
               }
-              label="Running today"
+              label="Ενεργό σήμερα"
             />
 
             {isAdmin && (
               <TextField
-                label="Owner ID (admin)"
+                label="Κωδικός ιδιοκτήτη (Owner ID) — admin"
                 value={ownerId}
                 onChange={(e) => setOwnerId(e.target.value)}
                 size="small"
@@ -214,14 +237,14 @@ function ContractList() {
             <TableHead>
               <TableRow>
                 <TableCell>ID</TableCell>
-                <TableCell>Property</TableCell>
-                <TableCell>Tenant</TableCell>
-                <TableCell>Status</TableCell>
-                <TableCell>Start</TableCell>
-                <TableCell>End</TableCell>
-                <TableCell align="right">Rent</TableCell>
+                <TableCell>Property ID</TableCell>
+                <TableCell>Tenant ID</TableCell>
+                <TableCell>Κατάσταση</TableCell>
+                <TableCell>Έναρξη</TableCell>
+                <TableCell>Λήξη</TableCell>
+                <TableCell align="right">Μίσθωμα</TableCell>
                 <TableCell>PDF</TableCell>
-                <TableCell>Actions</TableCell>
+                <TableCell>Ενέργειες</TableCell>
               </TableRow>
             </TableHead>
 
@@ -260,7 +283,7 @@ function ContractList() {
                           to={`/contracts/${c.id}`}
                           disabled={disabled}
                         >
-                          View
+                          Προβολή
                         </Button>
 
                         <Button
@@ -268,18 +291,18 @@ function ContractList() {
                           variant="outlined"
                           color="warning"
                           disabled={disabled || !canTerminate}
-                          onClick={() => terminateContract(c.id)}
+                          onClick={() => requestTerminate(c.id)}
                         >
-                          Terminate
+                          Τερματισμός
                         </Button>
                         <Button
                           size="small"
                           variant="outlined"
                           color="error"
                           disabled={disabled}
-                          onClick={() => deleteContract(c.id)}
+                          onClick={() => requestDelete(c.id)}
                         >
-                          Delete
+                          Διαγραφή
                         </Button>
                         <Button
                           size="small"
@@ -288,7 +311,7 @@ function ContractList() {
                           to={`/contracts/${c.id}/edit`}
                           disabled={disabled}
                         >
-                          Edit
+                          Επεξεργασία
                         </Button>
                       </Stack>
                     </TableCell>
@@ -299,7 +322,28 @@ function ContractList() {
           </Table>
         )}
       </Paper>
-    </Box>
+
+      <Dialog open={!!confirm} onClose={() => setConfirm(null)}>
+        <DialogTitle>
+          {confirm?.type === "delete" ? "Επιβεβαίωση διαγραφής" : "Επιβεβαίωση τερματισμού"}
+        </DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            {confirm?.type === "delete"
+              ? "Θέλεις σίγουρα να διαγράψεις το συμβόλαιο; Η ενέργεια δεν αναιρείται."
+              : "Θέλεις σίγουρα να τερματίσεις το συμβόλαιο;"}
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button variant="outlined" onClick={() => setConfirm(null)}>
+            Ακύρωση
+          </Button>
+          <Button variant="contained" color="error" onClick={runConfirmed}>
+            Επιβεβαίωση
+          </Button>
+        </DialogActions>
+      </Dialog>
+    </PageContainer>
   );
 }
 

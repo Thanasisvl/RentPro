@@ -12,6 +12,8 @@ import {
   MenuItem,
 } from "@mui/material";
 import api from "../api";
+import PageContainer from "./layout/PageContainer";
+import PageHeader from "./layout/PageHeader";
 
 function ContractEditForm() {
   const { id } = useParams();
@@ -117,11 +119,18 @@ function ContractEditForm() {
   }
 
   return (
-    <Box mt={4} display="flex" justifyContent="center">
-      <Paper sx={{ p: 3, width: "90%", maxWidth: 640 }}>
-        <Typography variant="h5" gutterBottom>
-          Επεξεργασία Συμβολαίου #{id}
-        </Typography>
+    <PageContainer>
+      <PageHeader
+        title={`Επεξεργασία Συμβολαίου #${id}`}
+        description="Ενημέρωση στοιχείων συμβολαίου (UC‑05)."
+        actions={
+          <Button variant="outlined" component={RouterLink} to={`/contracts/${id}`}>
+            Πίσω
+          </Button>
+        }
+      />
+
+      <Paper sx={{ p: 3, maxWidth: 760, mx: "auto" }}>
 
         {error && (
           <Alert severity="error" sx={{ mb: 2 }}>
@@ -130,12 +139,19 @@ function ContractEditForm() {
         )}
 
         <form onSubmit={onSubmit}>
-          <TextField label="Property ID" value={propertyId} fullWidth margin="normal" disabled />
+          <TextField
+            label="Κωδικός ακινήτου (Property ID)"
+            value={propertyId}
+            fullWidth
+            margin="normal"
+            disabled
+            helperText="Δεν αλλάζει."
+          />
 
           {/* CHANGED: Tenant dropdown (instead of disabled text field) */}
           <TextField
             select
-            label="Tenant"
+            label="Ενοικιαστής"
             value={tenantId}
             onChange={(e) => setTenantId(e.target.value)}
             fullWidth
@@ -151,10 +167,10 @@ function ContractEditForm() {
             ))}
           </TextField>
 
-          <TextField label="Status" value={status} fullWidth margin="normal" disabled />
+          <TextField label="Κατάσταση" value={status} fullWidth margin="normal" disabled />
 
           <TextField
-            label="Start Date"
+            label="Έναρξη"
             type="date"
             value={startDate}
             onChange={(e) => setStartDate(e.target.value)}
@@ -166,7 +182,7 @@ function ContractEditForm() {
           />
 
           <TextField
-            label="End Date"
+            label="Λήξη"
             type="date"
             value={endDate}
             onChange={(e) => setEndDate(e.target.value)}
@@ -178,7 +194,7 @@ function ContractEditForm() {
           />
 
           <TextField
-            label="Rent Amount"
+            label="Μίσθωμα (€/μήνα)"
             value={rentAmount}
             onChange={(e) => setRentAmount(e.target.value)}
             fullWidth
@@ -189,7 +205,7 @@ function ContractEditForm() {
 
           <Stack direction="row" spacing={2} mb={2}>
             <Button variant="outlined" onClick={openPdf} disabled={!hasPdf || submitting}>
-              PDF
+              Προβολή PDF
             </Button>
           </Stack>
 
@@ -200,7 +216,7 @@ function ContractEditForm() {
               to={`/contracts/${id}`}
               disabled={submitting}
             >
-              View
+              Προβολή
             </Button>
 
             <Button type="submit" variant="contained" disabled={submitting}>
@@ -212,7 +228,7 @@ function ContractEditForm() {
           </Stack>
         </form>
       </Paper>
-    </Box>
+    </PageContainer>
   );
 }
 

@@ -1,5 +1,5 @@
 import React from "react";
-import { BrowserRouter as Router, Routes, Route, Link } from "react-router-dom";
+import { BrowserRouter as Router, Routes, Route, Link, Navigate } from "react-router-dom";
 import { AppBar, Toolbar, Typography, Box, Button } from "@mui/material";
 
 import LandingPage from "./components/LandingPage";
@@ -7,6 +7,7 @@ import LoginForm from "./components/LoginForm";
 import RegisterForm from "./components/RegisterForm";
 import LogoutButton from "./components/LogoutButton";
 import RequireAuth from "./components/RequireAuth";
+import { getAccessToken, getUserRole } from "./api";
 
 import PreferencesPage from "./components/PreferencesPage";
 import RecommendationsPage from "./components/RecommendationsPage";
@@ -22,66 +23,130 @@ import ContractEditForm from "./components/ContractEditForm";
 import ContractList from "./components/ContractList";
 import ContractDetails from "./components/ContractDetails";
 import ProfilePage from "./components/ProfilePage";
+import TenantDashboard from "./components/dashboards/TenantDashboard";
+import OwnerDashboard from "./components/dashboards/OwnerDashboard";
+import AdminDashboard from "./components/dashboards/AdminDashboard";
+
+function normalizeRole(raw) {
+  const r = String(raw || "").toUpperCase().trim();
+  if (r === "ADMIN") return "ADMIN";
+  if (r === "OWNER") return "OWNER";
+  // backend might use USER/TENANT; treat unknown as tenant for UX
+  return "TENANT";
+}
+
+function roleLabel(role) {
+  if (role === "ADMIN") return "Διαχειριστής";
+  if (role === "OWNER") return "Ιδιοκτήτης";
+  return "Ενοικιαστής";
+}
+
+function RoleHomeRedirect() {
+  const role = normalizeRole(getUserRole());
+  if (role === "OWNER") return <Navigate to="/app/owner" replace />;
+  if (role === "ADMIN") return <Navigate to="/app/admin" replace />;
+  return <Navigate to="/app/tenant" replace />;
+}
+
+function RequireRole({ allowed, children }) {
+  const role = normalizeRole(getUserRole());
+  const ok = Array.isArray(allowed) && allowed.includes(role);
+  if (!ok) {
+    return <Navigate to="/app" replace />;
+  }
+  return children;
+}
 
 function App() {
-  const isAuthenticated = !!localStorage.getItem("token");
+  const isAuthenticated = !!getAccessToken();
+  const role = normalizeRole(getUserRole());
+  const homeTo = isAuthenticated ? "/app" : "/";
+  const homeLabel = isAuthenticated ? "Πίνακας" : "Αρχική";
+  const homeLabelWithRole = isAuthenticated ? `Πίνακας · ${roleLabel(role)}` : homeLabel;
 
   return (
     <Router>
-      <AppBar position="static">
+      <AppBar
+        position="static"
+        color="transparent"
+        elevation={0}
+        sx={{
+          bgcolor: "background.paper",
+          borderBottom: 1,
+          borderColor: "divider",
+        }}
+      >
         <Toolbar>
           <Typography variant="h6" sx={{ flexGrow: 1 }}>
             RentPro
           </Typography>
 
-          <Button color="inherit" component={Link} to="/">
-            Home
-          </Button>
-
-          <Button color="inherit" component={Link} to="/search">
-            Search
+          <Button color="inherit" component={Link} to={homeTo}>
+            {homeLabelWithRole}
           </Button>
 
           {isAuthenticated ? (
             <>
-              <Button color="inherit" component={Link} to="/preferences">
-                Preferences
-              </Button>
-              <Button color="inherit" component={Link} to="/recommendations">
-                Recommendations
-              </Button>
-
-              <Button color="inherit" component={Link} to="/properties">
-                Properties
-              </Button>
-              <Button color="inherit" component={Link} to="/tenants">
-                Tenants
-              </Button>
-
-              <Button color="inherit" component={Link} to="/contracts">
-                Contracts
-              </Button>
+              {role === "TENANT" ? (
+                <>
+                  <Button color="inherit" component={Link} to="/search">
+                    Αναζήτηση
+                  </Button>
+                  <Button color="inherit" component={Link} to="/preferences">
+                    Προτιμήσεις
+                  </Button>
+                  <Button color="inherit" component={Link} to="/recommendations">
+                    Προτάσεις
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <Button color="inherit" component={Link} to="/properties">
+                    Ακίνητα
+                  </Button>
+                  <Button color="inherit" component={Link} to="/tenants">
+                    Ενοικιαστές
+                  </Button>
+                  <Button color="inherit" component={Link} to="/contracts">
+                    Συμβόλαια
+                  </Button>
+                  {role === "ADMIN" ? (
+                    <Button color="inherit" component={Link} to="/app/admin">
+                      Διαχείριση
+                    </Button>
+                  ) : null}
+                </>
+              )}
 
               <Button color="inherit" component={Link} to="/profile">
-                Profile
+                Προφίλ
               </Button>
 
               <LogoutButton />
             </>
           ) : (
             <>
+              <Button color="inherit" component={Link} to="/search">
+                Αναζήτηση
+              </Button>
               <Button color="inherit" component={Link} to="/login">
-                Login
+                Σύνδεση
               </Button>
               <Button color="inherit" component={Link} to="/register">
-                Register
+                Εγγραφή
               </Button>
             </>
           )}
         </Toolbar>
       </AppBar>
 
-      <Box sx={{ mt: 2 }}>
+      <Box
+        sx={{
+          bgcolor: "background.default",
+          minHeight: "calc(100vh - 64px)",
+          py: 2,
+        }}
+      >
         <Routes>
           <Route path="/" element={<LandingPage />} />
           <Route path="/login" element={<LoginForm />} />
@@ -91,10 +156,51 @@ function App() {
           <Route path="/search/properties/:id" element={<PublicPropertyDetails />} />
 
           <Route
+            path="/app"
+            element={
+              <RequireAuth>
+                <RoleHomeRedirect />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/app/tenant"
+            element={
+              <RequireAuth>
+                <RequireRole allowed={["TENANT"]}>
+                  <TenantDashboard />
+                </RequireRole>
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/app/owner"
+            element={
+              <RequireAuth>
+                <RequireRole allowed={["OWNER", "ADMIN"]}>
+                  <OwnerDashboard />
+                </RequireRole>
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/app/admin"
+            element={
+              <RequireAuth>
+                <RequireRole allowed={["ADMIN"]}>
+                  <AdminDashboard />
+                </RequireRole>
+              </RequireAuth>
+            }
+          />
+
+          <Route
             path="/preferences"
             element={
               <RequireAuth>
-                <PreferencesPage />
+                <RequireRole allowed={["TENANT"]}>
+                  <PreferencesPage />
+                </RequireRole>
               </RequireAuth>
             }
           />
@@ -102,7 +208,9 @@ function App() {
             path="/recommendations"
             element={
               <RequireAuth>
-                <RecommendationsPage />
+                <RequireRole allowed={["TENANT"]}>
+                  <RecommendationsPage />
+                </RequireRole>
               </RequireAuth>
             }
           />
@@ -111,7 +219,9 @@ function App() {
             path="/properties"
             element={
               <RequireAuth>
-                <PropertyList />
+                <RequireRole allowed={["OWNER", "ADMIN"]}>
+                  <PropertyList />
+                </RequireRole>
               </RequireAuth>
             }
           />
@@ -119,7 +229,9 @@ function App() {
             path="/properties/new"
             element={
               <RequireAuth>
-                <PropertyForm mode="create" />
+                <RequireRole allowed={["OWNER", "ADMIN"]}>
+                  <PropertyForm mode="create" />
+                </RequireRole>
               </RequireAuth>
             }
           />
@@ -127,7 +239,9 @@ function App() {
             path="/properties/:id"
             element={
               <RequireAuth>
-                <PropertyDetails />
+                <RequireRole allowed={["OWNER", "ADMIN"]}>
+                  <PropertyDetails />
+                </RequireRole>
               </RequireAuth>
             }
           />
@@ -135,7 +249,9 @@ function App() {
             path="/properties/:id/edit"
             element={
               <RequireAuth>
-                <PropertyForm mode="edit" />
+                <RequireRole allowed={["OWNER", "ADMIN"]}>
+                  <PropertyForm mode="edit" />
+                </RequireRole>
               </RequireAuth>
             }
           />
@@ -153,7 +269,9 @@ function App() {
             path="/tenants"
             element={
               <RequireAuth>
-                <TenantList />
+                <RequireRole allowed={["OWNER", "ADMIN"]}>
+                  <TenantList />
+                </RequireRole>
               </RequireAuth>
             }
           />
@@ -161,7 +279,9 @@ function App() {
             path="/tenants/new"
             element={
               <RequireAuth>
-                <TenantForm />
+                <RequireRole allowed={["OWNER", "ADMIN"]}>
+                  <TenantForm />
+                </RequireRole>
               </RequireAuth>
             }
           />
@@ -170,7 +290,9 @@ function App() {
             path="/contracts"
             element={
               <RequireAuth>
-                <ContractList />
+                <RequireRole allowed={["OWNER", "ADMIN"]}>
+                  <ContractList />
+                </RequireRole>
               </RequireAuth>
             }
           />
@@ -179,7 +301,9 @@ function App() {
             path="/contracts/new"
             element={
               <RequireAuth>
-                <ContractForm />
+                <RequireRole allowed={["OWNER", "ADMIN"]}>
+                  <ContractForm />
+                </RequireRole>
               </RequireAuth>
             }
           />
@@ -188,7 +312,9 @@ function App() {
             path="/contracts/:id"
             element={
               <RequireAuth>
-                <ContractDetails />
+                <RequireRole allowed={["OWNER", "ADMIN"]}>
+                  <ContractDetails />
+                </RequireRole>
               </RequireAuth>
             }
           />
@@ -197,7 +323,9 @@ function App() {
             path="/contracts/:id/edit"
             element={
               <RequireAuth>
-                <ContractEditForm />
+                <RequireRole allowed={["OWNER", "ADMIN"]}>
+                  <ContractEditForm />
+                </RequireRole>
               </RequireAuth>
             }
           />

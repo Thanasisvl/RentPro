@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from "react";
-import { Box, Paper, Typography, TextField, Button, Alert } from "@mui/material";
+import { Box, Paper, Typography, TextField, Button, Alert, Stack } from "@mui/material";
 import api from "../api";
+import PageContainer from "./layout/PageContainer";
+import PageHeader from "./layout/PageHeader";
 
 function ProfilePage() {
   const [loading, setLoading] = useState(true);
@@ -36,7 +38,11 @@ function ProfilePage() {
         });
       } catch (e) {
         if (!mounted) return;
-        setError(e?.response?.data?.detail ? String(e.response.data.detail) : "Failed to load profile.");
+        setError(
+          e?.response?.data?.detail
+            ? String(e.response.data.detail)
+            : "Αποτυχία φόρτωσης προφίλ."
+        );
       } finally {
         if (mounted) setLoading(false);
       }
@@ -71,26 +77,31 @@ function ProfilePage() {
         role: res.data?.role ?? p.role,
       }));
 
-      setSuccess("Profile updated.");
+      setSuccess("Το προφίλ ενημερώθηκε.");
     } catch (e) {
-      setError(e?.response?.data?.detail ? String(e.response.data.detail) : "Update failed.");
+      setError(
+        e?.response?.data?.detail ? String(e.response.data.detail) : "Αποτυχία ενημέρωσης."
+      );
     }
   }
 
   return (
-    <Box display="flex" justifyContent="center" alignItems="center" minHeight="80vh">
-      <Paper elevation={3} sx={{ p: 4, width: 520 }}>
-        <Typography variant="h4" align="center" gutterBottom>
-          Profile
-        </Typography>
+    <PageContainer>
+      <PageHeader
+        title="Προφίλ"
+        description="Ενημέρωση βασικών στοιχείων προφίλ (FR‑4)."
+      />
 
-        {loading && <Alert severity="info" sx={{ mb: 2 }}>Loading…</Alert>}
-        {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
-        {success && <Alert severity="success" sx={{ mb: 2 }}>{success}</Alert>}
+      <Paper elevation={3} sx={{ p: 4, maxWidth: 560, mx: "auto" }}>
+        <Stack spacing={2}>
 
-        <form onSubmit={onSave}>
+          {loading && <Alert severity="info">Φόρτωση…</Alert>}
+          {error && <Alert severity="error">{error}</Alert>}
+          {success && <Alert severity="success">{success}</Alert>}
+
+          <form onSubmit={onSave}>
           <TextField
-            label="Username"
+            label="Όνομα χρήστη"
             value={profile.username}
             fullWidth
             margin="normal"
@@ -98,7 +109,7 @@ function ProfilePage() {
           />
 
           <TextField
-            label="Role"
+            label="Ρόλος"
             value={profile.role}
             fullWidth
             margin="normal"
@@ -115,7 +126,7 @@ function ProfilePage() {
           />
 
           <TextField
-            label="Full name"
+            label="Ονοματεπώνυμο"
             value={profile.full_name}
             onChange={(e) => setProfile((p) => ({ ...p, full_name: e.target.value }))}
             fullWidth
@@ -130,11 +141,12 @@ function ProfilePage() {
             sx={{ mt: 2 }}
             disabled={loading}
           >
-            Save
+            Αποθήκευση
           </Button>
-        </form>
+          </form>
+        </Stack>
       </Paper>
-    </Box>
+    </PageContainer>
   );
 }
 

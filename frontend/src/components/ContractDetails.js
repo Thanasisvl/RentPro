@@ -11,6 +11,8 @@ import {
   Divider,
 } from "@mui/material";
 import api from "../api";
+import PageContainer from "./layout/PageContainer";
+import PageHeader from "./layout/PageHeader";
 
 function Row({ label, value }) {
   return (
@@ -80,19 +82,27 @@ function ContractDetails() {
   }
 
   return (
-    <Box mt={4} display="flex" justifyContent="center">
-      <Paper sx={{ p: 3, width: "90%", maxWidth: 760 }}>
-        <Stack direction="row" justifyContent="space-between" alignItems="center" mb={2}>
-          <Typography variant="h5">Contract #{id}</Typography>
+    <PageContainer>
+      <PageHeader
+        title={`Συμβόλαιο #${id}`}
+        description="Λεπτομέρειες μίσθωσης (UC‑05)."
+        actions={
           <Stack direction="row" spacing={1}>
             <Button variant="outlined" onClick={() => navigate("/contracts")}>
               Πίσω
             </Button>
-            <Button variant="contained" component={RouterLink} to={`/contracts/${id}/edit`}>
-              Edit
+            <Button
+              variant="contained"
+              component={RouterLink}
+              to={`/contracts/${id}/edit`}
+            >
+              Επεξεργασία
             </Button>
           </Stack>
-        </Stack>
+        }
+      />
+
+      <Paper sx={{ p: 3, maxWidth: 860, mx: "auto" }}>
 
         {error && (
           <Alert severity="error" sx={{ mb: 2 }}>
@@ -105,18 +115,18 @@ function ContractDetails() {
         ) : (
           <>
             <Stack spacing={1.2}>
-              <Row label="Status" value={contract.status} />
+              <Row label="Κατάσταση" value={contract.status} />
               <Divider />
-              <Row label="Property ID" value={contract.property_id} />
-              <Row label="Tenant ID" value={contract.tenant_id} />
+              <Row label="Κωδικός ακινήτου (Property ID)" value={contract.property_id} />
+              <Row label="Κωδικός ενοικιαστή (Tenant ID)" value={contract.tenant_id} />
               <Divider />
-              <Row label="Start date" value={contract.start_date} />
-              <Row label="End date" value={contract.end_date} />
-              <Row label="Rent amount" value={contract.rent_amount} />
+              <Row label="Έναρξη" value={contract.start_date} />
+              <Row label="Λήξη" value={contract.end_date} />
+              <Row label="Μίσθωμα" value={contract.rent_amount} />
               <Divider />
-              <Row label="Created at" value={contract.created_at} />
-              <Row label="Updated at" value={contract.updated_at} />
-              <Row label="Terminated at" value={contract.terminated_at} />
+              <Row label="Δημιουργήθηκε" value={contract.created_at} />
+              <Row label="Ενημερώθηκε" value={contract.updated_at} />
+              <Row label="Τερματίστηκε" value={contract.terminated_at} />
             </Stack>
 
             <Stack direction="row" spacing={2} mt={3}>
@@ -125,13 +135,13 @@ function ContractDetails() {
                 onClick={openPdf}
                 disabled={pdfBusy || !(contract.pdf_url || contract.pdf_file)}
               >
-                PDF
+                Προβολή PDF
               </Button>
             </Stack>
           </>
         )}
       </Paper>
-    </Box>
+    </PageContainer>
   );
 }
 

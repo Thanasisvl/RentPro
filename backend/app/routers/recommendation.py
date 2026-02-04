@@ -112,6 +112,7 @@ def get_recommendations(
     missing_area_score = 0
     decision_matrix = []
     properties = []
+    explain_values = []  # aligned with decision_matrix/properties (post-filter)
 
     for prop, loc in rows:
         ptype = (prop.type or "").strip().upper()
@@ -129,10 +130,22 @@ def get_recommendations(
         if ptype_value is None:
             continue
 
-        decision_matrix.append(
-            [float(prop.price), float(prop.size), float(ptype_value), float(area_score)]
-        )
+        price = float(prop.price)
+        size = float(prop.size)
+        area_score = float(area_score)
+
+        decision_matrix.append([price, size, float(ptype_value), area_score])
         properties.append(prop)
+        explain_values.append(
+            {
+                "price": price,
+                "size": size,
+                # value used in TOPSIS for categorical criterion
+                "property_type": float(ptype_value),
+                # raw string still present on PropertyOut.type; include numeric for transparency
+                "area_score": area_score,
+            }
+        )
 
     if STRICT_PROPERTY_TYPE_MAPPING and unknown_types:
         raise HTTPException(
@@ -153,7 +166,12 @@ def get_recommendations(
             score=r.score,
             explain={
                 "ahp": {"weights": ahp.weights, "cr": ahp.cr},
-                "topsis": {"d_best": r.d_best, "d_worst": r.d_worst},
+                "topsis": {
+                    "d_best": r.d_best,
+                    "d_worst": r.d_worst,
+                    # for UI explainability + client-side what-if rerank
+                    "criteria_values": explain_values[r.index],
+                },
             },
         )
         for r in ranked
@@ -163,6 +181,7 @@ def get_recommendations(
         items=items,
         meta={
             "criteria_order": criteria_keys,
+            "is_benefit": is_benefit,
             "cr_threshold": CR_THRESHOLD,
             "available_properties_total": len(rows),
             "ranked_properties_count": len(items),

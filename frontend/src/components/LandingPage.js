@@ -1,10 +1,14 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
-import { Box, Paper, Typography, Button, Stack } from "@mui/material";
+import { Paper, Typography, Button, Stack } from "@mui/material";
+import PageContainer from "./layout/PageContainer";
+import PageHeader from "./layout/PageHeader";
+import { getAccessToken, getUserRole } from "../api";
 
 function LandingPage() {
   const navigate = useNavigate();
-  const isAuthenticated = !!localStorage.getItem("token");
+  const isAuthenticated = !!getAccessToken();
+  const role = String(getUserRole() || "").toUpperCase().trim();
 
   const go = (path) => {
     if (!isAuthenticated) {
@@ -15,43 +19,47 @@ function LandingPage() {
   };
 
   return (
-    <Box sx={{ maxWidth: 900, mx: "auto", p: 2 }}>
+    <PageContainer>
+      <PageHeader
+        title="RentPro"
+        description="Δημόσια αναζήτηση ακινήτων ή σύνδεση για πρόσβαση στις λειτουργίες ανά ρόλο."
+      />
+
       <Paper sx={{ p: 3 }}>
-        <Typography variant="h4" gutterBottom>
-          RentPro
-        </Typography>
-
-        <Typography variant="body1" color="text.secondary" sx={{ mb: 2 }}>
-          Welcome. Search properties publicly, or login to access owner features and recommendations.
-        </Typography>
-
         <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
           <Button variant="outlined" onClick={() => navigate("/search")}>
-            Search
+            Αναζήτηση
           </Button>
 
           {!isAuthenticated ? (
             <>
               <Button variant="contained" onClick={() => navigate("/login")}>
-                Login
+                Σύνδεση
               </Button>
               <Button variant="outlined" onClick={() => navigate("/register")}>
-                Register
+                Εγγραφή
               </Button>
             </>
           ) : (
             <>
-              <Button variant="contained" onClick={() => navigate("/preferences")}>
-                Set Preferences (AHP)
+              <Button variant="contained" onClick={() => navigate("/app")}>
+                Πήγαινε στον πίνακα
               </Button>
-              <Button variant="outlined" onClick={() => navigate("/recommendations")}>
-                Recommendations
-              </Button>
+              {role !== "OWNER" && role !== "ADMIN" ? (
+                <>
+                  <Button variant="outlined" onClick={() => navigate("/preferences")}>
+                    Προτιμήσεις (AHP)
+                  </Button>
+                  <Button variant="outlined" onClick={() => navigate("/recommendations")}>
+                    Προτάσεις
+                  </Button>
+                </>
+              ) : null}
             </>
           )}
         </Stack>
       </Paper>
-    </Box>
+    </PageContainer>
   );
 }
 

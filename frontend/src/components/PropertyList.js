@@ -25,6 +25,8 @@ import VisibilityIcon from '@mui/icons-material/Visibility';
 import AddIcon from '@mui/icons-material/Add';
 import api from '../api';
 import StatusChip from "./StatusChip";
+import PageContainer from "./layout/PageContainer";
+import PageHeader from "./layout/PageHeader";
 
 function PropertyList() {
   const [properties, setProperties] = useState([]);
@@ -106,11 +108,11 @@ function PropertyList() {
   }
 
   return (
-    <Box mt={4} display="flex" justifyContent="center">
-      <Paper sx={{ p: 3, width: '80%' }}>
-        <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 2 }}>
-          <Typography variant="h5">Ιδιοκτησίες</Typography>
-
+    <PageContainer>
+      <PageHeader
+        title="Ιδιοκτησίες"
+        description="Διαχείριση καταχωρημένων ακινήτων (UC‑02)."
+        actions={
           <Button
             variant="contained"
             startIcon={<AddIcon />}
@@ -119,8 +121,10 @@ function PropertyList() {
           >
             Νέο ακίνητο
           </Button>
-        </Stack>
+        }
+      />
 
+      <Paper sx={{ p: 3 }}>
         {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
 
         {!error && (
@@ -132,19 +136,31 @@ function PropertyList() {
                 secondaryAction={(
                   <>
                     <Tooltip title="Προβολή">
-                      <IconButton component={RouterLink} to={`/properties/${p.id}`}>
+                      <IconButton
+                        aria-label="Προβολή ακινήτου"
+                        component={RouterLink}
+                        to={`/properties/${p.id}`}
+                      >
                         <VisibilityIcon />
                       </IconButton>
                     </Tooltip>
 
                     <Tooltip title="Επεξεργασία">
-                      <IconButton component={RouterLink} to={`/properties/${p.id}/edit`}>
+                      <IconButton
+                        aria-label="Επεξεργασία ακινήτου"
+                        component={RouterLink}
+                        to={`/properties/${p.id}/edit`}
+                      >
                         <EditIcon />
                       </IconButton>
                     </Tooltip>
 
                     <Tooltip title="Διαγραφή">
-                      <IconButton edge="end" aria-label="delete" onClick={() => openDeleteConfirm(p)}>
+                      <IconButton
+                        edge="end"
+                        aria-label="Διαγραφή ακινήτου"
+                        onClick={() => openDeleteConfirm(p)}
+                      >
                         <DeleteIcon />
                       </IconButton>
                     </Tooltip>
@@ -154,7 +170,7 @@ function PropertyList() {
                 <ListItemText
                   primary={(
                     <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                      <span>{p.title || `Property #${p.id}`}</span>
+                      <span>{p.title || `Ακίνητο #${p.id}`}</span>
                       <StatusChip status={p.status} />
                     </div>
                   )}
@@ -189,7 +205,7 @@ function PropertyList() {
           </DialogActions>
         </Dialog>
       </Paper>
-    </Box>
+    </PageContainer>
   );
 }
 

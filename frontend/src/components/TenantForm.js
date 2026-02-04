@@ -2,6 +2,8 @@ import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Box, Paper, Typography, TextField, Button, Alert } from "@mui/material";
 import api from "../api";
+import PageContainer from "./layout/PageContainer";
+import PageHeader from "./layout/PageHeader";
 
 function TenantForm() {
   const navigate = useNavigate();
@@ -14,6 +16,11 @@ function TenantForm() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+
+  const afmOk = /^[0-9]{9}$/.test(String(afm || "").trim());
+  const emailOk = String(email || "").trim().includes("@");
+  const phoneOk = String(phone || "").trim().length >= 8;
+  const canSubmit = String(name || "").trim() && afmOk && emailOk && phoneOk && !submitting;
 
   const onSubmit = async (e) => {
     e.preventDefault();
@@ -47,11 +54,13 @@ function TenantForm() {
   };
 
   return (
-    <Box mt={4} display="flex" justifyContent="center">
-      <Paper sx={{ p: 3, width: "90%", maxWidth: 640 }}>
-        <Typography variant="h5" gutterBottom>
-          Νέος Ενοικιαστής
-        </Typography>
+    <PageContainer>
+      <PageHeader
+        title="Νέος Ενοικιαστής"
+        description="Καταχώριση ενοικιαστή (UC‑05)."
+      />
+
+      <Paper sx={{ p: 3, maxWidth: 720, mx: "auto" }}>
 
         {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
         {success && <Alert severity="success" sx={{ mb: 2 }}>{success}</Alert>}
@@ -64,6 +73,7 @@ function TenantForm() {
             fullWidth
             margin="normal"
             required
+            helperText="Πλήρες όνομα ενοικιαστή."
           />
 
           <TextField
@@ -73,7 +83,8 @@ function TenantForm() {
             fullWidth
             margin="normal"
             required
-            helperText="9 ψηφία"
+            error={afm.length > 0 && !afmOk}
+            helperText={afm.length === 0 ? "9 ψηφία" : afmOk ? "OK" : "Το ΑΦΜ πρέπει να έχει 9 ψηφία."}
           />
 
           <TextField
@@ -83,6 +94,8 @@ function TenantForm() {
             fullWidth
             margin="normal"
             required
+            error={phone.length > 0 && !phoneOk}
+            helperText={phone.length === 0 ? "" : phoneOk ? "" : "Δώσε έγκυρο τηλέφωνο."}
           />
 
           <TextField
@@ -92,10 +105,12 @@ function TenantForm() {
             fullWidth
             margin="normal"
             required
+            error={email.length > 0 && !emailOk}
+            helperText={email.length === 0 ? "" : emailOk ? "" : "Δώσε έγκυρο email."}
           />
 
           <Box mt={3} display="flex" gap={2}>
-            <Button type="submit" variant="contained" disabled={submitting}>
+            <Button type="submit" variant="contained" disabled={!canSubmit}>
               {submitting ? "Αποθήκευση..." : "Δημιουργία"}
             </Button>
             <Button variant="outlined" onClick={() => navigate("/tenants")} disabled={submitting}>
@@ -104,7 +119,7 @@ function TenantForm() {
           </Box>
         </form>
       </Paper>
-    </Box>
+    </PageContainer>
   );
 }
 

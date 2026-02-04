@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import {
-  Box,
   Paper,
   Typography,
   TextField,
@@ -9,7 +8,8 @@ import {
 } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import { login } from '../api';
-import { jwtDecode } from 'jwt-decode';
+import PageContainer from './layout/PageContainer';
+import PageHeader from './layout/PageHeader';
 
 function LoginForm() {
   const [username, setUsername] = useState('');
@@ -22,36 +22,26 @@ function LoginForm() {
     setError('');
 
     try {
-      const res = await login(username, password);
-      // το login() ήδη αποθηκεύει το token στο localStorage
-      const token = res.data.access_token;
-
-      // Διαβάζουμε το role από το JWT
-      const decoded = jwtDecode(token); // { sub, type, exp, role, username, ... }
-      const role = decoded.role;
-
-      // Redirect ανά ρόλο, όπως γράφεις στο UC-01
-      if (role === 'OWNER') {
-        navigate('/properties'); // αρχική σελίδα για ιδιοκτήτη
-      } else {
-        // USER / Tenant
-        navigate('/tenants'); // ή όπου θεωρείς "αρχική" για tenant/user
-      }
+      await login(username, password);
+      // Role-based landing happens in /app
+      navigate('/app');
     } catch (err) {
       if (err.response && err.response.data && err.response.data.detail) {
-        setError('Login failed: ' + err.response.data.detail);
+        setError('Αποτυχία σύνδεσης: ' + err.response.data.detail);
       } else {
-        setError('Login failed!');
+        setError('Αποτυχία σύνδεσης.');
       }
     }
   };
 
   return (
-    <Box display="flex" justifyContent="center" alignItems="center" minHeight="80vh">
-      <Paper elevation={3} sx={{ p: 4, width: 400 }}>
-        <Typography variant="h4" align="center" gutterBottom>
-          Login
-        </Typography>
+    <PageContainer maxWidthPx={520}>
+      <PageHeader
+        title="Σύνδεση"
+        description="Σύνδεση χρήστη (UC‑01)."
+      />
+
+      <Paper elevation={3} sx={{ p: 4 }}>
         {error && (
           <Alert severity="error" sx={{ mb: 2 }}>
             {error}
@@ -59,7 +49,7 @@ function LoginForm() {
         )}
         <form onSubmit={handleSubmit}>
           <TextField
-            label="Username"
+            label="Όνομα χρήστη"
             value={username}
             onChange={(e) => setUsername(e.target.value)}
             fullWidth
@@ -67,7 +57,7 @@ function LoginForm() {
             required
           />
           <TextField
-            label="Password"
+            label="Κωδικός"
             type="password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
@@ -82,7 +72,7 @@ function LoginForm() {
             fullWidth
             sx={{ mt: 2 }}
           >
-            Login
+            Σύνδεση
           </Button>
           <Button
             variant="text"
@@ -90,11 +80,11 @@ function LoginForm() {
             sx={{ mt: 1 }}
             onClick={() => navigate('/')}
           >
-            Back to Home
+            Πίσω στην αρχική
           </Button>
         </form>
       </Paper>
-    </Box>
+    </PageContainer>
   );
 }
 

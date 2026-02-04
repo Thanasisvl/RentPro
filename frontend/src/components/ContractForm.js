@@ -9,8 +9,13 @@ import {
   MenuItem,
   Alert,
   CircularProgress,
+  Divider,
+  Stack,
+  Grid,
 } from "@mui/material";
 import api from "../api";
+import PageContainer from "./layout/PageContainer";
+import PageHeader from "./layout/PageHeader";
 
 const MAX_PDF_BYTES = 5 * 1024 * 1024;
 
@@ -47,11 +52,35 @@ function ContractForm() {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
+  const fieldErrors = useMemo(() => {
+    const e = {};
+    const pid = Number(propertyId);
+    if (!Number.isFinite(pid) || pid <= 0) e.propertyId = "Δώσε έγκυρο Property ID.";
+
+    const tid = Number(tenantId);
+    if (!Number.isFinite(tid) || tid <= 0) e.tenantId = "Επίλεξε ενοικιαστή.";
+
+    if (!startDate) e.startDate = "Η ημερομηνία έναρξης είναι υποχρεωτική.";
+    if (!endDate) e.endDate = "Η ημερομηνία λήξης είναι υποχρεωτική.";
+    if (startDate && endDate && String(endDate) < String(startDate)) {
+      e.endDate = "Η λήξη πρέπει να είναι μετά την έναρξη.";
+    }
+
+    const rent = Number(rentAmount);
+    if (!Number.isFinite(rent) || rent <= 0) e.rentAmount = "Δώσε ποσό > 0.";
+
+    const pdfErr = validatePdf(file);
+    if (pdfErr) e.file = pdfErr;
+    return e;
+  }, [propertyId, tenantId, startDate, endDate, rentAmount, file]);
+
+  const hasErrors = Object.keys(fieldErrors).length > 0;
+
   const canSubmit = useMemo(() => {
     // If we have fetched property and it's not available, block create to avoid 409
     if (property && property.status && property.status !== "AVAILABLE") return false;
-    return true;
-  }, [property]);
+    return !hasErrors;
+  }, [property, hasErrors]);
 
   useEffect(() => {
     const loadTenants = async () => {
@@ -103,9 +132,8 @@ function ContractForm() {
     setSuccess("");
 
     try {
-      const pdfErr = validatePdf(file);
-      if (pdfErr) {
-        setError(pdfErr);
+      if (hasErrors) {
+        setError("Έλεγξε τα πεδία της φόρμας.");
         return;
       }
 
@@ -155,11 +183,13 @@ function ContractForm() {
   };
 
   return (
-    <Box mt={4} display="flex" justifyContent="center">
-      <Paper sx={{ p: 3, width: "90%", maxWidth: 640 }}>
-        <Typography variant="h5" gutterBottom>
-          Νέο Συμβόλαιο
-        </Typography>
+    <PageContainer>
+      <PageHeader
+        title="Νέο Συμβόλαιο"
+        description="Δημιουργία νέας μίσθωσης για συγκεκριμένο ακίνητο (UC‑05)."
+      />
+
+      <Paper sx={{ p: 3, maxWidth: 760, mx: "auto" }}>
 
         {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
         {success && <Alert severity="success" sx={{ mb: 2 }}>{success}</Alert>}
@@ -176,7 +206,7 @@ function ContractForm() {
             severity={property.status === "AVAILABLE" ? "info" : "warning"}
             sx={{ mb: 2 }}
           >
-            Ακίνητο: <b>{property.title}</b> — Status: <b>{property.status}</b>
+            Ακίνητο: <b>{property.title}</b> — Κατάσταση: <b>{property.status}</b>
           </Alert>
         )}
 
@@ -187,78 +217,131 @@ function ContractForm() {
         )}
 
         <form onSubmit={onSubmit}>
-          <TextField
-            label="Property ID"
-            value={propertyId}
-            onChange={(e) => setPropertyId(e.target.value)}
-            fullWidth
-            margin="normal"
-            required
-            disabled={Boolean(initialPropertyId)}
-          />
+          <Stack spacing={2.5}>
+            <Box>
+              <Typography variant="subtitle2" sx={{ mb: 1 }}>
+                Στοιχεία ακινήτου
+              </Typography>
+              <TextField
+                label="Κωδικός ακινήτου (Property ID)"
+                value={propertyId}
+                onChange={(e) => setPropertyId(e.target.value)}
+                fullWidth
+                required
+                disabled={Boolean(initialPropertyId)}
+                error={!!fieldErrors.propertyId}
+                helperText={
+                  fieldErrors.propertyId ||
+                  (initialPropertyId ? "Επιλέχθηκε από το ακίνητο." : "π.χ. 12")
+                }
+              />
+            </Box>
 
           {loadingTenants ? (
             <Box mt={2} display="flex" justifyContent="center">
               <CircularProgress size={24} />
             </Box>
           ) : (
-            <TextField
-              select
-              label="Tenant"
-              value={tenantId}
-              onChange={(e) => setTenantId(e.target.value)}
-              fullWidth
-              margin="normal"
-              required
-            >
-              {tenants.map((t) => (
-                <MenuItem key={t.id} value={t.id}>
-                  {t.name || `Tenant #${t.id}`} {t.afm ? `(${t.afm})` : ""}
+            <Box>
+              <Typography variant="subtitle2" sx={{ mb: 1 }}>
+                Ενοικιαστής
+              </Typography>
+              <TextField
+                select
+                label="Επιλογή ενοικιαστή"
+                value={tenantId}
+                onChange={(e) => setTenantId(e.target.value)}
+                fullWidth
+                required
+                error={!!fieldErrors.tenantId}
+                helperText={
+                  fieldErrors.tenantId || "Επίλεξε τον ενοικιαστή που θα συνδεθεί με τη μίσθωση."
+                }
+              >
+                <MenuItem value="">
+                  <em>Επίλεξε…</em>
                 </MenuItem>
-              ))}
-            </TextField>
+                {tenants.map((t) => (
+                  <MenuItem key={t.id} value={String(t.id)}>
+                    {t.name || `Ενοικιαστής #${t.id}`} {t.afm ? `(${t.afm})` : ""}
+                  </MenuItem>
+                ))}
+              </TextField>
+            </Box>
           )}
 
-          <TextField
-            label="Start Date"
-            type="date"
-            value={startDate}
-            onChange={(e) => setStartDate(e.target.value)}
-            fullWidth
-            margin="normal"
-            InputLabelProps={{ shrink: true }}
-            required
-          />
+          <Divider />
 
-          <TextField
-            label="End Date"
-            type="date"
-            value={endDate}
-            onChange={(e) => setEndDate(e.target.value)}
-            fullWidth
-            margin="normal"
-            InputLabelProps={{ shrink: true }}
-            required
-          />
+          <Box>
+            <Typography variant="subtitle2" sx={{ mb: 1 }}>
+              Ημερομηνίες
+            </Typography>
+            <Grid container spacing={2}>
+              <Grid item xs={12} sm={6}>
+                <TextField
+                  label="Έναρξη"
+                  type="date"
+                  value={startDate}
+                  onChange={(e) => setStartDate(e.target.value)}
+                  fullWidth
+                  InputLabelProps={{ shrink: true }}
+                  required
+                  error={!!fieldErrors.startDate}
+                  helperText={fieldErrors.startDate || ""}
+                />
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <TextField
+                  label="Λήξη"
+                  type="date"
+                  value={endDate}
+                  onChange={(e) => setEndDate(e.target.value)}
+                  fullWidth
+                  InputLabelProps={{ shrink: true }}
+                  required
+                  error={!!fieldErrors.endDate}
+                  helperText={fieldErrors.endDate || ""}
+                />
+              </Grid>
+            </Grid>
+          </Box>
 
-          <TextField
-            label="Rent Amount"
-            value={rentAmount}
-            onChange={(e) => setRentAmount(e.target.value)}
-            fullWidth
-            margin="normal"
-            required
-          />
+          <Divider />
 
-          <Box mt={2}>
-            <input
-              type="file"
-              accept="application/pdf,.pdf"
-              onChange={(e) => setFile(e.target.files?.[0] || null)}
+          <Box>
+            <Typography variant="subtitle2" sx={{ mb: 1 }}>
+              Οικονομικά
+            </Typography>
+            <TextField
+              label="Μίσθωμα (€/μήνα)"
+              value={rentAmount}
+              onChange={(e) => setRentAmount(e.target.value)}
+              fullWidth
+              required
+              type="number"
+              inputProps={{ min: 0.01, step: "0.01" }}
+              error={!!fieldErrors.rentAmount}
+              helperText={fieldErrors.rentAmount || "π.χ. 850"}
             />
           </Box>
 
-          <Box mt={3} display="flex" gap={2}>
+          <Divider />
+
+          <Box>
+            <Typography variant="subtitle2" sx={{ mb: 1 }}>
+              PDF (προαιρετικό)
+            </Typography>
+            <TextField
+              type="file"
+              fullWidth
+              inputProps={{ accept: "application/pdf,.pdf" }}
+              onChange={(e) => setFile(e.target.files?.[0] || null)}
+              error={!!fieldErrors.file}
+              helperText={fieldErrors.file || "Μόνο PDF έως 5MB."}
+            />
+          </Box>
+
+          <Box display="flex" gap={2}>
             <Button
               type="submit"
               variant="contained"
@@ -266,10 +349,14 @@ function ContractForm() {
             >
               {submitting ? "Αποθήκευση..." : "Δημιουργία"}
             </Button>
+            <Button variant="outlined" onClick={() => navigate("/contracts")} disabled={submitting}>
+              Ακύρωση
+            </Button>
           </Box>
+          </Stack>
         </form>
       </Paper>
-    </Box>
+    </PageContainer>
   );
 }
 

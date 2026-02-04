@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import {
-  Box,
   Paper,
   Typography,
   TextField,
@@ -10,6 +9,8 @@ import {
 } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import api from '../api';
+import PageContainer from './layout/PageContainer';
+import PageHeader from './layout/PageHeader';
 
 function RegisterForm() {
   const [username, setUsername] = useState('');
@@ -38,16 +39,18 @@ function RegisterForm() {
     } catch (err) {
       const detail =
         err.response && err.response.data && err.response.data.detail;
-      setError(`Registration failed${detail ? `: ${detail}` : ''}`);
+      setError(`Αποτυχία εγγραφής${detail ? `: ${detail}` : ''}`);
     }
   };
 
   return (
-    <Box display="flex" justifyContent="center" alignItems="center" minHeight="80vh">
-      <Paper elevation={3} sx={{ p: 4, width: 400 }}>
-        <Typography variant="h4" align="center" gutterBottom>
-          Register
-        </Typography>
+    <PageContainer maxWidthPx={520}>
+      <PageHeader
+        title="Εγγραφή"
+        description="Δημιουργία λογαριασμού (UC‑01)."
+      />
+
+      <Paper elevation={3} sx={{ p: 4 }}>
 
         {error && (
           <Alert severity="error" sx={{ mb: 2 }}>
@@ -57,7 +60,7 @@ function RegisterForm() {
 
         <form onSubmit={handleSubmit}>
           <TextField
-            label="Username"
+            label="Όνομα χρήστη"
             value={username}
             onChange={(e) => setUsername(e.target.value)}
             fullWidth
@@ -74,7 +77,7 @@ function RegisterForm() {
             required
           />
           <TextField
-            label="Full Name"
+            label="Ονοματεπώνυμο"
             value={fullName}
             onChange={(e) => setFullName(e.target.value)}
             fullWidth
@@ -83,18 +86,18 @@ function RegisterForm() {
           />
           <TextField
             select
-            label="Account Type"
+            label="Τύπος λογαριασμού"
             value={role}
             onChange={(e) => setRole(e.target.value)}
             fullWidth
             margin="normal"
             required
           >
-            <MenuItem value="USER">Tenant / Regular User</MenuItem>
-            <MenuItem value="OWNER">Owner</MenuItem>
+            <MenuItem value="USER">Ενοικιαστής</MenuItem>
+            <MenuItem value="OWNER">Ιδιοκτήτης</MenuItem>
           </TextField>
           <TextField
-            label="Password"
+            label="Κωδικός"
             type="password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
@@ -109,7 +112,7 @@ function RegisterForm() {
             fullWidth
             sx={{ mt: 2 }}
           >
-            Register
+            Εγγραφή
           </Button>
           <Button
             variant="text"
@@ -117,11 +120,11 @@ function RegisterForm() {
             sx={{ mt: 1 }}
             onClick={() => navigate('/')}
           >
-            Back to Home
+            Πίσω στην αρχική
           </Button>
         </form>
       </Paper>
-    </Box>
+    </PageContainer>
   );
 }
 

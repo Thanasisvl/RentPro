@@ -14,6 +14,8 @@ import {
 } from "@mui/material";
 import { Link as RouterLink } from "react-router-dom";
 import api, { getUserRole } from "../api";
+import PageContainer from "./layout/PageContainer";
+import PageHeader from "./layout/PageHeader";
 
 function TenantList() {
   const [tenants, setTenants] = useState([]);
@@ -58,15 +60,18 @@ function TenantList() {
   }
 
   return (
-    <Box mt={4} display="flex" justifyContent="center">
-      <Paper sx={{ p: 3, width: "80%" }}>
-        <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
-          <Typography variant="h5">Ενοικιαστές</Typography>
-
+    <PageContainer>
+      <PageHeader
+        title="Ενοικιαστές"
+        description="Καταχώριση και προβολή ενοικιαστών (UC‑05)."
+        actions={
           <Button variant="contained" component={RouterLink} to="/tenants/new">
             Νέος Ενοικιαστής
           </Button>
-        </Box>
+        }
+      />
+
+      <Paper sx={{ p: 3 }}>
 
         {isAdmin && (
           <Paper variant="outlined" sx={{ p: 2, mb: 2 }}>
@@ -100,7 +105,7 @@ function TenantList() {
           </List>
         )}
       </Paper>
-    </Box>
+    </PageContainer>
   );
 }
 

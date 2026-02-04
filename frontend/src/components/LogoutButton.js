@@ -22,7 +22,7 @@ function LogoutButton() {
 
   return (
     <Button color="inherit" onClick={handleLogout}>
-      Logout
+      Έξοδος
     </Button>
   );
 }

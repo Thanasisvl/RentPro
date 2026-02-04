@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from "react";
-import { Box, Button, Container, Paper, Typography, CircularProgress } from "@mui/material";
+import { Box, Button, Paper, Typography, CircularProgress } from "@mui/material";
 import { useNavigate, useParams } from "react-router-dom";
+import PageContainer from "./layout/PageContainer";
+import PageHeader from "./layout/PageHeader";
 
 const API_BASE_URL = process.env.REACT_APP_API_URL || "http://localhost:8000";
 
@@ -41,10 +43,16 @@ function PublicPropertyDetails() {
   }, [id]);
 
   return (
-    <Container maxWidth="md" sx={{ mt: 4, mb: 6 }}>
-      <Button variant="text" onClick={() => navigate("/search")} sx={{ mb: 2 }}>
-        Πίσω στην Αναζήτηση
-      </Button>
+    <PageContainer>
+      <PageHeader
+        title="Λεπτομέρειες Ακινήτου"
+        description="Public προβολή διαθέσιμου ακινήτου (UC‑03)."
+        actions={
+          <Button variant="outlined" onClick={() => navigate("/search")}>
+            Πίσω στην Αναζήτηση
+          </Button>
+        }
+      />
 
       {loading && (
         <Box display="flex" alignItems="center" gap={2}>
@@ -57,7 +65,7 @@ function PublicPropertyDetails() {
 
       {property && (
         <Paper sx={{ p: 3 }}>
-          <Typography variant="h4" gutterBottom>
+          <Typography variant="h5" gutterBottom>
             {property.title}
           </Typography>
           <Typography gutterBottom>{property.address}</Typography>
@@ -67,7 +75,7 @@ function PublicPropertyDetails() {
           <Typography gutterBottom>Κατάσταση: {property.status}</Typography>
         </Paper>
       )}
-    </Container>
+    </PageContainer>
   );
 }
 

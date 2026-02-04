@@ -1,8 +1,10 @@
 import React, { useEffect, useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
-import { Box, Paper, Typography, Button, Alert, CircularProgress } from "@mui/material";
+import { useParams, useNavigate, Link as RouterLink } from "react-router-dom";
+import { Box, Paper, Typography, Button, Alert, CircularProgress, Stack } from "@mui/material";
 import api from "../api";
 import StatusChip from "./StatusChip";
+import PageContainer from "./layout/PageContainer";
+import PageHeader from "./layout/PageHeader";
 
 function PropertyDetails() {
   const { id } = useParams();
@@ -41,11 +43,18 @@ function PropertyDetails() {
   const canCreateContract = property?.status === "AVAILABLE";
 
   return (
-    <Box mt={4} display="flex" justifyContent="center">
-      <Paper sx={{ p: 3, width: "80%", maxWidth: 720 }}>
-        <Typography variant="h5" gutterBottom>
-          Λεπτομέρειες Ακινήτου
-        </Typography>
+    <PageContainer>
+      <PageHeader
+        title="Λεπτομέρειες Ακινήτου"
+        description="Προβολή ακινήτου (UC‑02/UC‑03)."
+        actions={
+          <Button variant="outlined" onClick={() => navigate("/properties")}>
+            Πίσω
+          </Button>
+        }
+      />
+
+      <Paper sx={{ p: 3, maxWidth: 760, mx: "auto" }}>
 
         {error && (
           <Alert severity="error" sx={{ mb: 2 }}>
@@ -55,10 +64,12 @@ function PropertyDetails() {
 
         {property && (
           <>
-            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <h2 style={{ margin: 0 }}>{property.title}</h2>
+            <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+              <Typography variant="h5" sx={{ m: 0 }}>
+                {property.title}
+              </Typography>
               <StatusChip status={property.status} />
-            </div>
+            </Box>
             <Typography><b>Διεύθυνση:</b> {property.address}</Typography>
             <Typography><b>Τύπος:</b> {property.type}</Typography>
             <Typography><b>Εμβαδόν:</b> {property.size}</Typography>
@@ -68,15 +79,7 @@ function PropertyDetails() {
               <Typography sx={{ mt: 1 }}><b>Περιγραφή:</b> {property.description}</Typography>
             )}
 
-            <Box display="flex" gap={1} mt={2} flexWrap="wrap">
-              <Button
-                variant="contained"
-                component={RouterLink}
-                to={`/properties/${property.id}/edit`}
-              >
-                Επεξεργασία
-              </Button>
-
+            <Stack direction="row" spacing={1} sx={{ mt: 2 }} useFlexGap flexWrap="wrap">
               <Button
                 variant="contained"
                 color="success"
@@ -86,20 +89,24 @@ function PropertyDetails() {
                 Νέο Συμβόλαιο
               </Button>
 
+              <Button
+                variant="outlined"
+                component={RouterLink}
+                to={`/properties/${property.id}/edit`}
+              >
+                Επεξεργασία
+              </Button>
+
               {!canCreateContract && (
                 <Alert severity="info" sx={{ py: 0.5, alignSelf: "center" }}>
                   Δεν μπορείς να δημιουργήσεις νέο συμβόλαιο όταν το ακίνητο δεν είναι διαθέσιμο.
                 </Alert>
               )}
-
-              <Button variant="outlined" onClick={() => navigate('/properties')}>
-                Πίσω
-              </Button>
-            </Box>
+            </Stack>
           </>
         )}
       </Paper>
-    </Box>
+    </PageContainer>
   );
 }
 
