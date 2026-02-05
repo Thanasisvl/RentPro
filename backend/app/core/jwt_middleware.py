@@ -7,6 +7,7 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from app.core.jwt import decode_access_token
 
 PUBLIC_PATHS = [
+    "/health",
     "/login",
     "/users/register",
     "/openapi.json",

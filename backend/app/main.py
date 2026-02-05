@@ -117,3 +117,8 @@ app.mount("/uploads", StaticFiles(directory=str(UPLOADS_DIR)), name="uploads")
 @app.get("/")
 def read_root():
     return {"message": "Welcome to the RentPro application!"}
+
+
+@app.get("/health")
+def health():
+    return {"status": "ok"}
