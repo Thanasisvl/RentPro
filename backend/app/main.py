@@ -8,11 +8,14 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import ValidationError
 from sqlalchemy.exc import IntegrityError, OperationalError
 from pathlib import Path
+import os
 
 import app.models
 from app.core.uploads import get_upload_root
 from app.core.jwt_middleware import JWTAuthMiddleware
+from app.core.seed import seed_e2e_fixtures, seed_locked_criteria
 from app.db.session import Base, engine
+from app.db.session import SessionLocal
 from app.routers import api_router
 
 load_dotenv()
@@ -27,6 +30,15 @@ origins = [
 @app.on_event("startup")
 def on_startup_create_tables():
     Base.metadata.create_all(bind=engine)
+    # Safe, idempotent seeds
+    db = SessionLocal()
+    try:
+        seed_locked_criteria(db)
+        if os.getenv("RENTPRO_E2E_SEED", "").strip() == "1":
+            pwd = os.getenv("RENTPRO_E2E_PASSWORD", "rentpro-e2e")
+            seed_e2e_fixtures(db, password=pwd)
+    finally:
+        db.close()
 
 
 @app.exception_handler(OperationalError)

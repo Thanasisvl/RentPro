@@ -29,6 +29,14 @@ function addYears(d, years) {
   return nd;
 }
 
+function validatePdf(f) {
+  if (!f) return null;
+  const name = (f.name || "").toLowerCase();
+  if (!name.endsWith(".pdf")) return "Μόνο αρχεία PDF επιτρέπονται.";
+  if (f.size > MAX_PDF_BYTES) return "Το PDF είναι πολύ μεγάλο (max 5MB).";
+  return null;
+}
+
 function ContractForm() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
@@ -116,14 +124,6 @@ function ContractForm() {
 
     loadProperty();
   }, [initialPropertyId]);
-
-  const validatePdf = (f) => {
-    if (!f) return null;
-    const name = (f.name || "").toLowerCase();
-    if (!name.endsWith(".pdf")) return "Μόνο αρχεία PDF επιτρέπονται.";
-    if (f.size > MAX_PDF_BYTES) return "Το PDF είναι πολύ μεγάλο (max 5MB).";
-    return null;
-  };
 
   const onSubmit = async (e) => {
     e.preventDefault();

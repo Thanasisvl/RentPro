@@ -97,6 +97,86 @@ pytest backend/tests
 
 Δες το UI test plan εδώ: `docs/uiTestPlan.md`
 
+#### Component / Integration (Jest + React Testing Library)
+
+Από το `frontend/`:
+
+```bash
+cd frontend
+npm install
+```
+
+- Run once (CI-style, χωρίς watch):
+
+```bash
+npm run test:ci
+```
+
+- Watch mode (interactive):
+
+```bash
+npm test
+```
+
+- Run ένα συγκεκριμένο test file / pattern:
+
+```bash
+npm test -- PropertyList.test.js
+npm test -- Property
+```
+
+#### E2E (Playwright)
+
+Προαπαιτούμενο: **Node.js 18+** (recommended 20).
+
+Από το `frontend/`:
+
+```bash
+cd frontend
+npm run e2e:install
+npm run test:e2e
+```
+
+Αν δεις error τύπου “Executable doesn't exist … chrome-headless-shell …” (συνήθως μετά από Node/Playwright upgrade ή αλλαγή αρχιτεκτονικής), κάνε force reinstall:
+
+```bash
+cd frontend
+npm run e2e:install:force
+```
+
+Debug helpers:
+
+```bash
+npm run test:e2e -- --headed
+npm run test:e2e -- --ui
+```
+
+Artifacts σε failure (χρήσιμο για debugging):
+
+- `frontend/test-results/` (traces, screenshots)
+- `frontend/playwright-report/` (HTML report όταν τρέχει σε CI)
+
+#### E2E Integration (Playwright) — χωρίς network stubbing (@p3)
+
+Απαιτείται να τρέχει backend τοπικά, με seeded users/fixtures.
+
+Σε 1 terminal (backend):
+
+```bash
+source .venv/bin/activate
+export RENTPRO_E2E_SEED=1
+export RENTPRO_E2E_PASSWORD=rentpro-e2e
+uvicorn app.main:app --reload --app-dir backend
+```
+
+Σε άλλο terminal (frontend):
+
+```bash
+cd frontend
+npm run e2e:install
+E2E_PASSWORD=rentpro-e2e npm run test:e2e -- --grep @p3
+```
+
 ## Lint / Format
 
 ### Ruff

@@ -154,7 +154,7 @@
 - **Job: e2e-smoke**
   - start backend + frontend
   - run Playwright “smoke” project/suite
-  - upload artifacts (screenshots/videos) σε failure
+  - upload artifacts (traces/screenshots + HTML report) σε failure
 - **Job: e2e-full (optional)**
   - scheduled nightly ή manual dispatch
 

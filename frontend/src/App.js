@@ -471,3 +471,6 @@ function App() {
 }
 
 export default App;
+
+// Named exports to enable targeted component/integration tests.
+export { RoleHomeRedirect, RequireRole, normalizeRole };

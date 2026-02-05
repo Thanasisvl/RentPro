@@ -2,6 +2,52 @@
 
 This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
 
+## RentPro (project-specific)
+
+From `frontend/`:
+
+- Run component/integration tests once (CI-style):
+
+```bash
+npm run test:ci
+```
+
+- Run component/integration tests in watch mode:
+
+```bash
+npm test
+```
+
+- Run E2E tests (Playwright) — requires **Node 18+**:
+
+```bash
+npm run e2e:install
+npm run test:e2e
+```
+
+If you get an error like “Executable doesn't exist … chrome-headless-shell …”, reinstall browsers:
+
+```bash
+npm run e2e:install:force
+```
+
+### E2E integration tests (@p3, no network stubbing)
+
+Start backend with seeds:
+
+```bash
+export RENTPRO_E2E_SEED=1
+export RENTPRO_E2E_PASSWORD=rentpro-e2e
+uvicorn app.main:app --reload --app-dir backend
+```
+
+Then run:
+
+```bash
+npm run e2e:install
+E2E_PASSWORD=rentpro-e2e npm run test:e2e -- --grep @p3
+```
+
 ## Available Scripts
 
 In the project directory, you can run:
