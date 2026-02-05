@@ -40,9 +40,10 @@ import TenantDashboard from "./components/dashboards/TenantDashboard";
 import OwnerDashboard from "./components/dashboards/OwnerDashboard";
 import AdminDashboard from "./components/dashboards/AdminDashboard";
 import AdminUsersPage from "./components/AdminUsersPage";
+import ForbiddenPage from "./components/ForbiddenPage";
 
-// NEW: logo asset (put it under src/assets)
-import logo from "./assets/rentpro-mark.png";
+// Logo asset
+import logo from "./assets/rentpro_logo_mark.png";
 
 function normalizeRole(raw) {
   const r = String(raw || "").toUpperCase().trim();
@@ -67,7 +68,21 @@ function RoleHomeRedirect() {
 function RequireRole({ allowed, children }) {
   const role = normalizeRole(getUserRole());
   const ok = Array.isArray(allowed) && allowed.includes(role);
-  if (!ok) return <Navigate to="/app" replace />;
+  if (!ok) {
+    // UC-06 A1: show an explicit authorization error screen
+    const attemptedPath = window?.location?.pathname || "";
+    return (
+      <Navigate
+        to="/forbidden"
+        replace
+        state={{
+          attemptedPath,
+          currentRole: role,
+          requiredRoles: allowed,
+        }}
+      />
+    );
+  }
   return children;
 }
 
@@ -263,6 +278,7 @@ function App() {
           <Route path="/" element={<LandingPage />} />
           <Route path="/login" element={<LoginForm />} />
           <Route path="/register" element={<RegisterForm />} />
+          <Route path="/forbidden" element={<ForbiddenPage />} />
 
           <Route path="/search" element={<PropertySearchPage />} />
           <Route path="/search/properties/:id" element={<PublicPropertyDetails />} />
