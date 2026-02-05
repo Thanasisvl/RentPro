@@ -93,6 +93,10 @@ source .venv/bin/activate
 pytest backend/tests
 ```
 
+### UI (Frontend)
+
+Δες το UI test plan εδώ: `docs/uiTestPlan.md`
+
 ## Lint / Format
 
 ### Ruff
