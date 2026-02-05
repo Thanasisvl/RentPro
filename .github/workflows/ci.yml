@@ -52,6 +52,35 @@ jobs:
         run: |
           pytest -q --maxfail=1 --disable-warnings --cov=app --cov-report=term-missing --cov-fail-under=75
 
+  docker-tests:
+    name: Docker tests (backend + frontend)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Create .env for Docker Compose
+        run: |
+          cat > .env <<'EOF'
+          WEB_PORT=80
+          REACT_APP_API_URL=/api
+          RENTPRO_DATABASE_URL=sqlite:////data/rentpro.db
+          RENTPRO_UPLOAD_DIR=/data/uploads
+          RENTPRO_SECRET_KEY=ci-secret
+          RENTPRO_E2E_SEED=0
+          RENTPRO_E2E_PASSWORD=rentpro-e2e
+          EOF
+
+      - name: Backend tests (pytest) via Docker
+        run: docker compose --profile test run --rm backend-tests
+
+      - name: Frontend tests (Jest/RTL) via Docker
+        run: docker compose --profile test run --rm frontend-tests
+
   frontend-tests:
     runs-on: ubuntu-latest
     defaults:

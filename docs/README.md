@@ -79,6 +79,64 @@ cd frontend
 npm start
 ```
 
+## Εκτέλεση (Demo με Docker)
+
+Για demo/παρουσίαση μπορείς να σηκώσεις **frontend (nginx)** + **backend** με 1 εντολή, ώστε να έχεις:
+
+- **UI**: `http://localhost`
+- **API**: `http://localhost/api` (nginx proxy στο backend)
+- **Uploads**: `http://localhost/uploads`
+
+### Προαπαιτούμενα
+
+- Docker Desktop (ή Docker Engine) με `docker compose`
+
+### Εκτέλεση
+
+Από το root του project:
+
+```bash
+cp .env.example .env
+docker compose up --build
+```
+
+Health check:
+
+```bash
+curl -fsS http://localhost/api/health
+```
+
+### Stop / Reset demo data
+
+- Stop:
+
+```bash
+docker compose down
+```
+
+- Reset (σβήνει και το volume με SQLite DB + uploads):
+
+```bash
+docker compose down -v
+```
+
+### Quality-of-life (Makefile)
+
+Ίδιες εντολές μέσω `make`:
+
+```bash
+make demo-up
+make demo-down
+make demo-reset
+make logs
+```
+
+### Troubleshooting
+
+- **Η πόρτα 80 είναι πιασμένη**: άλλαξε port στο `.env` (π.χ. `WEB_PORT=8080`) και άνοιξε `http://localhost:8080`.
+- **Ξέχασες να βάλεις secret**: το `docker compose` απαιτεί `RENTPRO_SECRET_KEY` στο `.env` (δες `.env.example`).
+- **Permissions σε volume μετά από αλλαγές**: αν δεις error για write σε `/data` (SQLite/uploads), κάνε `docker compose down -v` για να ξαναδημιουργηθεί το volume.
+
 ## Χρήση
 
 - **Backend**: Η εφαρμογή θα είναι διαθέσιμη στο `http://localhost:8000`.
@@ -91,6 +149,20 @@ npm start
 ```bash
 source .venv/bin/activate
 pytest backend/tests
+```
+
+### Backend tests via Docker
+
+Από το root:
+
+```bash
+docker compose --profile test run --rm backend-tests
+```
+
+ή με Makefile:
+
+```bash
+make test-backend
 ```
 
 ### UI (Frontend)
@@ -110,6 +182,20 @@ npm install
 
 ```bash
 npm run test:ci
+```
+
+- Run component tests via Docker:
+
+Από το root:
+
+```bash
+docker compose --profile test run --rm frontend-tests
+```
+
+ή με Makefile:
+
+```bash
+make test-ui
 ```
 
 - Watch mode (interactive):

@@ -1,0 +1,16 @@
+**/node_modules
+**/build
+**/.venv
+**/__pycache__
+**/*.pyc
+**/.pytest_cache
+**/.DS_Store
+
+# Local app data (handled via docker volumes instead)
+backend/uploads
+backend/*.db
+
+# Playwright artifacts
+frontend/playwright-report
+frontend/test-results
+

@@ -16,6 +16,7 @@ venv/
 # Environment variables
 .env
 .env.*
+!.env.example
 
 # SQLite database files
 *.db
