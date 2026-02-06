@@ -1,7 +1,6 @@
 from datetime import date, timedelta
 from io import BytesIO
 
-import pytest
 from fastapi.testclient import TestClient
 
 from app.db.session import SessionLocal

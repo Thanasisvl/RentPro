@@ -42,4 +42,3 @@ def run_migrations(*, required: bool = True) -> None:
 
     logger.info("Running DB migrations to head")
     command.upgrade(cfg, "head")
-

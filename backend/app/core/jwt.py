@@ -6,6 +6,7 @@ from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from jose import JWTError, jwt
 
+
 def _strict_config_enabled() -> bool:
     return os.getenv("RENTPRO_STRICT_CONFIG", "").strip() == "1"
 
@@ -104,7 +105,9 @@ def create_refresh_token(
     - Contains 'sub', 'type'='refresh', 'exp'.
     """
     if expires_delta is None:
-        days = _get_env_int("REFRESH_TOKEN_EXPIRE_DAYS", REFRESH_TOKEN_EXPIRE_DAYS_DEFAULT)
+        days = _get_env_int(
+            "REFRESH_TOKEN_EXPIRE_DAYS", REFRESH_TOKEN_EXPIRE_DAYS_DEFAULT
+        )
         expires_delta = timedelta(days=days)
 
     expire = datetime.utcnow() + expires_delta

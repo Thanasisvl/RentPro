@@ -156,7 +156,9 @@ class ObservabilityMiddleware(BaseHTTPMiddleware):
 
         if self._metrics is not None:
             try:
-                self._metrics.observe(path=request.url.path, status_code=response.status_code)
+                self._metrics.observe(
+                    path=request.url.path, status_code=response.status_code
+                )
             except Exception:
                 # Never fail the request due to metrics.
                 pass
@@ -171,4 +173,3 @@ class ObservabilityMiddleware(BaseHTTPMiddleware):
             )
 
         return response
-

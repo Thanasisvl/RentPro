@@ -11,7 +11,11 @@ from pathlib import Path
 import os
 
 import app.models
-from app.core.observability import InMemoryMetrics, ObservabilityMiddleware, configure_logging
+from app.core.observability import (
+    InMemoryMetrics,
+    ObservabilityMiddleware,
+    configure_logging,
+)
 from app.core.migrations import run_migrations
 from app.core.uploads import get_upload_root
 from app.core.jwt_middleware import JWTAuthMiddleware

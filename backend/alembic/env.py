@@ -20,7 +20,7 @@ if str(BACKEND_DIR) not in sys.path:
     sys.path.insert(0, str(BACKEND_DIR))
 
 # Import models so Base.metadata is fully populated.
-import app.models  # noqa: F401  (side-effect import)
+import app.models  # noqa: F401,E402  (side-effect import)
 from app.db.session import Base  # noqa: E402
 
 target_metadata = Base.metadata
@@ -73,4 +73,3 @@ if context.is_offline_mode():
     run_migrations_offline()
 else:
     run_migrations_online()
-

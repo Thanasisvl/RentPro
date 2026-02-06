@@ -82,4 +82,3 @@ def rate_limit_auth(request: Request) -> None:
     elif path.endswith("/auth/refresh"):
         limit = _per_minute("RENTPRO_RATE_LIMIT_REFRESH_PER_MIN", 240)
         _limiter.hit(f"refresh:{ip}", limit=limit)
-
