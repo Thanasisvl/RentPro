@@ -50,7 +50,16 @@ jobs:
 
       - name: Pytest
         run: |
-          pytest -q --maxfail=1 --disable-warnings --cov=app --cov-report=term-missing --cov-fail-under=75
+          pytest -q --maxfail=1 --disable-warnings --cov=app --cov-report=term-missing --cov-report=xml:coverage.xml --cov-report=html:htmlcov --cov-fail-under=75
+
+      - name: Upload backend coverage artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-coverage
+          path: |
+            backend/coverage.xml
+            backend/htmlcov
 
   docker-tests:
     name: Docker tests (backend + frontend)
@@ -68,7 +77,8 @@ jobs:
           cat > .env <<'EOF'
           WEB_PORT=80
           REACT_APP_API_URL=/api
-          RENTPRO_DATABASE_URL=sqlite:////data/rentpro.db
+          # docker compose default is Postgres; backend-tests still overrides to SQLite explicitly
+          RENTPRO_DATABASE_URL=postgresql+psycopg2://rentpro:rentpro@postgres:5432/rentpro
           RENTPRO_UPLOAD_DIR=/data/uploads
           RENTPRO_SECRET_KEY=ci-secret
           RENTPRO_E2E_SEED=0
@@ -103,7 +113,14 @@ jobs:
         run: npm ci
 
       - name: Frontend tests (Jest/RTL)
-        run: npm run test:ci
+        run: npm run test:ci -- --coverage
+
+      - name: Upload frontend coverage artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-coverage
+          path: frontend/coverage
 
   e2e-smoke:
     runs-on: ubuntu-latest

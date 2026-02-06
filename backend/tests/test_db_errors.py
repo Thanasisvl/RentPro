@@ -1,14 +1,6 @@
-import os
-
-from dotenv import load_dotenv
-
 from fastapi.testclient import TestClient
 
 from app.main import app
-
-os.environ["RENTPRO_DATABASE_URL"] = "sqlite:///./test_test.db"
-os.environ["ACCESS_TOKEN_EXPIRE_MINUTES"] = "60"
-load_dotenv()
 
 client = TestClient(app)
 

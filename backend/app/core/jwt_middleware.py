@@ -8,6 +8,7 @@ from app.core.jwt import decode_access_token
 
 PUBLIC_PATHS = [
     "/health",
+    "/metrics",
     "/login",
     "/users/register",
     "/openapi.json",

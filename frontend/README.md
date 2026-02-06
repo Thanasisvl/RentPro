@@ -38,14 +38,15 @@ Start backend with seeds:
 ```bash
 export RENTPRO_E2E_SEED=1
 export RENTPRO_E2E_PASSWORD=rentpro-e2e
-uvicorn app.main:app --reload --app-dir backend
+docker compose up -d --build
 ```
 
 Then run:
 
 ```bash
 npm run e2e:install
-E2E_PASSWORD=rentpro-e2e npm run test:e2e -- --grep @p3
+# Run against the docker demo stack (nginx at http://localhost)
+E2E_BASE_URL=http://localhost E2E_PASSWORD=rentpro-e2e npm run test:e2e:p3
 ```
 
 ## Available Scripts

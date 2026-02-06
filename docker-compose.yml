@@ -1,16 +1,41 @@
 services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      POSTGRES_DB: "${POSTGRES_DB:-rentpro}"
+      POSTGRES_USER: "${POSTGRES_USER:-rentpro}"
+      POSTGRES_PASSWORD: "${POSTGRES_PASSWORD:-rentpro}"
+    volumes:
+      - rentpro_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U \"$${POSTGRES_USER}\" -d \"$${POSTGRES_DB}\" -h 127.0.0.1 -p 5432",
+        ]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 10s
+
   backend:
     build: ./backend
     restart: unless-stopped
     env_file:
       - .env
     environment:
-      RENTPRO_DATABASE_URL: "${RENTPRO_DATABASE_URL:-sqlite:////data/rentpro.db}"
+      RENTPRO_DATABASE_URL: "${RENTPRO_DATABASE_URL:-postgresql+psycopg2://rentpro:rentpro@postgres:5432/rentpro}"
       RENTPRO_UPLOAD_DIR: "${RENTPRO_UPLOAD_DIR:-/data/uploads}"
       RENTPRO_SECRET_KEY: "${RENTPRO_SECRET_KEY:?RENTPRO_SECRET_KEY must be set in .env}"
       # Optional demo seed:
       RENTPRO_E2E_SEED: "${RENTPRO_E2E_SEED:-0}"
       RENTPRO_E2E_PASSWORD: "${RENTPRO_E2E_PASSWORD:-rentpro-e2e}"
+    depends_on:
+      postgres:
+        condition: service_healthy
     healthcheck:
       test:
         [
@@ -70,4 +95,5 @@ services:
 
 volumes:
   rentpro_data:
+  rentpro_pgdata:
 

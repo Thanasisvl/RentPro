@@ -23,11 +23,13 @@
     "build": "react-scripts build",
     "test": "react-scripts test",
     "test:ci": "react-scripts test --watchAll=false",
-    "test:e2e": "node scripts/pw.js test",
+    "test:e2e": "node scripts/pw.js test --grep-invert @p3",
+    "test:e2e:p3": "node scripts/pw.js test --grep @p3",
     "e2e:install": "node scripts/pw.js install chromium",
     "e2e:install:force": "node scripts/pw.js install --force chromium",
     "e2e:install:ci": "node scripts/pw.js install --with-deps chromium",
-    "test:e2e:stable": "PW_JUNIT=1 CI=1 node scripts/pw.js test",
+    "test:e2e:stable": "PW_JUNIT=1 CI=1 node scripts/pw.js test --grep-invert @p3",
+    "test:e2e:p3:stable": "PW_JUNIT=1 CI=1 node scripts/pw.js test --grep @p3",
     "eject": "react-scripts eject"
   },
   "eslintConfig": {

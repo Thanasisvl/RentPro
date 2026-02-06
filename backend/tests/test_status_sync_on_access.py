@@ -5,19 +5,13 @@ from datetime import date, timedelta
 import pytest
 from fastapi.testclient import TestClient
 
-from app.db.session import Base, SessionLocal, engine
+from app.db.session import SessionLocal
 from app.main import app
 from app.models.contract import Contract, ContractStatus
 from app.models.property import Property, PropertyStatus
 from tests.utils import register_and_login
 
 client = TestClient(app)
-
-
-@pytest.fixture(autouse=True)
-def clean_db() -> None:
-    Base.metadata.drop_all(bind=engine)
-    Base.metadata.create_all(bind=engine)
 
 
 def test_get_property_syncs_overdue_contract_and_makes_property_available() -> None:

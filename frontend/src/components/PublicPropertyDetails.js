@@ -4,7 +4,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import PageContainer from "./layout/PageContainer";
 import PageHeader from "./layout/PageHeader";
 
-const API_BASE_URL = process.env.REACT_APP_API_URL || "http://localhost:8000";
+import { API_BASE_URL } from "../config";
 
 function PublicPropertyDetails() {
   const { id } = useParams();

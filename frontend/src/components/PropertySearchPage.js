@@ -29,7 +29,7 @@ import PropertyCard from "./PropertyCard";
 import PageContainer from "./layout/PageContainer";
 import PageHeader from "./layout/PageHeader";
 
-const API_BASE_URL = process.env.REACT_APP_API_URL || "http://localhost:8000";
+import { API_BASE_URL } from "../config";
 const PROPERTY_TYPES = ["", "STUDIO", "APARTMENT", "MAISONETTE", "DETACHED_HOUSE"];
 
 const PRICE_MIN = 0;

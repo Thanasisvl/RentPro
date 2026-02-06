@@ -1,27 +1,14 @@
-from dotenv import load_dotenv
 from datetime import date, timedelta
 
 import pytest
 from fastapi.testclient import TestClient
 
-from app.db.session import Base, engine
 from app.main import app
 from tests.utils import (
     login_headers,
     make_admin,
     register_and_login,
-    seed_locked_criteria_for_tests,
 )
-
-load_dotenv()
-
-
-@pytest.fixture(autouse=True)
-def clean_db():
-    Base.metadata.drop_all(bind=engine)
-    Base.metadata.create_all(bind=engine)
-    seed_locked_criteria_for_tests()
-
 
 client = TestClient(app)
 

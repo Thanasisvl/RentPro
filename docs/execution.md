@@ -6,7 +6,31 @@ from the root folder:
 
 ## Recreate the dev db
 From the backend folder:
-```python -m app.create_tables```
+```bash
+# apply migrations to the configured DB
+alembic upgrade head
+```
+
+## Create a new migration (Alembic)
+
+From the `backend/` folder:
+
+```bash
+# 1) Make your SQLAlchemy model changes in app/models/*
+# 2) Create a revision (autogenerate)
+alembic revision --autogenerate -m "add_x"
+
+# 3) Review the generated file in backend/alembic/versions/
+# 4) Apply it
+alembic upgrade head
+```
+
+If you’re using Docker Compose (recommended for demos), you can also run:
+
+```bash
+make revision-auto MSG="add_x"
+make migrate
+```
 
 ## Run the backend tests
 from the root folder:

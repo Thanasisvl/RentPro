@@ -7,3 +7,5 @@ python-multipart
 passlib[bcrypt]
 pyjwt
 python-jose[cryptography]
+psycopg2-binary
+alembic

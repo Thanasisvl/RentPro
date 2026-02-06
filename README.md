@@ -22,6 +22,18 @@ docker compose down
 docker compose down -v
 ```
 
+### Observability (demo)
+
+- **Metrics**: `http://localhost/api/metrics`
+- **Request correlation**: κάθε response περιλαμβάνει `X-Request-ID`
+
+Για JSON logs + request logs, βάλε στο `.env`:
+
+```bash
+RENTPRO_JSON_LOGS=1
+RENTPRO_LOG_REQUESTS=1
+```
+
 ### Quality-of-life
 
 Ίδιες εντολές μέσω `make`:
@@ -39,7 +51,7 @@ make test-backend
 
 - **Η πόρτα 80 είναι πιασμένη**: άλλαξε port στο `.env` (π.χ. `WEB_PORT=8080`) και άνοιξε `http://localhost:8080`.
 - **Ξέχασες να βάλεις secret**: το `docker compose` απαιτεί `RENTPRO_SECRET_KEY` στο `.env` (δες `.env.example`).
-- **Permissions σε volume μετά από αλλαγές**: αν δεις error για write σε `/data` (SQLite/uploads), κάνε `docker compose down -v` για να ξαναδημιουργηθεί το volume.
+- **Permissions σε volume μετά από αλλαγές**: αν δεις error για write σε `/data` (uploads), κάνε `docker compose down -v` για να ξαναδημιουργηθούν τα volumes.
 
 ### Documentation
 

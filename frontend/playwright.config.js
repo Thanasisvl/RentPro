@@ -3,6 +3,9 @@ const { defineConfig, devices } = require("@playwright/test");
 
 const isRealCI = Boolean(process.env.GITHUB_ACTIONS);
 const writeJunit = Boolean(process.env.PW_JUNIT);
+const externalBaseURL = (process.env.E2E_BASE_URL || "").trim();
+const useExternalServer = Boolean(externalBaseURL);
+const baseURL = externalBaseURL || "http://localhost:3000";
 
 module.exports = defineConfig({
   testDir: "./e2e",
@@ -28,18 +31,23 @@ module.exports = defineConfig({
     },
   ],
   use: {
-    baseURL: process.env.E2E_BASE_URL || "http://localhost:3000",
+    baseURL,
     trace: "retain-on-failure",
     screenshot: "only-on-failure",
   },
-  webServer: {
-    command: "npm run build && node scripts/serve-build.js",
-    url: "http://localhost:3000",
-    reuseExistingServer: !isRealCI,
-    env: {
-      PORT: "3000",
-      CI: "true",
-    },
-  },
+  // Default behavior: start a local web server that serves the built frontend.
+  // Integration behavior: if E2E_BASE_URL is provided, assume an external server
+  // (e.g. docker-compose nginx at http://localhost) and do not start webServer.
+  webServer: useExternalServer
+    ? undefined
+    : {
+        command: "npm run build && node scripts/serve-build.js",
+        url: "http://localhost:3000",
+        reuseExistingServer: !isRealCI,
+        env: {
+          PORT: "3000",
+          CI: "true",
+        },
+      },
 });
 

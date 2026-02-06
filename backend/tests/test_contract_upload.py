@@ -4,33 +4,22 @@ import shutil
 
 import pytest
 
-from dotenv import load_dotenv
-
 from fastapi.testclient import TestClient
 
-from app.db.session import Base, engine
 from app.main import app
 from app.core.uploads import get_upload_root
-from tests.utils import register_and_login, seed_locked_criteria_for_tests
+from tests.utils import register_and_login
 
-os.environ["RENTPRO_DATABASE_URL"] = "sqlite:///./test_test.db"
-os.environ["ACCESS_TOKEN_EXPIRE_MINUTES"] = "60"
-load_dotenv()
+
+client = TestClient(app)
 
 
 @pytest.fixture(autouse=True)
-def clean_db():
-    Base.metadata.drop_all(bind=engine)
-    Base.metadata.create_all(bind=engine)
-    seed_locked_criteria_for_tests()
-
+def clean_uploads_dir():
     upload_dir = str(get_upload_root() / "contracts")
     if os.path.exists(upload_dir):
         shutil.rmtree(upload_dir)
     os.makedirs(upload_dir, exist_ok=True)
-
-
-client = TestClient(app)
 
 
 def _create_tenant_for_owner(owner_headers):

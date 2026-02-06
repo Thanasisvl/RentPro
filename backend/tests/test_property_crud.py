@@ -6,26 +6,18 @@ import pytest
 from fastapi.testclient import TestClient
 from starlette.status import HTTP_422_UNPROCESSABLE_CONTENT
 
-from app.db.session import Base, SessionLocal, engine
+from app.db.session import SessionLocal
 from app.main import app
 from app.models.contract import Contract, ContractStatus
 from tests.utils import (
     make_admin,
     register_and_login,
-    seed_locked_criteria_for_tests,
     set_property_status,
 )
 
 # NOTE:
 # - Do NOT set os.environ / load_dotenv here.
 # - tests/conftest.py is responsible for env setup.
-
-
-@pytest.fixture(autouse=True)
-def clean_db():
-    Base.metadata.drop_all(bind=engine)
-    Base.metadata.create_all(bind=engine)
-    seed_locked_criteria_for_tests()
 
 
 client = TestClient(app)

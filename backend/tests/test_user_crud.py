@@ -1,24 +1,9 @@
-import os
-
-from dotenv import load_dotenv
-
 import pytest
 from fastapi.testclient import TestClient
 
-from app.db.session import Base, engine
 from app.main import app
 from app.models.user import UserRole
-from tests.utils import register_and_login, seed_locked_criteria_for_tests
-
-os.environ["RENTPRO_DATABASE_URL"] = "sqlite:///./test_test.db"
-load_dotenv()
-
-
-@pytest.fixture(autouse=True)
-def clean_db():
-    Base.metadata.drop_all(bind=engine)
-    Base.metadata.create_all(bind=engine)
-    seed_locked_criteria_for_tests()
+from tests.utils import register_and_login
 
 
 client = TestClient(app)

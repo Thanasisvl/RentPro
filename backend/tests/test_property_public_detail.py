@@ -6,7 +6,7 @@ from datetime import date, timedelta
 import pytest
 from fastapi.testclient import TestClient
 
-from app.db.session import Base, SessionLocal, engine
+from app.db.session import SessionLocal
 from app.main import app
 from app.models.contract import Contract, ContractStatus
 from tests.utils import (
@@ -14,18 +14,10 @@ from tests.utils import (
     login_headers,
     make_admin,
     register_and_login,
-    seed_locked_criteria_for_tests,
     set_property_status,
 )
 
 client = TestClient(app)
-
-
-@pytest.fixture(autouse=True)
-def clean_db():
-    Base.metadata.drop_all(bind=engine)
-    Base.metadata.create_all(bind=engine)
-    seed_locked_criteria_for_tests()
 
 
 @pytest.fixture

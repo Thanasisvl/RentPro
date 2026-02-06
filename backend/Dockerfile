@@ -20,6 +20,8 @@ RUN pip install --no-cache-dir -r requirements-dev.txt
 
 COPY app ./app
 COPY tests ./tests
+COPY alembic.ini ./alembic.ini
+COPY alembic ./alembic
 
 RUN chown -R appuser:appuser /app
 USER appuser
@@ -29,6 +31,8 @@ CMD ["pytest", "-q", "--maxfail=1", "--disable-warnings", "--cov=app", "--cov-re
 FROM base AS runtime
 
 COPY app ./app
+COPY alembic.ini ./alembic.ini
+COPY alembic ./alembic
 
 RUN chown -R appuser:appuser /app
 USER appuser

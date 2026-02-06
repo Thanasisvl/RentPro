@@ -11,16 +11,19 @@ from pathlib import Path
 import os
 
 import app.models
+from app.core.observability import InMemoryMetrics, ObservabilityMiddleware, configure_logging
+from app.core.migrations import run_migrations
 from app.core.uploads import get_upload_root
 from app.core.jwt_middleware import JWTAuthMiddleware
 from app.core.seed import seed_e2e_fixtures, seed_locked_criteria
-from app.db.session import Base, engine
 from app.db.session import SessionLocal
 from app.routers import api_router
 
 load_dotenv()
+configure_logging()
 
 app = FastAPI()
+app.state.metrics = InMemoryMetrics()
 
 origins = [
     "http://localhost:3000",  # React dev
@@ -28,8 +31,8 @@ origins = [
 
 
 @app.on_event("startup")
-def on_startup_create_tables():
-    Base.metadata.create_all(bind=engine)
+def on_startup_migrate_and_seed():
+    run_migrations()
     # Safe, idempotent seeds
     db = SessionLocal()
     try:
@@ -103,6 +106,7 @@ app.add_middleware(
 )
 
 app.add_middleware(JWTAuthMiddleware)
+app.add_middleware(ObservabilityMiddleware, metrics=app.state.metrics)
 
 app.include_router(api_router)
 
@@ -122,3 +126,8 @@ def read_root():
 @app.get("/health")
 def health():
     return {"status": "ok"}
+
+
+@app.get("/metrics")
+def metrics():
+    return app.state.metrics.snapshot()

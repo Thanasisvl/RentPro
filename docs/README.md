@@ -21,7 +21,7 @@
 
 - **Frontend**: React.js
 - **Backend**: Python (FastAPI)
-- **Database**: SQLite (tests/dev) / PostgreSQL (prod-ready)
+- **Database**: PostgreSQL (Docker demo/runtime) + SQLite (tests)
 - **Tooling**: pytest, ruff, black
 
 ## Προαπαιτούμενα
@@ -100,6 +100,8 @@ cp .env.example .env
 docker compose up --build
 ```
 
+Σημείωση: το backend τρέχει **Alembic migrations** στο startup (δεν χρησιμοποιεί πλέον `create_all`).
+
 Health check:
 
 ```bash
@@ -114,11 +116,57 @@ curl -fsS http://localhost/api/health
 docker compose down
 ```
 
-- Reset (σβήνει και το volume με SQLite DB + uploads):
+- Reset (σβήνει και τα volumes με PostgreSQL DB + uploads):
 
 ```bash
 docker compose down -v
 ```
+
+### Inspect PostgreSQL (optional)
+
+Αν θέλεις να δεις tables/δεδομένα:
+
+```bash
+docker compose exec postgres psql -U "${POSTGRES_USER:-rentpro}" -d "${POSTGRES_DB:-rentpro}" -c "\\dt"
+```
+
+### Database migrations (Alembic)
+
+Το RentPro χρησιμοποιεί **Alembic migrations** (source of truth για schema).
+
+#### Apply migrations (Docker demo runtime)
+
+Από το root:
+
+```bash
+make migrate
+```
+
+ή χωρίς Makefile:
+
+```bash
+docker compose run --rm backend alembic -c alembic.ini upgrade head
+```
+
+#### Create a new migration (autogenerate)
+
+Flow:
+
+1. Κάνε αλλαγές στα SQLAlchemy models (`backend/app/models/*`).
+2. Δημιούργησε revision:
+
+```bash
+make revision-auto MSG="add_x"
+```
+
+3. Έλεγξε/διόρθωσε το generated migration file στο `backend/alembic/versions/`.
+4. Εφάρμοσέ το:
+
+```bash
+make migrate
+```
+
+Σημείωση: το `--autogenerate` είναι “best effort”. Για constraints / indexes / data migrations μπορεί να χρειαστεί manual edit στο migration script.
 
 ### Quality-of-life (Makefile)
 
@@ -129,6 +177,8 @@ make demo-up
 make demo-down
 make demo-reset
 make logs
+make migrate
+make revision-auto MSG="add_x"
 ```
 
 ### Troubleshooting
@@ -143,6 +193,21 @@ make logs
 - **Frontend**: Η εφαρμογή θα είναι διαθέσιμη στο `http://localhost:3000`.
 
 ## Tests
+
+### Κατηγοριοποίηση & πότε τρέχουν
+
+- **Backend (pytest)**: unit/integration tests για FastAPI + DB logic (SQLite by default).
+  - **Local**: `pytest backend/tests`
+  - **Docker**: `docker compose --profile test run --rm backend-tests`
+  - **CI**: τρέχουν και “native” (Python job) και “via Docker” (docker-tests job) + ανεβαίνουν coverage artifacts
+- **Frontend component/integration (Jest/RTL)**:
+  - **Local**: `npm run test:ci` (από `frontend/`)
+  - **Docker**: `docker compose --profile test run --rm frontend-tests`
+  - **CI**: τρέχουν και “native” (Node job) και “via Docker” (docker-tests job) + ανεβαίνουν coverage artifacts
+- **Frontend E2E (Playwright)**:
+  - **CI**: smoke + tiered suites (`@smoke`, `@p1`, `@p2`)
+  - **Local**: `npm run test:e2e` (από `frontend/`)
+  - **Integration E2E (@p3)**: manual/optional (real backend, seeded)
 
 ### Backend
 
@@ -282,12 +347,54 @@ black backend/app backend/tests
 
 ## Ρυθμίσεις / Environment variables (backend)
 
-Τα περισσότερα έχουν defaults για dev/tests. Ενδεικτικά:
+Τα περισσότερα έχουν defaults για dev/tests, αλλά για **Docker demo** προτείνεται να τα ορίζεις από `.env`
+(δες `.env.example`).
 
-- **`RENTPRO_DATABASE_URL`**: π.χ. `sqlite:///./rentpro.db`
-- **`RENTPRO_SECRET_KEY`**: secret για JWT (βάλε δική σου τιμή σε production)
-- **`RENTPRO_UPLOAD_DIR`**: directory για uploads (default: `backend/uploads`)
-- **`ACCESS_TOKEN_EXPIRE_MINUTES`**, **`REFRESH_TOKEN_EXPIRE_DAYS`**
+### Docker / Compose (`.env`)
+
+- **`WEB_PORT`** (default: `80`): port που κάνει expose το nginx (UI + `/api`).
+- **`REACT_APP_API_URL`** (default: `/api`): API base URL που “ψήνεται” στο React build (για nginx demo κράτα `/api`).
+- **`POSTGRES_DB`**, **`POSTGRES_USER`**, **`POSTGRES_PASSWORD`**: ρυθμίσεις για το Postgres container (Docker demo).
+
+### Backend (FastAPI)
+
+- **`RENTPRO_DATABASE_URL`** (default στο code: `sqlite:///./rentpro_dev.db`): SQLAlchemy DB URL.
+  - Docker demo (Postgres): `postgresql+psycopg2://rentpro:rentpro@postgres:5432/rentpro`
+  - Tests (SQLite): `sqlite:///./test_test.db`
+- **`RENTPRO_UPLOAD_DIR`** (default: `backend/uploads`): absolute/relative directory για uploads (PDFs).
+  - Docker demo: `/data/uploads` (persist σε volume)
+- **`RENTPRO_SECRET_KEY`** (default στο code: `your-secret-key`): JWT signing key.
+  - **Στο Docker demo είναι required** (δεν επιτρέπεται fallback).
+- **`RENTPRO_JWT_ALGORITHM`** (default: `HS256`): JWT HMAC algorithm (HS256/HS384/HS512).
+- **`ACCESS_TOKEN_EXPIRE_MINUTES`** (default: `60`): διάρκεια access token (λεπτά).
+- **`REFRESH_TOKEN_EXPIRE_DAYS`** (default: `7`): διάρκεια refresh token (ημέρες).
+- **`RENTPRO_COOKIE_SECURE`** (optional): αν είναι `1`, το refresh cookie μπαίνει με `Secure`.
+  - Useful όταν τρέχεις πίσω από HTTPS reverse proxy.
+- **`RENTPRO_COOKIE_SAMESITE`** (default: `lax`): `lax` / `strict` / `none` για το refresh cookie.
+- **`RENTPRO_E2E_SEED`** (default: `0`): αν είναι `1`, κάνει seed fixtures στο startup.
+- **`RENTPRO_E2E_PASSWORD`** (default: `rentpro-e2e`): password που χρησιμοποιείται όταν `RENTPRO_E2E_SEED=1`.
+
+### Startup validation (optional)
+
+- **`RENTPRO_STRICT_CONFIG`** (default: `0`)
+  - Αν είναι `1`, το backend κάνει πιο αυστηρό validation στην εκκίνηση (π.χ. δεν επιτρέπει default `RENTPRO_SECRET_KEY`
+    και επιβάλλει αποδεκτές τιμές για `RENTPRO_JWT_ALGORITHM`).
+
+### Observability (optional)
+
+- **`RENTPRO_LOG_LEVEL`** (default: `INFO`)
+- **`RENTPRO_JSON_LOGS`**: αν είναι `1`, τα logs γράφονται ως JSON lines.
+- **`RENTPRO_LOG_REQUESTS`**: αν είναι `1`, κάνει access-style log για κάθε request (method/path/status/duration) με `request_id`.
+- Κάθε response περιλαμβάνει header **`X-Request-ID`** για correlation.
+- Simple metrics endpoint: `GET /metrics` (public).
+
+### Rate limiting (optional)
+
+Για demo-friendly throttling στα auth endpoints (in-memory, fixed window, per-IP):
+
+- **`RENTPRO_RATE_LIMIT_ENABLED`**: `1` για enable.
+- **`RENTPRO_RATE_LIMIT_LOGIN_PER_MIN`** (default: `120`)
+- **`RENTPRO_RATE_LIMIT_REFRESH_PER_MIN`** (default: `240`)
 
 ## Συνεισφορά
 
