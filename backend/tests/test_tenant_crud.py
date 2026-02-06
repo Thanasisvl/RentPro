@@ -11,7 +11,6 @@ from tests.utils import (
     register_and_login,
 )
 
-
 client = TestClient(app)
 
 

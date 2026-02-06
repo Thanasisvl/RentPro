@@ -14,7 +14,6 @@ from fastapi import Request
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import Response
 
-
 _request_id_ctx: contextvars.ContextVar[str | None] = contextvars.ContextVar(
     "rentpro_request_id", default=None
 )

@@ -10,7 +10,6 @@ from app.main import app
 from app.core.uploads import get_upload_root
 from tests.utils import register_and_login
 
-
 client = TestClient(app)
 
 

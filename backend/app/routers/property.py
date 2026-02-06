@@ -79,8 +79,9 @@ def list_properties(
     db: Session = Depends(get_db),
     skip: int = Query(default=0, ge=0),
     limit: int = Query(default=100, ge=1, le=500),
-    owner_id: int
-    | None = Query(default=None, description="Admin-only filter by property owner id"),
+    owner_id: int | None = Query(
+        default=None, description="Admin-only filter by property owner id"
+    ),
 ):
     user = get_current_user(request, db)
 

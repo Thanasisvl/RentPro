@@ -4,7 +4,6 @@ from app.main import app
 from app.models.user import UserRole
 from tests.utils import register_and_login
 
-
 client = TestClient(app)
 
 
