@@ -70,7 +70,12 @@ class PropertySearchFilters(BaseModel):
     """
 
     area: str | None = Field(
-        default=None, min_length=1, description="Substring match against address"
+        default=None,
+        min_length=1,
+        description=(
+            "Area filter. Supports substring match against address, and also macro areas like "
+            "'Βόρεια Προάστεια', 'Κέντρο Αθήνας', 'Νότια Προάστεια', 'Πειραιάς', 'Δυτικά Προάστεια'."
+        ),
     )
     type: str | None = Field(default=None, min_length=1)
 

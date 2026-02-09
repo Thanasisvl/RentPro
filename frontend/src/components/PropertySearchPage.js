@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   AlertTitle,
+  Autocomplete,
   Box,
   Button,
   Card,
@@ -30,7 +31,21 @@ import PageContainer from "./layout/PageContainer";
 import PageHeader from "./layout/PageHeader";
 
 import { API_BASE_URL } from "../config";
-const PROPERTY_TYPES = ["", "STUDIO", "APARTMENT", "MAISONETTE", "DETACHED_HOUSE"];
+
+const PROPERTY_TYPE_LABELS = {
+  STUDIO: "Γκαρσονιέρα",
+  APARTMENT: "Διαμέρισμα",
+  MAISONETTE: "Μεζονέτα",
+  DETACHED_HOUSE: "Μονοκατοικία",
+};
+
+const PROPERTY_TYPE_OPTIONS = [
+  { value: "", label: "Όλοι οι τύποι" },
+  { value: "STUDIO", label: PROPERTY_TYPE_LABELS.STUDIO },
+  { value: "APARTMENT", label: PROPERTY_TYPE_LABELS.APARTMENT },
+  { value: "MAISONETTE", label: PROPERTY_TYPE_LABELS.MAISONETTE },
+  { value: "DETACHED_HOUSE", label: PROPERTY_TYPE_LABELS.DETACHED_HOUSE },
+];
 
 const PRICE_MIN = 0;
 const PRICE_MAX = 5000;
@@ -46,6 +61,16 @@ const SORT_OPTIONS = [
   { value: "PRICE_DESC", label: "Τιμή ↓" },
   { value: "SIZE_ASC", label: "Εμβαδόν ↑" },
   { value: "SIZE_DESC", label: "Εμβαδόν ↓" },
+];
+
+const AREA_OPTIONS = [
+  "Βόρεια Προάστεια",
+  "Κέντρο Αθήνας",
+  "Νότια Προάστεια",
+  "Πειραιάς",
+  "Δυτικά Προάστεια",
+  "Δυτική Αττική",
+  "Ανατολική Αττική",
 ];
 
 function formatEur(n) {
@@ -388,7 +413,8 @@ function PropertySearchPage() {
       chips.push({ key: "area", label: `Περιοχή: ${area}` });
     }
     if (type) {
-      chips.push({ key: "type", label: `Τύπος: ${type}` });
+      const typeLabel = PROPERTY_TYPE_LABELS[type] || type;
+      chips.push({ key: "type", label: `Τύπος: ${typeLabel}` });
     }
     if (pMin > 0 || pMax < PRICE_MAX) {
       const left = pMin > 0 ? formatEur(pMin) : "—";
@@ -402,7 +428,7 @@ function PropertySearchPage() {
     }
     if (sort) {
       const label = SORT_OPTIONS.find((o) => o.value === sort)?.label || sort;
-      chips.push({ key: "sort", label: `Sort: ${label}` });
+      chips.push({ key: "sort", label: `Ταξινόμηση: ${label}` });
     }
     return chips;
   }, [filters, priceRange, sizeRange, sort]);
@@ -492,31 +518,50 @@ function PropertySearchPage() {
         description="Δημόσια αναζήτηση διαθέσιμων ακινήτων με φίλτρα (UC‑03)."
       />
 
-      <Paper sx={{ p: 2, mb: 3 }}>
-        <Grid container spacing={2}>
-          <Grid item xs={12} sm={6}>
-            <TextField
-              label="Περιοχή"
-              fullWidth
+      <Paper sx={{ p: { xs: 2, md: 3 }, mb: 3 }}>
+        <Grid container spacing={2.5} alignItems="stretch">
+          <Grid item xs={12} md={4}>
+            <Autocomplete
+              freeSolo
+              options={AREA_OPTIONS}
               value={filters.area}
-              onChange={(e) => setFilters((f) => ({ ...f, area: e.target.value }))}
-              error={!!fieldErrors.area}
-              helperText={fieldErrors.area || ""}
+              onChange={(_, value) => setFilters((f) => ({ ...f, area: value || "" }))}
+              onInputChange={(_, value) => setFilters((f) => ({ ...f, area: value || "" }))}
+              renderInput={(params) => (
+                <TextField
+                  {...params}
+                  label="Περιοχή"
+                  placeholder="π.χ. Βόρεια Προάστεια ή Μαρούσι"
+                  fullWidth
+                  error={!!fieldErrors.area}
+                  helperText={
+                    fieldErrors.area ||
+                    "Μπορείς να βάλεις macro-area (π.χ. Βόρεια Προάστεια) ή συγκεκριμένη περιοχή."
+                  }
+                />
+              )}
             />
           </Grid>
 
-          <Grid item xs={12} sm={6}>
+          <Grid item xs={12} sm={6} md={3}>
             <FormControl fullWidth error={!!fieldErrors.type}>
-              <InputLabel id="type-label">Τύπος</InputLabel>
+              <InputLabel id="type-label" shrink>
+                Τύπος
+              </InputLabel>
               <Select
                 labelId="type-label"
                 label="Τύπος"
                 value={filters.type}
                 onChange={(e) => setFilters((f) => ({ ...f, type: e.target.value }))}
+                displayEmpty
+                renderValue={(v) =>
+                  PROPERTY_TYPE_OPTIONS.find((o) => o.value === String(v ?? ""))?.label ||
+                  "Όλοι οι τύποι"
+                }
               >
-                {PROPERTY_TYPES.map((t) => (
-                  <MenuItem key={t || "<all>"} value={t}>
-                    {t || "ALL"}
+                {PROPERTY_TYPE_OPTIONS.map((o) => (
+                  <MenuItem key={o.value || "<all>"} value={o.value}>
+                    {o.label}
                   </MenuItem>
                 ))}
               </Select>
@@ -528,7 +573,76 @@ function PropertySearchPage() {
             </FormControl>
           </Grid>
 
-          <Grid item xs={12} sm={6}>
+          <Grid item xs={12} sm={6} md={3}>
+            <FormControl fullWidth>
+              <InputLabel id="sort-label" shrink>
+                Ταξινόμηση
+              </InputLabel>
+              <Select
+                labelId="sort-label"
+                label="Ταξινόμηση"
+                value={sort}
+                onChange={(e) => setSort(e.target.value)}
+                displayEmpty
+                renderValue={(v) =>
+                  SORT_OPTIONS.find((o) => o.value === String(v ?? ""))?.label ||
+                  SORT_OPTIONS[0].label
+                }
+              >
+                {SORT_OPTIONS.map((o) => (
+                  <MenuItem key={o.value || "<default>"} value={o.value}>
+                    {o.label}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          </Grid>
+
+          <Grid item xs={12} sm={6} md={2}>
+            <FormControl fullWidth error={!!fieldErrors.limit}>
+              <InputLabel id="limit-label" shrink>
+                Ανά σελίδα
+              </InputLabel>
+              <Select
+                labelId="limit-label"
+                label="Ανά σελίδα"
+                value={limit}
+                onChange={(e) => handleLimitChange(Number(e.target.value))}
+                renderValue={(v) => String(v)}
+              >
+                <MenuItem value={10}>10</MenuItem>
+                <MenuItem value={20}>20</MenuItem>
+                <MenuItem value={50}>50</MenuItem>
+              </Select>
+              {fieldErrors.limit ? (
+                <Typography variant="caption" color="error">
+                  {fieldErrors.limit}
+                </Typography>
+              ) : null}
+            </FormControl>
+          </Grid>
+
+          <Grid item xs={12}>
+            <Stack
+              direction={{ xs: "column", sm: "row" }}
+              spacing={1}
+              justifyContent="flex-end"
+              alignItems={{ xs: "stretch", sm: "center" }}
+            >
+              <Button variant="outlined" onClick={resetAll} disabled={loading}>
+                Επαναφορά φίλτρων
+              </Button>
+              <Button
+                variant="contained"
+                onClick={() => runSearch({ nextOffset: 0, nextLimit: limit })}
+                disabled={loading}
+              >
+                Αναζήτηση
+              </Button>
+            </Stack>
+          </Grid>
+
+          <Grid item xs={12} md={6}>
             <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
               Τιμή / μήνα
             </Typography>
@@ -550,7 +664,7 @@ function PropertySearchPage() {
             ) : null}
           </Grid>
 
-          <Grid item xs={12} sm={6}>
+          <Grid item xs={12} md={6}>
             <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
               Εμβαδόν (τ.μ.)
             </Typography>
@@ -570,58 +684,6 @@ function PropertySearchPage() {
                 {fieldErrors.min_size || fieldErrors.max_size}
               </Typography>
             ) : null}
-          </Grid>
-
-          <Grid item xs={12} sm={6}>
-            <FormControl fullWidth error={!!fieldErrors.limit}>
-              <InputLabel id="limit-label">Ανά σελίδα</InputLabel>
-              <Select
-                labelId="limit-label"
-                label="Ανά σελίδα"
-                value={limit}
-                onChange={(e) => handleLimitChange(Number(e.target.value))}
-              >
-                <MenuItem value={10}>10</MenuItem>
-                <MenuItem value={20}>20</MenuItem>
-                <MenuItem value={50}>50</MenuItem>
-              </Select>
-              {fieldErrors.limit ? (
-                <Typography variant="caption" color="error">
-                  {fieldErrors.limit}
-                </Typography>
-              ) : null}
-            </FormControl>
-          </Grid>
-
-          <Grid item xs={12} sm={6}>
-            <FormControl fullWidth>
-              <InputLabel id="sort-label">Ταξινόμηση</InputLabel>
-              <Select
-                labelId="sort-label"
-                label="Ταξινόμηση"
-                value={sort}
-                onChange={(e) => setSort(e.target.value)}
-              >
-                {SORT_OPTIONS.map((o) => (
-                  <MenuItem key={o.value || "<default>"} value={o.value}>
-                    {o.label}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-          </Grid>
-
-          <Grid item xs={12} display="flex" justifyContent="space-between" alignItems="center">
-            <Button variant="outlined" onClick={resetAll} disabled={loading}>
-              Επαναφορά φίλτρων
-            </Button>
-            <Button
-              variant="contained"
-              onClick={() => runSearch({ nextOffset: 0, nextLimit: limit })}
-              disabled={loading}
-            >
-              Αναζήτηση
-            </Button>
           </Grid>
         </Grid>
       </Paper>
@@ -698,7 +760,7 @@ function PropertySearchPage() {
           </Box>
           <Grid container spacing={2}>
             {Array.from({ length: 4 }).map((_, i) => (
-              <Grid key={i} item xs={12} sm={6}>
+              <Grid key={i} item xs={12} sm={4} md={4}>
                 <PropertyCardSkeleton />
               </Grid>
             ))}
@@ -782,7 +844,7 @@ function PropertySearchPage() {
           ) : (
             <Grid container spacing={2} sx={{ mt: 0.5 }}>
               {itemsSorted.map((p) => (
-                <Grid key={p.id} item xs={12} sm={6}>
+                <Grid key={p.id} item xs={12} sm={4} md={4}>
                   <PropertyCard
                     property={p}
                     viewTo={`/search/properties/${p.id}`}

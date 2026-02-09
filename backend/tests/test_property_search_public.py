@@ -97,3 +97,43 @@ def test_public_search_combined_filters(owner_headers):
     assert data["meta"]["total"] >= 1
     assert all(600 <= p["price"] <= 1000 for p in data["items"])
     assert all(40 <= p["size"] <= 60 for p in data["items"])
+
+
+def test_public_search_macro_area_group_north_suburbs(owner_headers):
+    # Addresses in northern suburbs should match macro area query like "Βόρεια Προάστεια".
+    p1 = create_property(
+        client,
+        owner_headers,
+        title="Marousi Apt",
+        address="Λ. Κηφισίας 10, Μαρούσι",
+        price=900.0,
+        size=70.0,
+        type="APARTMENT",
+    )
+    p2 = create_property(
+        client,
+        owner_headers,
+        title="Cholargos Apt",
+        address="Λ. Μεσογείων 305, Χολαργός",
+        price=1100.0,
+        size=80.0,
+        type="APARTMENT",
+    )
+    p3 = create_property(
+        client,
+        owner_headers,
+        title="Piraeus Apt",
+        address="Κολοκοτρώνη 8, Πειραιάς",
+        price=750.0,
+        size=60.0,
+        type="APARTMENT",
+    )
+
+    resp = client.get("/properties/search?area=%CE%92%CF%8C%CF%81%CE%B5%CE%B9%CE%B1%20%CE%A0%CF%81%CE%BF%CE%AC%CF%83%CF%84%CE%B5%CE%B9%CE%B1")
+    assert resp.status_code == 200
+    data = resp.json()
+    ids = [x["id"] for x in data["items"]]
+
+    assert p1["id"] in ids
+    assert p2["id"] in ids
+    assert p3["id"] not in ids

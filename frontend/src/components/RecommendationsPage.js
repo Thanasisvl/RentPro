@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import {
+  Autocomplete,
   Box,
   Paper,
   Typography,
@@ -14,10 +15,20 @@ import {
   LinearProgress,
   FormControlLabel,
   Switch,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+  TextField,
+  Tooltip,
+  IconButton,
+  Collapse,
   List,
   ListItem,
   ListItemText,
 } from "@mui/material";
+import InfoOutlinedIcon from "@mui/icons-material/InfoOutlined";
+import CloseOutlinedIcon from "@mui/icons-material/CloseOutlined";
 import api from "../api";
 import { Link as RouterLink } from "react-router-dom";
 import PropertyCard from "./PropertyCard";
@@ -49,6 +60,138 @@ const CRITERIA_META = {
     format: (v) => (Number.isFinite(Number(v)) ? `${Number(v).toFixed(1)}` : "—"),
   },
 };
+
+const PROPERTY_TYPE_LABELS = {
+  STUDIO: "Γκαρσονιέρα",
+  APARTMENT: "Διαμέρισμα",
+  MAISONETTE: "Μεζονέτα",
+  DETACHED_HOUSE: "Μονοκατοικία",
+};
+
+const PROPERTY_TYPE_OPTIONS = [
+  { value: "", label: "Όλοι οι τύποι" },
+  { value: "STUDIO", label: PROPERTY_TYPE_LABELS.STUDIO },
+  { value: "APARTMENT", label: PROPERTY_TYPE_LABELS.APARTMENT },
+  { value: "MAISONETTE", label: PROPERTY_TYPE_LABELS.MAISONETTE },
+  { value: "DETACHED_HOUSE", label: PROPERTY_TYPE_LABELS.DETACHED_HOUSE },
+];
+
+const AREA_OPTIONS = [
+  "Βόρεια Προάστεια",
+  "Κέντρο Αθήνας",
+  "Νότια Προάστεια",
+  "Δυτικά Προάστεια",
+  "Πειραιάς",
+  "Δυτική Αττική",
+  "Ανατολική Αττική",
+];
+
+const AREA_TOKENS = {
+  "Βόρεια Προάστεια": [
+    "Αγία Παρασκευή",
+    "Αμαρούσιο",
+    "Μαρούσι",
+    "Βριλήσσια",
+    "Ηράκλειο",
+    "Νέο Ηράκλειο",
+    "Κηφισιά",
+    "Λυκόβρυση",
+    "Πεύκη",
+    "Λυκόβρυση-Πεύκη",
+    "Μεταμόρφωση",
+    "Νέα Ιωνία",
+    "Παπάγου",
+    "Χολαργός",
+    "Παπάγου-Χολαργός",
+    "Πεντέλη",
+    "Φιλοθέη",
+    "Ψυχικό",
+    "Φιλοθέη-Ψυχικό",
+    "Χαλάνδρι",
+    "Μελίσσια",
+  ],
+  "Δυτικά Προάστεια": [
+    "Αγία Βαρβάρα",
+    "Άγιοι Ανάργυροι",
+    "Καματερό",
+    "Άγιοι Ανάργυροι-Καματερού",
+    "Αιγάλεω",
+    "Ίλιον",
+    "Περιστέρι",
+    "Πετρούπολη",
+    "Χαϊδάρι",
+  ],
+  "Κέντρο Αθήνας": [
+    "Αθήνα",
+    "Βύρωνας",
+    "Γαλάτσι",
+    "Δάφνη",
+    "Υμηττός",
+    "Ζωγράφου",
+    "Ηλιούπολη",
+    "Καισαριανή",
+    "Φιλαδέλφεια",
+    "Χαλκηδόνα",
+    "Κολωνάκι",
+    "Εξάρχεια",
+    "Σύνταγμα",
+    "Ομόνοια",
+    "Παγκράτι",
+  ],
+  "Νότια Προάστεια": [
+    "Άγιος Δημήτριος",
+    "Άλιμος",
+    "Γλυφάδα",
+    "Ελληνικό",
+    "Αργυρούπολη",
+    "Καλλιθέα",
+    "Μοσχάτο",
+    "Ταύρος",
+    "Νέα Σμύρνη",
+    "Παλαιό Φάληρο",
+  ],
+  "Πειραιάς": [
+    "Πειραιάς",
+    "Νίκαια",
+    "Άγιος Ιωάννης Ρέντης",
+    "Κορυδαλλός",
+    "Κερατσίνι",
+    "Δραπετσώνα",
+    "Πέραμα",
+  ],
+  "Δυτική Αττική": ["Ασπρόπυργος", "Ελευσίνα", "Μάνδρα", "Μέγαρα", "Φυλή"],
+  "Ανατολική Αττική": [
+    "Αχαρνές",
+    "Μενίδι",
+    "Βάρη",
+    "Βούλα",
+    "Βουλιαγμένη",
+    "Διόνυσος",
+    "Κορωπί",
+    "Λαύριο",
+    "Κερατέα",
+    "Μαραθώνας",
+    "Νέα Μάκρη",
+    "Μαρκόπουλο",
+    "Παιανία",
+    "Παλλήνη",
+    "Γέρακας",
+    "Ραφήνα",
+    "Πικέρμι",
+    "Σαρωνικός",
+    "Καλύβια",
+    "Σπάτα",
+    "Αρτέμιδα",
+    "Ωρωπός",
+  ],
+};
+
+function normText(s) {
+  const raw = String(s || "");
+  // strip accents
+  const noAccents = raw.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  return noAccents.toLowerCase();
+}
 
 function normalizeWeightsFromDict(criteriaOrder, weightsDict) {
   const w = criteriaOrder.map((k) => Number(weightsDict?.[k] ?? 0));
@@ -169,6 +312,23 @@ export default function RecommendationsPage() {
   const [whatIf, setWhatIf] = useState(false);
   const [priceBoost, setPriceBoost] = useState(0.2);
 
+  const HINTS_KEY = "rentpro_recommendations_hints_dismissed";
+  const [showHints, setShowHints] = useState(() => {
+    try {
+      return localStorage.getItem(HINTS_KEY) !== "1";
+    } catch {
+      return true;
+    }
+  });
+
+  // UI filters (client-side)
+  const [filters, setFilters] = useState({
+    area: "",
+    type: "",
+    price: [0, 5000],
+    size: [0, 300],
+  });
+
   const SAVED_KEY = "rentpro_saved_properties";
   const COMPARE_KEY = "rentpro_compare_properties";
 
@@ -280,6 +440,54 @@ export default function RecommendationsPage() {
     return mapped;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [whatIf, decisionMatrix, weightsActive, isBenefit, items]);
+
+  const rowsForDisplay = useMemo(() => {
+    if (whatIfRanking) {
+      return whatIfRanking.map((x) => ({
+        it: x.it,
+        score: Number(x.score ?? 0),
+        vRow: x.vRow,
+        idealBest: x.idealBest,
+        idealWorst: x.idealWorst,
+      }));
+    }
+    return items.map((it) => ({ it, score: Number(it?.score ?? 0) }));
+  }, [whatIfRanking, items]);
+
+  const filteredRows = useMemo(() => {
+    const areaQ = String(filters.area || "").trim();
+    const typeQ = String(filters.type || "").trim().toUpperCase();
+    const [pMin, pMax] = Array.isArray(filters.price) ? filters.price : [0, 5000];
+    const [sMin, sMax] = Array.isArray(filters.size) ? filters.size : [0, 300];
+
+    const areaKey = AREA_OPTIONS.includes(areaQ) ? areaQ : null;
+    const areaTokens = areaKey ? AREA_TOKENS[areaKey] || [] : null;
+
+    return rowsForDisplay.filter((r) => {
+      const p = r.it?.property;
+      if (!p) return false;
+
+      // type
+      if (typeQ && String(p.type || "").toUpperCase() !== typeQ) return false;
+
+      // price/size
+      const price = Number(p.price);
+      const size = Number(p.size);
+      if (Number.isFinite(price) && (price < pMin || price > pMax)) return false;
+      if (Number.isFinite(size) && (size < sMin || size > sMax)) return false;
+
+      // area
+      if (areaQ) {
+        const addrN = normText(p.address || "");
+        if (areaTokens && areaTokens.length) {
+          return areaTokens.some((t) => addrN.includes(normText(t)));
+        }
+        return addrN.includes(normText(areaQ));
+      }
+
+      return true;
+    });
+  }, [rowsForDisplay, filters]);
 
   const baseExplain = useMemo(() => {
     if (!decisionMatrix) return null;
@@ -410,6 +618,175 @@ export default function RecommendationsPage() {
       />
 
       <Paper sx={{ p: 3 }}>
+        <Collapse in={showHints}>
+          <Alert
+            severity="info"
+            icon={<InfoOutlinedIcon fontSize="inherit" />}
+            sx={{ mb: 2 }}
+            action={
+              <IconButton
+                size="small"
+                aria-label="Κλείσιμο οδηγιών"
+                onClick={() => {
+                  setShowHints(false);
+                  try {
+                    localStorage.setItem(HINTS_KEY, "1");
+                  } catch {
+                    // ignore
+                  }
+                }}
+              >
+                <CloseOutlinedIcon fontSize="small" />
+              </IconButton>
+            }
+          >
+            <Typography variant="subtitle2" sx={{ mb: 0.5 }}>
+              Γρήγορος οδηγός
+            </Typography>
+            <Typography variant="body2">
+              - Οι προτάσεις παράγονται από τις <b>Προτιμήσεις</b> σου (AHP) και την κατάταξη TOPSIS.
+            </Typography>
+            <Typography variant="body2">
+              - Χρησιμοποίησε τα <b>Φίλτρα</b> για να περιορίσεις τη λίστα χωρίς να αλλάξεις τις προτιμήσεις σου.
+            </Typography>
+            <Typography variant="body2">
+              - Το <b>What‑if</b> δείχνει πώς θα άλλαζε η κατάταξη αν δώσεις λίγο παραπάνω βάρος στην τιμή (μόνο στο UI).
+            </Typography>
+            <Typography variant="body2">
+              - Αν θες διαφορετικά αποτελέσματα, γύρνα στις{" "}
+              <RouterLink to="/preferences">Προτιμήσεις</RouterLink> και αναθεώρησε τα βάρη σου.
+            </Typography>
+          </Alert>
+        </Collapse>
+
+        <Paper variant="outlined" sx={{ p: { xs: 2, md: 3 }, mb: 2 }}>
+          <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 1 }}>
+            <Typography variant="subtitle2">Φίλτρα προτάσεων</Typography>
+            <Tooltip
+              title="Φιλτράρεις τη λίστα προτάσεων που έχει ήδη υπολογιστεί. Δεν αλλάζεις τις προτιμήσεις σου."
+              placement="right"
+            >
+              <IconButton size="small" aria-label="Βοήθεια φίλτρων">
+                <InfoOutlinedIcon fontSize="small" />
+              </IconButton>
+            </Tooltip>
+          </Stack>
+          <Grid container spacing={2.5} alignItems="stretch">
+            <Grid item xs={12} md={6}>
+              <Autocomplete
+                freeSolo
+                options={AREA_OPTIONS}
+                value={filters.area}
+                onChange={(_, v) => setFilters((f) => ({ ...f, area: v || "" }))}
+                onInputChange={(_, v) => setFilters((f) => ({ ...f, area: v || "" }))}
+                renderOption={(props, option) => (
+                  <li {...props}>
+                    <Typography variant="body2" sx={{ whiteSpace: "normal" }}>
+                      {option}
+                    </Typography>
+                  </li>
+                )}
+                slotProps={{
+                  paper: {
+                    sx: { maxWidth: 420 },
+                  },
+                }}
+                renderInput={(params) => (
+                  <TextField
+                    {...params}
+                    label="Περιοχή"
+                    placeholder="π.χ. Βόρεια Προάστεια ή Μαρούσι"
+                    helperText="Μπορείς να βάλεις macro-area (π.χ. Βόρεια Προάστεια) ή συγκεκριμένη περιοχή."
+                  />
+                )}
+              />
+            </Grid>
+            <Grid item xs={12} md={6}>
+              <FormControl fullWidth>
+                <InputLabel id="rec-type-label" shrink>
+                  Τύπος
+                </InputLabel>
+                <Select
+                  labelId="rec-type-label"
+                  label="Τύπος"
+                  value={filters.type}
+                  onChange={(e) => setFilters((f) => ({ ...f, type: e.target.value }))}
+                  displayEmpty
+                  renderValue={(v) =>
+                    PROPERTY_TYPE_OPTIONS.find((o) => o.value === String(v ?? ""))?.label ||
+                    "Όλοι οι τύποι"
+                  }
+                >
+                  {PROPERTY_TYPE_OPTIONS.map((o) => (
+                    <MenuItem key={o.value || "<all>"} value={o.value} sx={{ whiteSpace: "normal" }}>
+                      {o.label}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </Grid>
+
+            <Grid item xs={12} md={6}>
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                Τιμή / μήνα
+              </Typography>
+              <Slider
+                value={filters.price}
+                min={0}
+                max={5000}
+                step={50}
+                onChange={(_, v) => setFilters((f) => ({ ...f, price: v }))}
+                valueLabelDisplay="auto"
+                valueLabelFormat={(v) =>
+                  new Intl.NumberFormat("el-GR", {
+                    style: "currency",
+                    currency: "EUR",
+                    maximumFractionDigits: 0,
+                  }).format(Number(v))
+                }
+                disableSwap
+              />
+            </Grid>
+            <Grid item xs={12} md={6}>
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                Εμβαδόν (τ.μ.)
+              </Typography>
+              <Slider
+                value={filters.size}
+                min={0}
+                max={300}
+                step={5}
+                onChange={(_, v) => setFilters((f) => ({ ...f, size: v }))}
+                valueLabelDisplay="auto"
+                valueLabelFormat={(v) => `${v} τ.μ.`}
+                disableSwap
+              />
+            </Grid>
+
+            <Grid item xs={12}>
+              <Stack
+                direction={{ xs: "column", sm: "row" }}
+                spacing={1}
+                justifyContent="flex-end"
+                alignItems={{ xs: "stretch", sm: "center" }}
+              >
+                <Button
+                  variant="outlined"
+                  onClick={() =>
+                    setFilters({
+                      area: "",
+                      type: "",
+                      price: [0, 5000],
+                      size: [0, 300],
+                    })
+                  }
+                >
+                  Επαναφορά φίλτρων
+                </Button>
+              </Stack>
+            </Grid>
+          </Grid>
+        </Paper>
 
         <Divider sx={{ my: 2 }} />
 
@@ -423,29 +800,33 @@ export default function RecommendationsPage() {
               <Alert severity="info">
                 Δεν υπάρχουν διαθέσιμα ακίνητα για συστάσεις.
               </Alert>
+            ) : filteredRows.length === 0 ? (
+              <Alert severity="info">
+                Δεν υπάρχουν προτάσεις που να ταιριάζουν με τα φίλτρα σου.
+              </Alert>
             ) : (
               <Grid container spacing={2}>
-                {(whatIfRanking ? whatIfRanking.map((x) => x.it) : items).map((it, idx) => {
+                {filteredRows.map((row, idx) => {
+                  const it = row.it;
                   const valuesPresent = !!it?.explain?.topsis?.criteria_values;
                   const explainPack = whatIf
                     ? (() => {
-                        if (!whatIfRanking || !valuesPresent) return null;
-                        const match = whatIfRanking.find((x) => x.it === it);
-                        if (!match) return null;
+                        if (!valuesPresent || !row.vRow) return null;
                         return explainTopBullets({
                           it,
                           idx,
                           criteriaOrder,
                           weights: weightsActive,
                           isBenefit,
-                          vRow: match.vRow,
-                          idealBest: match.idealBest,
-                          idealWorst: match.idealWorst,
+                          vRow: row.vRow,
+                          idealBest: row.idealBest,
+                          idealWorst: row.idealWorst,
                         });
                       })()
                     : (() => {
                         if (!baseExplain || !valuesPresent) return null;
                         const i = items.indexOf(it);
+                        if (i < 0) return null;
                         return explainTopBullets({
                           it,
                           idx,
@@ -459,16 +840,12 @@ export default function RecommendationsPage() {
                       })();
 
                   return (
-                    <Grid key={it.property?.id ?? idx} item xs={12} sm={6}>
+                    <Grid key={it.property?.id ?? idx} item xs={12} sm={6} md={4}>
                       <PropertyCard
                         property={it.property}
                         viewTo={`/search/properties/${it.property?.id}`}
                         rank={idx + 1} // NEW
-                        score={
-                          whatIf && whatIfRanking
-                            ? Number(whatIfRanking[idx]?.score ?? it.score)
-                            : Number(it.score)
-                        }
+                        score={Number(row.score)}
                         saved={savedIds.includes(Number(it.property?.id))}
                         inCompare={compareIds.includes(Number(it.property?.id))}
                         onToggleSave={toggleSaved}
@@ -560,9 +937,17 @@ export default function RecommendationsPage() {
 
                   <Divider sx={{ my: 2 }} />
 
-                  <Typography variant="body2" sx={{ mb: 1 }}>
-                    What‑if (προαιρετικό)
-                  </Typography>
+                  <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 1 }}>
+                    <Typography variant="body2">What‑if (προαιρετικό)</Typography>
+                    <Tooltip
+                      title="Δοκιμαστική αλλαγή βαρών μόνο για να δεις πώς επηρεάζεται η κατάταξη. Δεν αποθηκεύεται."
+                      placement="right"
+                    >
+                      <IconButton size="small" aria-label="Βοήθεια what-if">
+                        <InfoOutlinedIcon fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
+                  </Stack>
                   <FormControlLabel
                     control={<Switch checked={whatIf} onChange={(e) => setWhatIf(e.target.checked)} />}
                     label="Δώσε λίγο παραπάνω βάρος στην τιμή"

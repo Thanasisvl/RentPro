@@ -1,7 +1,7 @@
 import React from "react";
 import { Container } from "@mui/material";
 
-const DEFAULT_MAX_WIDTH_PX = 1100;
+const DEFAULT_MAX_WIDTH_PX = 1400;
 
 export default function PageContainer({ children, maxWidthPx = DEFAULT_MAX_WIDTH_PX, sx }) {
   return (
