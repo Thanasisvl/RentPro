@@ -1,5 +1,5 @@
 import React from "react";
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Routes, Route } from "react-router-dom";
 import ContractList from "./ContractList";
@@ -40,8 +40,14 @@ function mockContracts() {
 test("terminate contract flow calls API and reloads list", async () => {
   getUserRole.mockReturnValue("OWNER");
   api.get
-    .mockResolvedValueOnce({ data: mockContracts() }) // initial load
-    .mockResolvedValueOnce({ data: mockContracts() }); // reload after terminate
+    // initial load: contracts + properties + tenants
+    .mockResolvedValueOnce({ data: mockContracts() })
+    .mockResolvedValueOnce({ data: [{ id: 10, address: "Athens Address" }] })
+    .mockResolvedValueOnce({ data: [{ id: 20, name: "Tenant A" }] })
+    // reload after terminate: contracts + properties + tenants
+    .mockResolvedValueOnce({ data: mockContracts() })
+    .mockResolvedValueOnce({ data: [{ id: 10, address: "Athens Address" }] })
+    .mockResolvedValueOnce({ data: [{ id: 20, name: "Tenant A" }] });
   api.post.mockResolvedValueOnce({});
 
   render(
@@ -52,17 +58,25 @@ test("terminate contract flow calls API and reloads list", async () => {
 
   expect(await screen.findByText("Συμβόλαια")).toBeInTheDocument();
   expect(await screen.findByText("ACTIVE")).toBeInTheDocument();
+  expect(await screen.findByText("Athens Address")).toBeInTheDocument();
+  expect(await screen.findByText("Tenant A")).toBeInTheDocument();
+  // Derived indicator column: ACTIVE -> "Ενεργό"
+  const row = screen.getByText("ACTIVE").closest("tr");
+  expect(within(row).getByText("Ενεργό")).toBeInTheDocument();
 
   await userEvent.click(screen.getByRole("button", { name: "Τερματισμός" }));
   await userEvent.click(screen.getByRole("button", { name: "Επιβεβαίωση" }));
 
   expect(api.post).toHaveBeenCalledWith("/contracts/1/terminate");
-  expect(api.get).toHaveBeenLastCalledWith("/contracts/", { params: {} });
+  expect(api.get).toHaveBeenCalledWith("/contracts/", { params: {} });
 });
 
 test("delete 409 shows active-contract deletion message", async () => {
   getUserRole.mockReturnValue("OWNER");
-  api.get.mockResolvedValueOnce({ data: mockContracts() });
+  api.get
+    .mockResolvedValueOnce({ data: mockContracts() }) // contracts
+    .mockResolvedValueOnce({ data: [{ id: 10, address: "Athens Address" }] }) // properties
+    .mockResolvedValueOnce({ data: [{ id: 20, name: "Tenant A" }] }); // tenants
   api.delete.mockRejectedValueOnce({ response: { status: 409 } });
 
   render(
@@ -72,6 +86,8 @@ test("delete 409 shows active-contract deletion message", async () => {
   );
 
   expect(await screen.findByText("ACTIVE")).toBeInTheDocument();
+  expect(await screen.findByText("Athens Address")).toBeInTheDocument();
+  expect(await screen.findByText("Tenant A")).toBeInTheDocument();
 
   await userEvent.click(screen.getByRole("button", { name: "Διαγραφή" }));
   await userEvent.click(screen.getByRole("button", { name: "Επιβεβαίωση" }));
@@ -86,7 +102,10 @@ test("delete 409 shows active-contract deletion message", async () => {
 test("PDF button opens a new window with blob URL", async () => {
   getUserRole.mockReturnValue("OWNER");
   api.get
-    .mockResolvedValueOnce({ data: mockContracts() }) // initial load
+    // initial load: contracts + properties + tenants
+    .mockResolvedValueOnce({ data: mockContracts() })
+    .mockResolvedValueOnce({ data: [{ id: 10, address: "Athens Address" }] })
+    .mockResolvedValueOnce({ data: [{ id: 20, name: "Tenant A" }] })
     .mockResolvedValueOnce({ data: new Blob(["pdf"], { type: "application/pdf" }) }); // pdf fetch
 
   const originalCreate = window.URL.createObjectURL;

@@ -1,8 +1,10 @@
 from __future__ import annotations
 
+from datetime import date, timedelta
 from sqlalchemy.orm import Session
 
 from app.models.area import Area
+from app.models.contract import Contract, ContractStatus
 from app.models.criterion import Criterion
 from app.core.security import get_password_hash
 from app.models.property import Property, PropertyStatus
@@ -593,3 +595,44 @@ def seed_e2e_fixtures(db: Session, *, password: str = "rentpro-e2e") -> None:
         )
 
     db.commit()
+
+    # --- Active contract (owner1) ---
+    # Useful for manual testing: owner1 has at least one running ACTIVE contract.
+    # Keep it idempotent and avoid touching the canonical "E2E Seed Property" fixture.
+    tenant = (
+        db.query(Tenant)
+        .filter(Tenant.owner_id == owner1.id, Tenant.afm == "123456789")
+        .first()
+    )
+    prop = (
+        db.query(Property)
+        .filter(Property.owner_id == owner1.id, Property.title == "E2E Seed Property 02")
+        .first()
+    )
+    if tenant is not None and prop is not None:
+        active_exists = (
+            db.query(Contract.id)
+            .filter(
+                Contract.property_id == prop.id,
+                Contract.status == ContractStatus.ACTIVE,
+            )
+            .first()
+            is not None
+        )
+        if not active_exists:
+            today = date.today()
+            db.add(
+                Contract(
+                    property_id=prop.id,
+                    tenant_id=tenant.id,
+                    start_date=today - timedelta(days=30),
+                    end_date=today + timedelta(days=335),
+                    rent_amount=650.0,
+                    status=ContractStatus.ACTIVE,
+                    created_by_id=owner1.id,
+                    updated_by_id=owner1.id,
+                )
+            )
+            # Keep UI consistent without needing background sync.
+            prop.status = PropertyStatus.RENTED
+            db.commit()

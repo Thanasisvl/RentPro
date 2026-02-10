@@ -31,6 +31,27 @@ test("@p1 OWNER: contracts list filters + PDF + terminate + delete flows", async
     rent_amount: 650,
   });
 
+  // Lookups used by contracts table (to show address + tenant name)
+  await page.route("**/properties/**", async (route) => {
+    const req = route.request();
+    if (req.method() !== "GET") return route.fulfill({ status: 405, body: "Method not allowed" });
+    return route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify([{ id: 10, address: "Athens Address" }]),
+    });
+  });
+
+  await page.route("**/tenants/**", async (route) => {
+    const req = route.request();
+    if (req.method() !== "GET") return route.fulfill({ status: 405, body: "Method not allowed" });
+    return route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify([{ id: 20, name: "Tenant A", afm: "123456789" }]),
+    });
+  });
+
   // Contracts list (GET /contracts/?...)
   await page.route("**/contracts/?*", async (route) => {
     const req = route.request();

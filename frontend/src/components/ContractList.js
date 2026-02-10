@@ -20,6 +20,7 @@ import {
   DialogContent,
   DialogContentText,
   DialogActions,
+  Chip,
 } from "@mui/material";
 import { Link as RouterLink } from "react-router-dom";
 import api, { getUserRole } from "../api";
@@ -36,6 +37,10 @@ function ContractList() {
   const [confirm, setConfirm] = useState(null); // { type: "delete"|"terminate", id }
 
   const isAdmin = getUserRole() === "ADMIN";
+
+  // Lookups (replace IDs with meaningful labels in the table)
+  const [propertyLabelById, setPropertyLabelById] = useState({}); // id -> address/title
+  const [tenantNameById, setTenantNameById] = useState({}); // id -> name
 
   // Filters (L2)
   const [status, setStatus] = useState("");
@@ -63,7 +68,36 @@ function ContractList() {
     setError("");
     try {
       const res = await api.get("/contracts/", { params });
-      setContracts(res.data || []);
+      const items = Array.isArray(res.data) ? res.data : [];
+      setContracts(items);
+
+      // For thesis UX: resolve property address + tenant name for the table.
+      // If map calls fail, keep showing fallback "#<id>".
+      const ownerFilter =
+        isAdmin && ownerId ? { owner_id: Number(ownerId), limit: 500 } : { limit: 500 };
+
+      const [propsRes, tenantsRes] = await Promise.allSettled([
+        api.get("/properties/", { params: ownerFilter }),
+        api.get("/tenants/", { params: ownerFilter }),
+      ]);
+
+      if (propsRes.status === "fulfilled") {
+        const arr = Array.isArray(propsRes.value?.data) ? propsRes.value.data : [];
+        const next = {};
+        for (const p of arr) {
+          next[p.id] = String(p.address || p.title || `#${p.id}`);
+        }
+        setPropertyLabelById(next);
+      }
+
+      if (tenantsRes.status === "fulfilled") {
+        const arr = Array.isArray(tenantsRes.value?.data) ? tenantsRes.value.data : [];
+        const next = {};
+        for (const t of arr) {
+          next[t.id] = String(t.name || `#${t.id}`);
+        }
+        setTenantNameById(next);
+      }
     } catch (e) {
       setError("Αποτυχία φόρτωσης συμβολαίων.");
     } finally {
@@ -236,8 +270,9 @@ function ContractList() {
             <TableHead>
               <TableRow>
                 <TableCell>ID</TableCell>
-                <TableCell>Property ID</TableCell>
-                <TableCell>Tenant ID</TableCell>
+                <TableCell>Ακίνητο (Διεύθυνση)</TableCell>
+                <TableCell>Ενοικιαστής</TableCell>
+                <TableCell>Ενεργό</TableCell>
                 <TableCell>Κατάσταση</TableCell>
                 <TableCell>Έναρξη</TableCell>
                 <TableCell>Λήξη</TableCell>
@@ -251,12 +286,25 @@ function ContractList() {
               {contracts.map((c) => {
                 const disabled = busyId === c.id;
                 const canTerminate = c.status === "ACTIVE";
+                const isActive = c.status === "ACTIVE";
 
                 return (
                   <TableRow key={c.id}>
                     <TableCell>{c.id}</TableCell>
-                    <TableCell>{c.property_id}</TableCell>
-                    <TableCell>{c.tenant_id}</TableCell>
+                    <TableCell>
+                      {propertyLabelById?.[c.property_id] || `#${c.property_id}`}
+                    </TableCell>
+                    <TableCell>
+                      {tenantNameById?.[c.tenant_id] || `#${c.tenant_id}`}
+                    </TableCell>
+                    <TableCell>
+                      <Chip
+                        size="small"
+                        label={isActive ? "Ενεργό" : "Ανενεργό"}
+                        color={isActive ? "success" : "default"}
+                        variant={isActive ? "filled" : "outlined"}
+                      />
+                    </TableCell>
                     <TableCell>{c.status}</TableCell>
                     <TableCell>{c.start_date}</TableCell>
                     <TableCell>{c.end_date}</TableCell>

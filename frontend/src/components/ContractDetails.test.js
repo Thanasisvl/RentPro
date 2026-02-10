@@ -31,6 +31,14 @@ test("loads contract details and enables PDF when present", async () => {
         },
       });
     }
+    if (url === "/properties/10") {
+      return Promise.resolve({
+        data: { id: 10, address: "Athens Address", status: "RENTED" },
+      });
+    }
+    if (url === "/tenants/20") {
+      return Promise.resolve({ data: { id: 20, name: "Tenant A" } });
+    }
     if (url === "/contracts/1/pdf") {
       return Promise.resolve({ data: new Blob(["pdf"], { type: "application/pdf" }) });
     }
@@ -53,6 +61,10 @@ test("loads contract details and enables PDF when present", async () => {
 
   expect(await screen.findByText("Συμβόλαιο #1")).toBeInTheDocument();
   expect(screen.getByText("ACTIVE")).toBeInTheDocument();
+  expect(screen.getByText("Athens Address")).toBeInTheDocument();
+  expect(screen.getByText("Tenant A")).toBeInTheDocument();
+  expect(screen.getByText("Μη διαθέσιμο")).toBeInTheDocument();
+  expect(screen.getByText("(RENTED)")).toBeInTheDocument();
 
   const pdfBtn = screen.getByRole("button", { name: "Προβολή PDF" });
   expect(pdfBtn).toBeEnabled();

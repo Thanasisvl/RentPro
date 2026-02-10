@@ -9,6 +9,7 @@ import {
   Stack,
   Button,
   Divider,
+  Chip,
 } from "@mui/material";
 import api from "../api";
 import PageContainer from "./layout/PageContainer";
@@ -34,7 +35,12 @@ function ContractDetails() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [contract, setContract] = useState(null);
+  const [property, setProperty] = useState(null);
+  const [tenant, setTenant] = useState(null);
   const [pdfBusy, setPdfBusy] = useState(false);
+
+  const propertyStatus = property?.status || null;
+  const isPropertyAvailable = propertyStatus === "AVAILABLE";
 
   useEffect(() => {
     const load = async () => {
@@ -42,7 +48,17 @@ function ContractDetails() {
       setError("");
       try {
         const res = await api.get(`/contracts/${id}`);
-        setContract(res.data);
+        const c = res.data;
+        setContract(c);
+
+        // Resolve "labels" for thesis UX (address + tenant name).
+        // If these fail, we fall back to IDs in the UI.
+        const [pRes, tRes] = await Promise.allSettled([
+          api.get(`/properties/${c?.property_id}`),
+          api.get(`/tenants/${c?.tenant_id}`),
+        ]);
+        if (pRes.status === "fulfilled") setProperty(pRes.value?.data ?? null);
+        if (tRes.status === "fulfilled") setTenant(tRes.value?.data ?? null);
       } catch (e) {
         const s = e?.response?.status;
         if (s === 404) setError("Το συμβόλαιο δεν βρέθηκε.");
@@ -117,8 +133,36 @@ function ContractDetails() {
             <Stack spacing={1.2}>
               <Row label="Κατάσταση" value={contract.status} />
               <Divider />
-              <Row label="Κωδικός ακινήτου (Property ID)" value={contract.property_id} />
-              <Row label="Κωδικός ενοικιαστή (Tenant ID)" value={contract.tenant_id} />
+              <Row
+                label="Ακίνητο (Διεύθυνση)"
+                value={property?.address || `#${contract.property_id}`}
+              />
+              <Box display="flex" justifyContent="space-between" gap={2} alignItems="center">
+                <Typography variant="body2" color="text.secondary">
+                  Κατάσταση ακινήτου
+                </Typography>
+                {propertyStatus ? (
+                  <Stack direction="row" spacing={1} alignItems="center">
+                    <Chip
+                      size="small"
+                      label={isPropertyAvailable ? "Διαθέσιμο" : "Μη διαθέσιμο"}
+                      color={isPropertyAvailable ? "success" : "warning"}
+                      variant={isPropertyAvailable ? "filled" : "outlined"}
+                    />
+                    <Typography variant="body2" sx={{ wordBreak: "break-word" }}>
+                      ({propertyStatus})
+                    </Typography>
+                  </Stack>
+                ) : (
+                  <Typography variant="body2" sx={{ wordBreak: "break-word" }}>
+                    -
+                  </Typography>
+                )}
+              </Box>
+              <Row
+                label="Ενοικιαστής"
+                value={tenant?.name || `#${contract.tenant_id}`}
+              />
               <Divider />
               <Row label="Έναρξη" value={contract.start_date} />
               <Row label="Λήξη" value={contract.end_date} />
