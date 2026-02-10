@@ -81,3 +81,25 @@ def update_area(
     db.commit()
     db.refresh(area)
     return area
+
+
+@router.delete("/{area_id}", response_model=AreaAdminOut)
+def delete_area(request: Request, area_id: int, db: Session = Depends(get_db)):
+    """
+    Admin "delete" for thesis/demo purposes:
+    - soft-deactivates the area (sets is_active=False)
+    - keeps referential integrity stable for existing properties
+    """
+    if not is_admin(request, db):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail="Admin privileges required"
+        )
+
+    area = db.query(Area).filter(Area.id == area_id).first()
+    if area is None:
+        raise HTTPException(status_code=404, detail="Area not found")
+
+    area.is_active = False
+    db.commit()
+    db.refresh(area)
+    return area

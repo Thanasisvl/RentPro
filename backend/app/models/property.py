@@ -40,8 +40,14 @@ class Property(Base):
 
     owner_id = Column(Integer, ForeignKey("users.id"))
 
-    # Dictionary-based area selection (nullable during migration rollout)
-    area_id = Column(Integer, ForeignKey("areas.id", ondelete="RESTRICT"), index=True)
+    # Dictionary-based area selection (centralized in areas table).
+    # DB migrations enforce NOT NULL (fallback to UNKNOWN=1).
+    area_id = Column(
+        Integer,
+        ForeignKey("areas.id", ondelete="RESTRICT"),
+        index=True,
+        nullable=False,
+    )
 
     owner = relationship("User", back_populates="properties")
     contracts = relationship("Contract", back_populates="property")

@@ -14,7 +14,13 @@ def create_property(db: Session, property: PropertyCreate, owner_id: int):
     db.add(db_property)
     db.commit()
     db.refresh(db_property)
-    return db_property
+    # Reload with relationship eager-loaded for deterministic API responses.
+    return (
+        db.query(Property)
+        .options(joinedload(Property.area))
+        .filter(Property.id == db_property.id)
+        .first()
+    )
 
 
 def get_properties(db: Session, skip: int = 0, limit: int = 100):
@@ -37,7 +43,12 @@ def get_property(db: Session, property_id: int):
 
 
 def update_property(db: Session, property_id: int, property: PropertyUpdate):
-    db_property = db.query(Property).filter(Property.id == property_id).first()
+    db_property = (
+        db.query(Property)
+        .options(joinedload(Property.area))
+        .filter(Property.id == property_id)
+        .first()
+    )
     if not db_property:
         return None
 
@@ -47,7 +58,13 @@ def update_property(db: Session, property_id: int, property: PropertyUpdate):
 
     db.commit()
     db.refresh(db_property)
-    return db_property
+    # Ensure Area relationship remains loaded for response serialization.
+    return (
+        db.query(Property)
+        .options(joinedload(Property.area))
+        .filter(Property.id == property_id)
+        .first()
+    )
 
 
 def delete_property(db: Session, property_id: int):
