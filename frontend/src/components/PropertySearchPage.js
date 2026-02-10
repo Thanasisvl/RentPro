@@ -1,7 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   AlertTitle,
-  Autocomplete,
   Box,
   Button,
   Card,
@@ -63,15 +62,7 @@ const SORT_OPTIONS = [
   { value: "SIZE_DESC", label: "Εμβαδόν ↓" },
 ];
 
-const AREA_OPTIONS = [
-  "Βόρεια Προάστεια",
-  "Κέντρο Αθήνας",
-  "Νότια Προάστεια",
-  "Πειραιάς",
-  "Δυτικά Προάστεια",
-  "Δυτική Αττική",
-  "Ανατολική Αττική",
-];
+// Areas are loaded from backend (/areas) and selected via area_id.
 
 function formatEur(n) {
   const v = Number(n);
@@ -136,6 +127,8 @@ function PropertyCardSkeleton() {
 
 const KNOWN_FIELDS = new Set([
   "area",
+  "address",
+  "area_id",
   "type",
   "min_price",
   "max_price",
@@ -244,9 +237,35 @@ function PropertySearchPage() {
   const [compareIds, setCompareIds] = useState(() => readIds(COMPARE_KEY));
 
   const [filters, setFilters] = useState({
-    area: "",
+    area_id: "",
+    address: "",
     type: "",
   });
+
+  const [areas, setAreas] = useState([]);
+  const areaById = useMemo(() => {
+    const m = new Map();
+    for (const a of areas) m.set(String(a.id), a);
+    return m;
+  }, [areas]);
+
+  useEffect(() => {
+    let mounted = true;
+    async function loadAreas() {
+      try {
+        const resp = await fetch(`${API_BASE_URL}/areas/`);
+        const json = await resp.json().catch(() => []);
+        if (!mounted) return;
+        setAreas(Array.isArray(json) ? json : []);
+      } catch {
+        // non-fatal for search
+      }
+    }
+    loadAreas();
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   const [priceRange, setPriceRange] = useState([PRICE_MIN, PRICE_MAX]);
   const [sizeRange, setSizeRange] = useState([SIZE_MIN, SIZE_MAX]);
@@ -387,7 +406,7 @@ function PropertySearchPage() {
   const itemsSorted = useMemo(() => applySort(data?.items, sort), [data, sort]);
 
   const resetAll = async () => {
-    const nextFilters = { area: "", type: "" };
+    const nextFilters = { area_id: "", address: "", type: "" };
     const nextPrice = [PRICE_MIN, PRICE_MAX];
     const nextSize = [SIZE_MIN, SIZE_MAX];
     suppressAutoSearchRef.current = true;
@@ -404,13 +423,18 @@ function PropertySearchPage() {
 
   const activeChips = useMemo(() => {
     const chips = [];
-    const area = String(filters.area || "").trim();
+    const areaId = String(filters.area_id || "").trim();
+    const address = String(filters.address || "").trim();
     const type = String(filters.type || "").trim();
     const [pMin, pMax] = clampRange(priceRange, PRICE_MIN, PRICE_MAX);
     const [sMin, sMax] = clampRange(sizeRange, SIZE_MIN, SIZE_MAX);
 
-    if (area) {
-      chips.push({ key: "area", label: `Περιοχή: ${area}` });
+    if (areaId) {
+      const a = areaById.get(areaId);
+      chips.push({ key: "area_id", label: `Περιοχή: ${a?.name || areaId}` });
+    }
+    if (address) {
+      chips.push({ key: "address", label: `Διεύθυνση: ${address}` });
     }
     if (type) {
       const typeLabel = PROPERTY_TYPE_LABELS[type] || type;
@@ -431,10 +455,11 @@ function PropertySearchPage() {
       chips.push({ key: "sort", label: `Ταξινόμηση: ${label}` });
     }
     return chips;
-  }, [filters, priceRange, sizeRange, sort]);
+  }, [filters, priceRange, sizeRange, sort, areaById]);
 
   const deleteChip = async (key) => {
-    if (key === "area") setFilters((f) => ({ ...f, area: "" }));
+    if (key === "area_id") setFilters((f) => ({ ...f, area_id: "" }));
+    if (key === "address") setFilters((f) => ({ ...f, address: "" }));
     if (key === "type") setFilters((f) => ({ ...f, type: "" }));
     if (key === "price") {
       const next = [PRICE_MIN, PRICE_MAX];
@@ -520,26 +545,47 @@ function PropertySearchPage() {
 
       <Paper sx={{ p: { xs: 2, md: 3 }, mb: 3 }}>
         <Grid container spacing={2.5} alignItems="stretch">
-          <Grid item xs={12} md={4}>
-            <Autocomplete
-              freeSolo
-              options={AREA_OPTIONS}
-              value={filters.area}
-              onChange={(_, value) => setFilters((f) => ({ ...f, area: value || "" }))}
-              onInputChange={(_, value) => setFilters((f) => ({ ...f, area: value || "" }))}
-              renderInput={(params) => (
-                <TextField
-                  {...params}
-                  label="Περιοχή"
-                  placeholder="π.χ. Βόρεια Προάστεια ή Μαρούσι"
-                  fullWidth
-                  error={!!fieldErrors.area}
-                  helperText={
-                    fieldErrors.area ||
-                    "Μπορείς να βάλεις macro-area (π.χ. Βόρεια Προάστεια) ή συγκεκριμένη περιοχή."
-                  }
-                />
-              )}
+          <Grid item xs={12} md={3}>
+            <FormControl fullWidth error={!!fieldErrors.area_id}>
+              <InputLabel id="area-label" shrink>
+                Περιοχή
+              </InputLabel>
+              <Select
+                labelId="area-label"
+                label="Περιοχή"
+                value={filters.area_id}
+                onChange={(e) => setFilters((f) => ({ ...f, area_id: e.target.value }))}
+                displayEmpty
+                renderValue={(v) => {
+                  const id = String(v ?? "");
+                  if (!id) return "Όλες οι περιοχές";
+                  const a = areaById.get(id);
+                  return a?.name || id;
+                }}
+              >
+                <MenuItem value="">Όλες οι περιοχές</MenuItem>
+                {areas.map((a) => (
+                  <MenuItem key={a.id} value={String(a.id)}>
+                    {a.name}
+                  </MenuItem>
+                ))}
+              </Select>
+              {fieldErrors.area_id ? (
+                <Typography variant="caption" color="error">
+                  {fieldErrors.area_id}
+                </Typography>
+              ) : null}
+            </FormControl>
+          </Grid>
+
+          <Grid item xs={12} md={3}>
+            <TextField
+              label="Διεύθυνση"
+              value={filters.address}
+              onChange={(e) => setFilters((f) => ({ ...f, address: e.target.value }))}
+              fullWidth
+              error={!!fieldErrors.address}
+              helperText={fieldErrors.address || "Substring match στη διεύθυνση (π.χ. Μαρούσι, Πατησίων)."}
             />
           </Grid>
 

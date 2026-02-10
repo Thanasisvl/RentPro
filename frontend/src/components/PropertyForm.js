@@ -40,16 +40,47 @@ function PropertyForm({ mode }) {
 
   const [loading, setLoading] = useState(isEdit);
   const [error, setError] = useState('');
+  const [areasLoading, setAreasLoading] = useState(true);
+  const [areas, setAreas] = useState([]);
 
   const [form, setForm] = useState({
     title: '',
     description: '',
     address: '',
+    area_id: '',
     type: '',
     size: '',
     price: '',
     status: 'AVAILABLE',
   });
+
+  useEffect(() => {
+    let mounted = true;
+    async function loadAreas() {
+      setAreasLoading(true);
+      try {
+        const res = await api.get('/areas/');
+        if (!mounted) return;
+        const arr = Array.isArray(res.data) ? res.data : [];
+        setAreas(arr);
+        // Default selection (create only): pick Athens if present, else first
+        if (!isEdit) {
+          const athens = arr.find((a) => a.code === 'ATHENS');
+          const first = arr[0];
+          const def = athens?.id ?? first?.id ?? '';
+          setForm((prev) => ({ ...prev, area_id: prev.area_id || String(def || '') }));
+        }
+      } catch (e) {
+        // Keep form usable; backend will still validate.
+      } finally {
+        if (mounted) setAreasLoading(false);
+      }
+    }
+    loadAreas();
+    return () => {
+      mounted = false;
+    };
+  }, [isEdit]);
 
   useEffect(() => {
     if (!isEdit) return;
@@ -64,6 +95,7 @@ function PropertyForm({ mode }) {
           title: p.title ?? '',
           description: p.description ?? '',
           address: p.address ?? '',
+          area_id: String(p.area_id ?? ''),
           type: p.type ?? '',
           size: String(p.size ?? ''),
           price: String(p.price ?? ''),
@@ -87,6 +119,7 @@ function PropertyForm({ mode }) {
     const e = {};
     if (!String(form.title || '').trim()) e.title = 'Ο τίτλος είναι υποχρεωτικός.';
     if (!String(form.address || '').trim()) e.address = 'Η διεύθυνση είναι υποχρεωτική.';
+    if (!String(form.area_id || '').trim()) e.area_id = 'Επίλεξε περιοχή.';
     if (!String(form.type || '').trim()) e.type = 'Επίλεξε τύπο ακινήτου.';
 
     const size = Number(form.size);
@@ -95,7 +128,7 @@ function PropertyForm({ mode }) {
     const price = Number(form.price);
     if (!Number.isFinite(price) || price <= 0) e.price = 'Δώσε τιμή > 0.';
     return e;
-  }, [form.title, form.address, form.type, form.size, form.price]);
+  }, [form.title, form.address, form.area_id, form.type, form.size, form.price]);
 
   const hasErrors = Object.keys(fieldErrors).length > 0;
 
@@ -107,6 +140,7 @@ function PropertyForm({ mode }) {
       title: form.title,
       description: form.description,
       address: form.address,
+      area_id: Number(form.area_id),
       type: String(form.type || '').trim().toUpperCase(),
       size: Number(form.size),
       price: Number(form.price),
@@ -182,6 +216,24 @@ function PropertyForm({ mode }) {
                   error={!!fieldErrors.address}
                   helperText={fieldErrors.address || 'Περιοχή / οδός / στοιχεία τοποθεσίας.'}
                 />
+                <TextField
+                  label="Περιοχή"
+                  value={String(form.area_id || '')}
+                  onChange={onChange('area_id')}
+                  select
+                  required
+                  error={!!fieldErrors.area_id}
+                  helperText={
+                    fieldErrors.area_id ||
+                    (areasLoading ? 'Φόρτωση περιοχών…' : 'Επίλεξε περιοχή από το λεξικό περιοχών.')
+                  }
+                >
+                  {areas.map((a) => (
+                    <MenuItem key={a.id} value={String(a.id)}>
+                      {a.name} ({Number(a.area_score).toFixed(1)})
+                    </MenuItem>
+                  ))}
+                </TextField>
               </Stack>
             </Box>
 

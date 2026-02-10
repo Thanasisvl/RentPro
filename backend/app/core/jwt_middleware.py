@@ -6,18 +6,29 @@ from starlette.middleware.base import BaseHTTPMiddleware
 
 from app.core.jwt import decode_access_token
 
-PUBLIC_PATHS = [
+PUBLIC_EXACT_PATHS = {
     "/health",
     "/metrics",
     "/login",
+    "/login/",
     "/users/register",
+    "/users/register/",
     "/openapi.json",
+    "/auth/refresh",
+    "/auth/refresh/",
+    "/properties/search",
+    "/properties/search/",
+    # Public list of areas for dropdowns (must NOT make /areas/admin public)
+    "/areas",
+    "/areas/",
+}
+
+PUBLIC_PREFIX_PATHS = [
+    # Swagger/ReDoc UIs
     "/docs",
     "/docs/",
     "/redoc",
     "/redoc/",
-    "/auth/refresh",
-    "/properties/search",
 ]
 
 _PROPERTY_DETAIL_RE = re.compile(r"^/properties/\d+$")
@@ -27,8 +38,14 @@ class JWTAuthMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
         path = request.url.path
 
+        # Let CORS preflight requests pass through without auth.
+        if request.method == "OPTIONS":
+            return await call_next(request)
+
         # Always-public paths
-        if any(path.startswith(pub) for pub in PUBLIC_PATHS):
+        if path in PUBLIC_EXACT_PATHS or any(
+            path.startswith(pub) for pub in PUBLIC_PREFIX_PATHS
+        ):
             return await call_next(request)
 
         # UC-03: Public GET property details ONLY (prevents POST/PUT/DELETE becoming public)

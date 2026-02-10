@@ -47,6 +47,8 @@ module.exports = defineConfig({
         env: {
           PORT: "3000",
           CI: "true",
+          // Force IPv4 loopback for local backend (avoids localhost -> ::1 issues)
+          REACT_APP_API_URL: "http://127.0.0.1:8000",
         },
       },
 });

@@ -47,6 +47,7 @@ def test_public_search_filters_by_area_and_excludes_non_available(owner_headers)
         price=900.0,
         size=80.0,
         type="APARTMENT",
+        area_id=11,  # ATHENS
     )
     p2 = create_property(
         client,
@@ -56,11 +57,12 @@ def test_public_search_filters_by_area_and_excludes_non_available(owner_headers)
         price=1500.0,
         size=120.0,
         type="DETACHED_HOUSE",
+        area_id=16,  # PIRAEUS
     )
 
     set_property_status(p2["id"], "RENTED")
 
-    resp = client.get("/properties/search?area=Center")
+    resp = client.get("/properties/search?area_id=11&address=Center")
     assert resp.status_code == 200
     data = resp.json()
     ids = [x["id"] for x in data["items"]]
@@ -78,6 +80,7 @@ def test_public_search_combined_filters(owner_headers):
         price=700.0,
         size=45.0,
         type="STUDIO",
+        area_id=11,  # ATHENS
     )
     create_property(
         client,
@@ -87,10 +90,11 @@ def test_public_search_combined_filters(owner_headers):
         price=2500.0,
         size=140.0,
         type="DETACHED_HOUSE",
+        area_id=11,  # ATHENS
     )
 
     resp = client.get(
-        "/properties/search?area=Center&min_price=600&max_price=1000&min_size=40&max_size=60"
+        "/properties/search?area_id=11&address=Center&min_price=600&max_price=1000&min_size=40&max_size=60"
     )
     assert resp.status_code == 200
     data = resp.json()
@@ -99,8 +103,8 @@ def test_public_search_combined_filters(owner_headers):
     assert all(40 <= p["size"] <= 60 for p in data["items"])
 
 
-def test_public_search_macro_area_group_north_suburbs(owner_headers):
-    # Addresses in northern suburbs should match macro area query like "Βόρεια Προάστεια".
+def test_public_search_filters_by_area_id_specific_municipality(owner_headers):
+    # Area selection uses the areas dictionary (municipality-level), not macro areas.
     p1 = create_property(
         client,
         owner_headers,
@@ -109,6 +113,7 @@ def test_public_search_macro_area_group_north_suburbs(owner_headers):
         price=900.0,
         size=70.0,
         type="APARTMENT",
+        area_id=10,  # MAROUSI
     )
     p2 = create_property(
         client,
@@ -118,6 +123,7 @@ def test_public_search_macro_area_group_north_suburbs(owner_headers):
         price=1100.0,
         size=80.0,
         type="APARTMENT",
+        area_id=14,  # CHOLARGOS
     )
     p3 = create_property(
         client,
@@ -127,15 +133,14 @@ def test_public_search_macro_area_group_north_suburbs(owner_headers):
         price=750.0,
         size=60.0,
         type="APARTMENT",
+        area_id=16,  # PIRAEUS
     )
 
-    resp = client.get(
-        "/properties/search?area=%CE%92%CF%8C%CF%81%CE%B5%CE%B9%CE%B1%20%CE%A0%CF%81%CE%BF%CE%AC%CF%83%CF%84%CE%B5%CE%B9%CE%B1"
-    )
+    resp = client.get("/properties/search?area_id=10")
     assert resp.status_code == 200
     data = resp.json()
     ids = [x["id"] for x in data["items"]]
 
     assert p1["id"] in ids
-    assert p2["id"] in ids
+    assert p2["id"] not in ids
     assert p3["id"] not in ids

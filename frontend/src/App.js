@@ -40,6 +40,7 @@ import TenantDashboard from "./components/dashboards/TenantDashboard";
 import OwnerDashboard from "./components/dashboards/OwnerDashboard";
 import AdminDashboard from "./components/dashboards/AdminDashboard";
 import AdminUsersPage from "./components/AdminUsersPage";
+import AdminAreasPage from "./components/AdminAreasPage";
 import ForbiddenPage from "./components/ForbiddenPage";
 
 // Logo asset
@@ -143,7 +144,15 @@ function App() {
           </Stack>
 
           {/* Nav (center) */}
-          <Stack direction="row" spacing={0.5} sx={{ flex: 1, overflowX: "auto" }}>
+          <Stack
+            direction="row"
+            spacing={0.5}
+            sx={{
+              flex: 1,
+              minWidth: 0, // critical: allow shrinking so right-side buttons stay visible
+              overflowX: "auto",
+            }}
+          >
             <Button
               component={NavLink}
               to={homeTo}
@@ -252,7 +261,12 @@ function App() {
 
           {/* Right side */}
           {isAuthenticated ? (
-            <Stack direction="row" spacing={1} alignItems="center">
+            <Stack
+              direction="row"
+              spacing={1}
+              alignItems="center"
+              sx={{ flexShrink: 0 }}
+            >
               <Button
                 component={NavLink}
                 to="/profile"
@@ -327,6 +341,16 @@ function App() {
               <RequireAuth>
                 <RequireRole allowed={["ADMIN"]}>
                   <AdminUsersPage />
+                </RequireRole>
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/app/admin/areas"
+            element={
+              <RequireAuth>
+                <RequireRole allowed={["ADMIN"]}>
+                  <AdminAreasPage />
                 </RequireRole>
               </RequireAuth>
             }

@@ -27,7 +27,7 @@ async function selectMuiOption(labelText, optionText) {
 test("creates contract with PDF upload and navigates back to property details when propertyId is provided", async () => {
   // tenants + property load
   api.get.mockImplementation((url) => {
-    if (url === "/tenants") {
+    if (url === "/tenants/") {
       return Promise.resolve({
         data: [{ id: 20, name: "Tenant A", afm: "123" }],
       });
@@ -55,9 +55,8 @@ test("creates contract with PDF upload and navigates back to property details wh
     </MemoryRouter>
   );
 
-  // PropertyId should be prefilled and disabled
-  const propertyId = await screen.findByLabelText(/Κωδικός ακινήτου \(Property ID\)/i);
-  expect(propertyId).toBeDisabled();
+  // Property should be prefilled (coming from PropertyDetails) and disabled
+  expect(await screen.findByLabelText(/Ακίνητο/i)).toBeDisabled();
 
   // Wait tenants to load and select
   await selectMuiOption(/Επιλογή ενοικιαστή/i, /Tenant A/i);

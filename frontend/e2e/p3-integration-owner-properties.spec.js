@@ -16,6 +16,6 @@ test("@p3 owner can login and load real /properties list", async ({ page }) => {
   await expect(page.getByText("Ιδιοκτησίες")).toBeVisible();
 
   // Seeded fixtures (real backend data)
-  await expect(page.getByText("E2E Seed Property")).toBeVisible();
+  await expect(page.getByText("E2E Seed Property", { exact: true })).toBeVisible();
 });
 

@@ -15,17 +15,19 @@ function AdminDashboard() {
     properties: 0,
     tenants: 0,
     contracts: 0,
+    areas: 0,
   });
 
   React.useEffect(() => {
     let mounted = true;
     async function load() {
       try {
-        const [uRes, pRes, tRes, cRes] = await Promise.all([
+        const [uRes, pRes, tRes, cRes, aRes] = await Promise.all([
           api.get("/users/"),
           api.get("/properties/"),
           api.get("/tenants"),
           api.get("/contracts/"),
+          api.get("/areas/"),
         ]);
         if (!mounted) return;
         setStats({
@@ -35,6 +37,7 @@ function AdminDashboard() {
           properties: Array.isArray(pRes.data) ? pRes.data.length : 0,
           tenants: Array.isArray(tRes.data) ? tRes.data.length : 0,
           contracts: Array.isArray(cRes.data) ? cRes.data.length : 0,
+          areas: Array.isArray(aRes.data) ? aRes.data.length : 0,
         });
       } catch (e) {
         if (!mounted) return;
@@ -112,6 +115,19 @@ function AdminDashboard() {
             loading={stats.loading}
             actions={
               <Button variant="contained" onClick={() => navigate("/contracts")}>
+                Άνοιξε
+              </Button>
+            }
+          />
+        </Grid>
+        <Grid item xs={12} sm={6} md={3}>
+          <StatCard
+            title="Περιοχές (Areas)"
+            value={stats.areas}
+            subtitle="Λεξικό περιοχών"
+            loading={stats.loading}
+            actions={
+              <Button variant="contained" onClick={() => navigate("/app/admin/areas")}>
                 Άνοιξε
               </Button>
             }

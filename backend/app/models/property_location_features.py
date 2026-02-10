@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from sqlalchemy import Column, DateTime, Float, ForeignKey, Integer, func
+from sqlalchemy import Column, DateTime, ForeignKey, Integer, func
 from sqlalchemy.orm import relationship
 
 from app.db.session import Base
@@ -16,9 +16,6 @@ class PropertyLocationFeatures(Base):
         primary_key=True,
         index=True,
     )
-
-    # UC-04: area/location numeric score (π.χ. 1–10)
-    area_score = Column(Float, nullable=True)
 
     created_at = Column(
         DateTime(timezone=True), server_default=func.now(), nullable=False

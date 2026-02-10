@@ -5,6 +5,9 @@ test("@p1 OWNER: create/edit property + create contract from property", async ({
   // Auth as OWNER (frontend only decodes role from token)
   await setAuthToken(page, { role: "OWNER", username: "owner1" });
 
+  // Areas dictionary (required by PropertyForm)
+  const areas = [{ id: 11, code: "ATHENS", name: "Αθήνα", area_score: 7.2, is_active: true }];
+
   // In-test “DB”
   let property = {
     id: 123,
@@ -20,6 +23,14 @@ test("@p1 OWNER: create/edit property + create contract from property", async ({
   const tenants = [{ id: 20, name: "Tenant A", afm: "123" }];
 
   // --- API stubs (axios baseURL defaults to http://localhost:8000) ---
+  await page.route("**/areas/**", async (route) => {
+    return route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify(areas),
+    });
+  });
+
   await page.route("**/properties/", async (route) => {
     const req = route.request();
     const method = req.method();

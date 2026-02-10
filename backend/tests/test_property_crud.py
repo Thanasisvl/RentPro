@@ -38,6 +38,7 @@ def test_create_property(owner_headers):
             "title": "Test Property",
             "description": "A nice place",
             "address": "123 Main St",
+            "area_id": 11,  # ATHENS (seeded)
             "type": "APARTMENT",
             "size": 100.0,
             "price": 1200.0,
@@ -60,6 +61,7 @@ def test_get_property(owner_headers):
             "title": "Test Property",
             "description": "A nice place",
             "address": "123 Main St",
+            "area_id": 11,  # ATHENS (seeded)
             "type": "APARTMENT",
             "size": 100.0,
             "price": 1200.0,
@@ -83,6 +85,7 @@ def test_get_properties(owner_headers):
             "title": "Test Property",
             "description": "A nice place",
             "address": "123 Main St",
+            "area_id": 11,  # ATHENS (seeded)
             "type": "APARTMENT",
             "size": 100.0,
             "price": 1200.0,
@@ -95,6 +98,7 @@ def test_get_properties(owner_headers):
             "title": "Second Property",
             "description": "Another place",
             "address": "456 Side St",
+            "area_id": 11,  # ATHENS (seeded)
             "type": "DETACHED_HOUSE",
             "size": 150.0,
             "price": 2000.0,
@@ -118,6 +122,7 @@ def test_update_property(owner_headers):
             "title": "Test Property",
             "description": "A nice place",
             "address": "123 Main St",
+            "area_id": 11,  # ATHENS (seeded)
             "type": "APARTMENT",
             "size": 100.0,
             "price": 1200.0,
@@ -155,6 +160,7 @@ def test_delete_property(owner_headers):
             "title": "Test Property",
             "description": "A nice place",
             "address": "123 Main St",
+            "area_id": 11,  # ATHENS (seeded)
             "type": "APARTMENT",
             "size": 100.0,
             "price": 1200.0,
@@ -194,6 +200,7 @@ def test_create_property_unauthenticated():
             "title": "No Auth",
             "description": "No Auth",
             "address": "No Auth",
+            "area_id": 11,
             "type": "APARTMENT",
             "size": 50.0,
             "price": 1000.0,
@@ -231,6 +238,7 @@ def test_update_property_invalid_data(owner_headers):
             "title": "To Update",
             "description": "desc",
             "address": "addr",
+            "area_id": 11,  # ATHENS (seeded)
             "type": "APARTMENT",
             "size": 100.0,
             "price": 1200.0,
@@ -262,6 +270,7 @@ def test_update_property_not_owner(owner_headers):
             "title": "Owner1 Property",
             "description": "desc",
             "address": "addr",
+            "area_id": 11,  # ATHENS (seeded)
             "type": "APARTMENT",
             "size": 100.0,
             "price": 1200.0,
@@ -301,6 +310,7 @@ def test_cross_user_property_access(owner_headers):
             "title": "Owner1 Property",
             "description": "desc",
             "address": "addr",
+            "area_id": 11,  # ATHENS (seeded)
             "type": "APARTMENT",
             "size": 100.0,
             "price": 1200.0,
@@ -472,6 +482,7 @@ def test_admin_create_property_for_owner_success():
             "title": "Admin Created Property",
             "description": "Created on behalf of owner",
             "address": "999 Admin St",
+            "area_id": 11,  # ATHENS (seeded)
             "type": "APARTMENT",
             "size": 55.0,
             "price": 1500.0,
@@ -508,6 +519,7 @@ def test_admin_create_property_missing_owner_id_returns_422():
             "title": "Missing owner_id",
             "description": "Admin must provide owner_id",
             "address": "1 Missing St",
+            "area_id": 11,  # ATHENS (seeded)
             "type": "APARTMENT",
             "size": 50.0,
             "price": 1000.0,
@@ -540,6 +552,7 @@ def test_admin_create_property_owner_not_found_returns_404():
             "title": "Bad owner_id",
             "description": "Should fail",
             "address": "404 St",
+            "area_id": 11,  # ATHENS (seeded)
             "type": "DETACHED_HOUSE",
             "size": 70.0,
             "price": 1100.0,
@@ -580,6 +593,7 @@ def test_admin_create_property_owner_id_must_point_to_owner_returns_422():
             "title": "Wrong owner role",
             "description": "owner_id points to a non-owner",
             "address": "422 St",
+            "area_id": 11,  # ATHENS (seeded)
             "type": "APARTMENT",
             "size": 60.0,
             "price": 1300.0,
@@ -604,6 +618,7 @@ def test_owner_cannot_create_property_for_other_owner():
             "title": "Should Fail",
             "description": "Owner cannot create for other owner",
             "address": "Forbidden St",
+            "area_id": 11,  # ATHENS (seeded)
             "type": "APARTMENT",
             "size": 45.0,
             "price": 900.0,
@@ -625,6 +640,7 @@ def test_owner_create_property_with_owner_id_self_is_allowed():
             "title": "Self owner_id",
             "description": "Owner sends owner_id=self",
             "address": "Self St",
+            "area_id": 11,  # ATHENS (seeded)
             "type": "APARTMENT",
             "size": 40.0,
             "price": 800.0,
@@ -645,6 +661,7 @@ def test_create_property_invalid_data(owner_headers):
             "title": "Invalid Property",
             "description": "Negative size",
             "address": "123 Main St",
+            "area_id": 11,  # ATHENS (seeded)
             "type": "APARTMENT",
             "size": -50.0,
             "price": -100.0,
@@ -662,6 +679,7 @@ def test_create_property_rejects_blank_strings_after_strip(owner_headers):
             "title": "   ",
             "description": "desc",
             "address": "  ",
+            "area_id": 11,  # ATHENS (seeded)
             "type": "\t",
             "size": 50.0,
             "price": 1000.0,

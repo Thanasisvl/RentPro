@@ -81,27 +81,18 @@ def seed_locked_criteria_for_tests():
         db.close()
 
 
-def set_area_score(property_id: int, area_score: float | None):
+def set_area(property_id: int, area_id: int | None):
     """
-    Upsert PropertyLocationFeatures for a property (used by UC-04 TOPSIS).
+    Set Property.area_id directly (used by UC-04 TOPSIS via Area.area_score).
     """
     from app.db.session import SessionLocal
-    from app.models.property_location_features import PropertyLocationFeatures
+    from app.models.property import Property
 
     db = SessionLocal()
     try:
-        row = (
-            db.query(PropertyLocationFeatures)
-            .filter(PropertyLocationFeatures.property_id == property_id)
-            .first()
-        )
-        if row is None:
-            row = PropertyLocationFeatures(
-                property_id=property_id, area_score=area_score
-            )
-            db.add(row)
-        else:
-            row.area_score = area_score
+        p = db.query(Property).filter(Property.id == property_id).first()
+        assert p is not None
+        p.area_id = area_id
         db.commit()
     finally:
         db.close()
@@ -153,6 +144,7 @@ def create_property(client, headers, **overrides):
         "type": "APARTMENT",  # locked & normalized
         "size": 100.0,
         "price": 1200.0,
+        "area_id": 11,  # ATHENS (seeded in migration)
     }
     payload.update(overrides)
 

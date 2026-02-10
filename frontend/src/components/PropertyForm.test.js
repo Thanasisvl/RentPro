@@ -26,6 +26,9 @@ async function selectMuiOption(labelText, optionText) {
 }
 
 test("create property submits and navigates to details", async () => {
+  api.get.mockResolvedValueOnce({
+    data: [{ id: 11, code: "ATHENS", name: "Αθήνα", area_score: 7.2 }],
+  });
   api.post.mockResolvedValueOnce({ data: { id: 123 } });
 
   render(
@@ -42,6 +45,8 @@ test("create property submits and navigates to details", async () => {
 
   await userEvent.type(screen.getByLabelText(/Τίτλος/i), "My place");
   await userEvent.type(screen.getByLabelText(/Διεύθυνση/i), "Athens");
+  // default area selection is fine; just ensure the field exists
+  expect(screen.getByRole("combobox", { name: /Περιοχή/i })).toBeInTheDocument();
   await selectMuiOption(/Τύπος ακινήτου/i, "Διαμέρισμα");
   await userEvent.clear(screen.getByLabelText(/Εμβαδόν \(τ\.μ\.\)/i));
   await userEvent.type(screen.getByLabelText(/Εμβαδόν \(τ\.μ\.\)/i), "55");
@@ -55,6 +60,7 @@ test("create property submits and navigates to details", async () => {
     title: "My place",
     description: "",
     address: "Athens",
+    area_id: 11,
     type: "APARTMENT",
     size: 55,
     price: 650,
@@ -65,18 +71,23 @@ test("create property submits and navigates to details", async () => {
 });
 
 test("edit property loads, submits PUT and navigates to details", async () => {
-  api.get.mockResolvedValueOnce({
+  api.get
+    .mockResolvedValueOnce({
+      data: [{ id: 11, code: "ATHENS", name: "Αθήνα", area_score: 7.2 }],
+    })
+    .mockResolvedValueOnce({
     data: {
       id: 123,
       title: "Old title",
       description: "d",
       address: "Addr",
+      area_id: 11,
       type: "APARTMENT",
       size: 50,
       price: 600,
       status: "AVAILABLE",
     },
-  });
+    });
   api.put.mockResolvedValueOnce({});
 
   render(

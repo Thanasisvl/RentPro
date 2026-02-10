@@ -56,6 +56,9 @@ function ContractForm() {
   const [property, setProperty] = useState(null);
   const [loadingProperty, setLoadingProperty] = useState(Boolean(initialPropertyId));
 
+  const [properties, setProperties] = useState([]);
+  const [loadingProperties, setLoadingProperties] = useState(!Boolean(initialPropertyId));
+
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
@@ -63,7 +66,7 @@ function ContractForm() {
   const fieldErrors = useMemo(() => {
     const e = {};
     const pid = Number(propertyId);
-    if (!Number.isFinite(pid) || pid <= 0) e.propertyId = "Δώσε έγκυρο Property ID.";
+    if (!Number.isFinite(pid) || pid <= 0) e.propertyId = "Επίλεξε ακίνητο.";
 
     const tid = Number(tenantId);
     if (!Number.isFinite(tid) || tid <= 0) e.tenantId = "Επίλεξε ενοικιαστή.";
@@ -95,8 +98,19 @@ function ContractForm() {
       setLoadingTenants(true);
       setError("");
       try {
-        const res = await api.get("/tenants");
-        setTenants(res.data || []);
+        const res = await api.get("/tenants/", {});
+        const raw = res.data;
+        const arr = Array.isArray(raw)
+          ? raw
+          : Array.isArray(raw?.items)
+            ? raw.items
+            : [];
+        setTenants(arr);
+
+        if (!Array.isArray(raw) && !Array.isArray(raw?.items)) {
+          console.warn("Unexpected /tenants response shape", raw);
+          setError("Αποτυχία φόρτωσης ενοικιαστών (μη αναμενόμενη απόκριση).");
+        }
       } catch (e) {
         setError("Αποτυχία φόρτωσης ενοικιαστών.");
       } finally {
@@ -124,6 +138,44 @@ function ContractForm() {
 
     loadProperty();
   }, [initialPropertyId]);
+
+  useEffect(() => {
+    const loadProperties = async () => {
+      if (initialPropertyId) return;
+      setLoadingProperties(true);
+      setError("");
+      try {
+        const res = await api.get("/properties/");
+        const raw = res.data;
+        const arr = Array.isArray(raw)
+          ? raw
+          : Array.isArray(raw?.items)
+            ? raw.items
+            : [];
+        setProperties(arr);
+      } catch (e) {
+        setProperties([]);
+        setError("Αποτυχία φόρτωσης ακινήτων.");
+      } finally {
+        setLoadingProperties(false);
+      }
+    };
+    loadProperties();
+  }, [initialPropertyId]);
+
+  // Keep `property` in sync when selecting from dropdown
+  useEffect(() => {
+    if (initialPropertyId) return; // handled by loadProperty
+    const pid = Number(propertyId);
+    if (!Number.isFinite(pid) || pid <= 0) {
+      setProperty(null);
+      return;
+    }
+    const found = (Array.isArray(properties) ? properties : []).find(
+      (p) => Number(p?.id) === pid
+    );
+    setProperty(found || null);
+  }, [propertyId, properties, initialPropertyId]);
 
   const onSubmit = async (e) => {
     e.preventDefault();
@@ -222,19 +274,45 @@ function ContractForm() {
               <Typography variant="subtitle2" sx={{ mb: 1 }}>
                 Στοιχεία ακινήτου
               </Typography>
-              <TextField
-                label="Κωδικός ακινήτου (Property ID)"
-                value={propertyId}
-                onChange={(e) => setPropertyId(e.target.value)}
-                fullWidth
-                required
-                disabled={Boolean(initialPropertyId)}
-                error={!!fieldErrors.propertyId}
-                helperText={
-                  fieldErrors.propertyId ||
-                  (initialPropertyId ? "Επιλέχθηκε από το ακίνητο." : "π.χ. 12")
-                }
-              />
+              {initialPropertyId ? (
+                <TextField
+                  label="Ακίνητο"
+                  value={property?.title ? `${property.title} (#${initialPropertyId})` : `#${initialPropertyId}`}
+                  fullWidth
+                  disabled
+                  helperText="Επιλέχθηκε από το ακίνητο."
+                />
+              ) : loadingProperties ? (
+                <Box display="flex" alignItems="center" gap={1}>
+                  <CircularProgress size={18} />
+                  <Typography variant="body2">Φόρτωση ακινήτων...</Typography>
+                </Box>
+              ) : (
+                <TextField
+                  select
+                  label="Επιλογή ακινήτου"
+                  value={propertyId}
+                  onChange={(e) => setPropertyId(e.target.value)}
+                  fullWidth
+                  required
+                  error={!!fieldErrors.propertyId}
+                  helperText={fieldErrors.propertyId || "Επίλεξε ακίνητο από τη λίστα σου."}
+                >
+                  <MenuItem value="">
+                    <em>Επίλεξε…</em>
+                  </MenuItem>
+                  {properties.map((p) => (
+                    <MenuItem
+                      key={p.id}
+                      value={String(p.id)}
+                      disabled={p.status && p.status !== "AVAILABLE"}
+                    >
+                      {p.title || `Ακίνητο #${p.id}`}{" "}
+                      {p.status ? `(${p.status})` : ""}
+                    </MenuItem>
+                  ))}
+                </TextField>
+              )}
             </Box>
 
           {loadingTenants ? (

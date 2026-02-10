@@ -25,6 +25,7 @@ def owner_and_property():
             "title": "Initial Property",
             "description": "Initial property",
             "address": "1 Owner St",
+            "area_id": 11,  # ATHENS (seeded)
             "type": "APARTMENT",
             "size": 50.0,
             "price": 1000.0,
@@ -431,6 +432,7 @@ def test_admin_can_list_all_properties_from_properties_endpoint():
             "title": "Owner1 Property",
             "description": "desc",
             "address": "addr1",
+            "area_id": 11,  # ATHENS (seeded)
             "type": "APARTMENT",
             "size": 50.0,
             "price": 1000.0,
@@ -449,6 +451,7 @@ def test_admin_can_list_all_properties_from_properties_endpoint():
             "title": "Owner2 Property",
             "description": "desc",
             "address": "addr2",
+            "area_id": 11,  # ATHENS (seeded)
             "type": "DETACHED_HOUSE",
             "size": 60.0,
             "price": 1100.0,
@@ -578,6 +581,7 @@ def test_owner_cannot_update_contract_to_other_owners_tenant():
             "title": "P1",
             "description": "desc",
             "address": "addr",
+            "area_id": 11,  # ATHENS (seeded)
             "type": "APARTMENT",
             "size": 50.0,
             "price": 1000.0,
@@ -697,6 +701,7 @@ def test_admin_can_list_all_contracts_and_filter_by_owner():
             "title": "P1",
             "description": "d",
             "address": "a",
+            "area_id": 11,  # ATHENS (seeded)
             "type": "APARTMENT",
             "size": 50.0,
             "price": 1000.0,
@@ -742,6 +747,7 @@ def test_admin_can_list_all_contracts_and_filter_by_owner():
             "title": "P2",
             "description": "d",
             "address": "a2",
+            "area_id": 11,  # ATHENS (seeded)
             "type": "APARTMENT",
             "size": 60.0,
             "price": 1100.0,

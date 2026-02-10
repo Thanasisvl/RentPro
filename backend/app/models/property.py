@@ -40,8 +40,12 @@ class Property(Base):
 
     owner_id = Column(Integer, ForeignKey("users.id"))
 
+    # Dictionary-based area selection (nullable during migration rollout)
+    area_id = Column(Integer, ForeignKey("areas.id", ondelete="RESTRICT"), index=True)
+
     owner = relationship("User", back_populates="properties")
     contracts = relationship("Contract", back_populates="property")
+    area = relationship("Area", back_populates="properties")
 
     # UC-04: derived numeric location features (1–1)
     location_features = relationship(

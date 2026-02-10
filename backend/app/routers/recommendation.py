@@ -12,9 +12,9 @@ from app.core.recommendation_config import (
 from app.core.utils import get_current_user
 from app.db.session import get_db
 from app.models.criterion import Criterion
+from app.models.area import Area
 from app.models.preference_profile import PreferenceProfile
 from app.models.property import Property, PropertyStatus
-from app.models.property_location_features import PropertyLocationFeatures
 from app.schemas.property import PropertyOut
 from app.schemas.recommendation import RecommendationItem, RecommendationsResponse
 from app.services.ahp import CR_THRESHOLD, compute_ahp
@@ -94,11 +94,9 @@ def get_recommendations(
     weights = [ahp.weights[k] for k in criteria_keys]
 
     rows = (
-        db.query(Property, PropertyLocationFeatures)
-        .outerjoin(
-            PropertyLocationFeatures,
-            PropertyLocationFeatures.property_id == Property.id,
-        )
+        db.query(Property, Area)
+        .options(joinedload(Property.area))
+        .outerjoin(Area, Area.id == Property.area_id)
         .filter(Property.status == PropertyStatus.AVAILABLE)
         .all()
     )
@@ -114,7 +112,7 @@ def get_recommendations(
     properties = []
     explain_values = []  # aligned with decision_matrix/properties (post-filter)
 
-    for prop, loc in rows:
+    for prop, area in rows:
         ptype = (prop.type or "").strip().upper()
         if ptype not in PROPERTY_TYPE_MAPPING:
             unknown_types.add(ptype or "<empty>")
@@ -122,7 +120,8 @@ def get_recommendations(
         else:
             ptype_value = float(PROPERTY_TYPE_MAPPING[ptype])
 
-        area_score = loc.area_score if loc is not None else None
+        # Dictionary-based area score (Area.area_score).
+        area_score = area.area_score if area is not None else None
         if area_score is None:
             missing_area_score += 1
             area_score = 0.0

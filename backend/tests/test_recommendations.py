@@ -6,7 +6,7 @@ from tests.utils import (
     create_preference_profile,
     create_property,
     register_and_login,
-    set_area_score,
+    set_area,
     set_pairwise_all_equal,
     set_property_status,
 )
@@ -50,7 +50,7 @@ def test_recommendations_a2_no_available_returns_empty(user_headers, owner_heade
     p = create_property(
         client, owner_headers, type="APARTMENT", price=1000.0, size=60.0
     )
-    set_area_score(p["id"], 7.0)
+    set_area(p["id"], 11)  # ATHENS
     set_property_status(p["id"], "RENTED")
 
     r = client.get("/recommendations", headers=user_headers)
@@ -66,10 +66,10 @@ def test_recommendations_success_ranked_items(user_headers, owner_headers):
     p1 = create_property(
         client, owner_headers, type="APARTMENT", price=900.0, size=80.0
     )
-    set_area_score(p1["id"], 8.0)
+    set_area(p1["id"], 18)  # VRILISSIA (higher)
 
     p2 = create_property(client, owner_headers, type="STUDIO", price=1100.0, size=45.0)
-    set_area_score(p2["id"], 5.0)
+    set_area(p2["id"], 17)  # PERISTERI (lower)
 
     r = client.get("/recommendations", headers=user_headers)
     assert r.status_code == 200
@@ -123,7 +123,7 @@ def test_recommendations_a1_high_cr_returns_422(user_headers, owner_headers):
     p = create_property(
         client, owner_headers, type="APARTMENT", price=1000.0, size=60.0
     )
-    set_area_score(p["id"], 6.0)
+    set_area(p["id"], 11)  # ATHENS
 
     r = client.get("/recommendations", headers=user_headers)
     assert r.status_code == 422, r.text

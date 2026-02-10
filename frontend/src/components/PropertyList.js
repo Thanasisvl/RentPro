@@ -123,14 +123,19 @@ function PropertyList() {
         title="Ιδιοκτησίες"
         description="Διαχείριση καταχωρημένων ακινήτων (UC‑02)."
         actions={
-          <Button
-            variant="contained"
-            startIcon={<AddIcon />}
-            component={RouterLink}
-            to="/properties/new"
-          >
-            Νέο ακίνητο
-          </Button>
+          <Stack direction="row" spacing={1}>
+            <Button variant="outlined" component={RouterLink} to="/app/owner">
+              Πίνακας
+            </Button>
+            <Button
+              variant="contained"
+              startIcon={<AddIcon />}
+              component={RouterLink}
+              to="/properties/new"
+            >
+              Νέο ακίνητο
+            </Button>
+          </Stack>
         }
       />
 

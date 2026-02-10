@@ -19,7 +19,7 @@ from app.core.observability import (
 from app.core.migrations import run_migrations
 from app.core.uploads import get_upload_root
 from app.core.jwt_middleware import JWTAuthMiddleware
-from app.core.seed import seed_e2e_fixtures, seed_locked_criteria
+from app.core.seed import seed_e2e_fixtures, seed_locked_areas, seed_locked_criteria
 from app.db.session import SessionLocal
 from app.routers import api_router
 
@@ -31,6 +31,7 @@ app.state.metrics = InMemoryMetrics()
 
 origins = [
     "http://localhost:3000",  # React dev
+    "http://127.0.0.1:3000",  # Playwright/webServer default
 ]
 
 
@@ -40,6 +41,7 @@ def on_startup_migrate_and_seed():
     # Safe, idempotent seeds
     db = SessionLocal()
     try:
+        seed_locked_areas(db)
         seed_locked_criteria(db)
         if os.getenv("RENTPRO_E2E_SEED", "").strip() == "1":
             pwd = os.getenv("RENTPRO_E2E_PASSWORD", "rentpro-e2e")

@@ -1,6 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
 import {
-  Autocomplete,
   Box,
   Paper,
   Typography,
@@ -76,122 +75,7 @@ const PROPERTY_TYPE_OPTIONS = [
   { value: "DETACHED_HOUSE", label: PROPERTY_TYPE_LABELS.DETACHED_HOUSE },
 ];
 
-const AREA_OPTIONS = [
-  "Βόρεια Προάστεια",
-  "Κέντρο Αθήνας",
-  "Νότια Προάστεια",
-  "Δυτικά Προάστεια",
-  "Πειραιάς",
-  "Δυτική Αττική",
-  "Ανατολική Αττική",
-];
-
-const AREA_TOKENS = {
-  "Βόρεια Προάστεια": [
-    "Αγία Παρασκευή",
-    "Αμαρούσιο",
-    "Μαρούσι",
-    "Βριλήσσια",
-    "Ηράκλειο",
-    "Νέο Ηράκλειο",
-    "Κηφισιά",
-    "Λυκόβρυση",
-    "Πεύκη",
-    "Λυκόβρυση-Πεύκη",
-    "Μεταμόρφωση",
-    "Νέα Ιωνία",
-    "Παπάγου",
-    "Χολαργός",
-    "Παπάγου-Χολαργός",
-    "Πεντέλη",
-    "Φιλοθέη",
-    "Ψυχικό",
-    "Φιλοθέη-Ψυχικό",
-    "Χαλάνδρι",
-    "Μελίσσια",
-  ],
-  "Δυτικά Προάστεια": [
-    "Αγία Βαρβάρα",
-    "Άγιοι Ανάργυροι",
-    "Καματερό",
-    "Άγιοι Ανάργυροι-Καματερού",
-    "Αιγάλεω",
-    "Ίλιον",
-    "Περιστέρι",
-    "Πετρούπολη",
-    "Χαϊδάρι",
-  ],
-  "Κέντρο Αθήνας": [
-    "Αθήνα",
-    "Βύρωνας",
-    "Γαλάτσι",
-    "Δάφνη",
-    "Υμηττός",
-    "Ζωγράφου",
-    "Ηλιούπολη",
-    "Καισαριανή",
-    "Φιλαδέλφεια",
-    "Χαλκηδόνα",
-    "Κολωνάκι",
-    "Εξάρχεια",
-    "Σύνταγμα",
-    "Ομόνοια",
-    "Παγκράτι",
-  ],
-  "Νότια Προάστεια": [
-    "Άγιος Δημήτριος",
-    "Άλιμος",
-    "Γλυφάδα",
-    "Ελληνικό",
-    "Αργυρούπολη",
-    "Καλλιθέα",
-    "Μοσχάτο",
-    "Ταύρος",
-    "Νέα Σμύρνη",
-    "Παλαιό Φάληρο",
-  ],
-  "Πειραιάς": [
-    "Πειραιάς",
-    "Νίκαια",
-    "Άγιος Ιωάννης Ρέντης",
-    "Κορυδαλλός",
-    "Κερατσίνι",
-    "Δραπετσώνα",
-    "Πέραμα",
-  ],
-  "Δυτική Αττική": ["Ασπρόπυργος", "Ελευσίνα", "Μάνδρα", "Μέγαρα", "Φυλή"],
-  "Ανατολική Αττική": [
-    "Αχαρνές",
-    "Μενίδι",
-    "Βάρη",
-    "Βούλα",
-    "Βουλιαγμένη",
-    "Διόνυσος",
-    "Κορωπί",
-    "Λαύριο",
-    "Κερατέα",
-    "Μαραθώνας",
-    "Νέα Μάκρη",
-    "Μαρκόπουλο",
-    "Παιανία",
-    "Παλλήνη",
-    "Γέρακας",
-    "Ραφήνα",
-    "Πικέρμι",
-    "Σαρωνικός",
-    "Καλύβια",
-    "Σπάτα",
-    "Αρτέμιδα",
-    "Ωρωπός",
-  ],
-};
-
-function normText(s) {
-  const raw = String(s || "");
-  // strip accents
-  const noAccents = raw.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-  return noAccents.toLowerCase();
-}
+// Area filtering uses the areas dictionary (municipality-level) via Property.area_id.
 
 function normalizeWeightsFromDict(criteriaOrder, weightsDict) {
   const w = criteriaOrder.map((k) => Number(weightsDict?.[k] ?? 0));
@@ -323,11 +207,22 @@ export default function RecommendationsPage() {
 
   // UI filters (client-side)
   const [filters, setFilters] = useState({
-    area: "",
+    area_id: "",
     type: "",
     price: [0, 5000],
     size: [0, 300],
   });
+
+  const [areas, setAreas] = useState([]);
+  const areaById = useMemo(() => {
+    const m = new Map();
+    for (const a of Array.isArray(areas) ? areas : []) {
+      const id = Number(a?.id);
+      if (!Number.isFinite(id)) continue;
+      m.set(id, a);
+    }
+    return m;
+  }, [areas]);
 
   const SAVED_KEY = "rentpro_saved_properties";
   const COMPARE_KEY = "rentpro_compare_properties";
@@ -366,6 +261,23 @@ export default function RecommendationsPage() {
       }
     }
     load();
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    let mounted = true;
+    async function loadAreas() {
+      try {
+        const res = await api.get("/areas/");
+        if (!mounted) return;
+        setAreas(Array.isArray(res.data) ? res.data : []);
+      } catch {
+        if (mounted) setAreas([]);
+      }
+    }
+    loadAreas();
     return () => {
       mounted = false;
     };
@@ -455,13 +367,10 @@ export default function RecommendationsPage() {
   }, [whatIfRanking, items]);
 
   const filteredRows = useMemo(() => {
-    const areaQ = String(filters.area || "").trim();
+    const areaId = Number(filters.area_id || 0);
     const typeQ = String(filters.type || "").trim().toUpperCase();
     const [pMin, pMax] = Array.isArray(filters.price) ? filters.price : [0, 5000];
     const [sMin, sMax] = Array.isArray(filters.size) ? filters.size : [0, 300];
-
-    const areaKey = AREA_OPTIONS.includes(areaQ) ? areaQ : null;
-    const areaTokens = areaKey ? AREA_TOKENS[areaKey] || [] : null;
 
     return rowsForDisplay.filter((r) => {
       const p = r.it?.property;
@@ -477,13 +386,7 @@ export default function RecommendationsPage() {
       if (Number.isFinite(size) && (size < sMin || size > sMax)) return false;
 
       // area
-      if (areaQ) {
-        const addrN = normText(p.address || "");
-        if (areaTokens && areaTokens.length) {
-          return areaTokens.some((t) => addrN.includes(normText(t)));
-        }
-        return addrN.includes(normText(areaQ));
-      }
+      if (areaId > 0) return Number(p.area_id) === areaId;
 
       return true;
     });
@@ -673,33 +576,32 @@ export default function RecommendationsPage() {
           </Stack>
           <Grid container spacing={2.5} alignItems="stretch">
             <Grid item xs={12} md={6}>
-              <Autocomplete
-                freeSolo
-                options={AREA_OPTIONS}
-                value={filters.area}
-                onChange={(_, v) => setFilters((f) => ({ ...f, area: v || "" }))}
-                onInputChange={(_, v) => setFilters((f) => ({ ...f, area: v || "" }))}
-                renderOption={(props, option) => (
-                  <li {...props}>
-                    <Typography variant="body2" sx={{ whiteSpace: "normal" }}>
-                      {option}
-                    </Typography>
-                  </li>
-                )}
-                slotProps={{
-                  paper: {
-                    sx: { maxWidth: 420 },
-                  },
-                }}
-                renderInput={(params) => (
-                  <TextField
-                    {...params}
-                    label="Περιοχή"
-                    placeholder="π.χ. Βόρεια Προάστεια ή Μαρούσι"
-                    helperText="Μπορείς να βάλεις macro-area (π.χ. Βόρεια Προάστεια) ή συγκεκριμένη περιοχή."
-                  />
-                )}
-              />
+              <FormControl fullWidth>
+                <InputLabel id="rec-area-label" shrink>
+                  Περιοχή
+                </InputLabel>
+                <Select
+                  labelId="rec-area-label"
+                  label="Περιοχή"
+                  value={filters.area_id}
+                  onChange={(e) =>
+                    setFilters((f) => ({ ...f, area_id: e.target.value }))
+                  }
+                  displayEmpty
+                  renderValue={(v) => {
+                    const id = Number(v || 0);
+                    if (!id) return "Όλες οι περιοχές";
+                    return areaById.get(id)?.name || `Area #${id}`;
+                  }}
+                >
+                  <MenuItem value="">Όλες οι περιοχές</MenuItem>
+                  {(Array.isArray(areas) ? areas : []).map((a) => (
+                    <MenuItem key={a.id} value={String(a.id)}>
+                      {a.name}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
             </Grid>
             <Grid item xs={12} md={6}>
               <FormControl fullWidth>
@@ -774,7 +676,7 @@ export default function RecommendationsPage() {
                   variant="outlined"
                   onClick={() =>
                     setFilters({
-                      area: "",
+                      area_id: "",
                       type: "",
                       price: [0, 5000],
                       size: [0, 300],

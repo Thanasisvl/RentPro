@@ -29,6 +29,7 @@ def test_get_property_syncs_overdue_contract_and_makes_property_available() -> N
             "title": "Sync Test Property",
             "description": "desc",
             "address": "addr",
+            "area_id": 11,  # ATHENS (seeded)
             "type": "APARTMENT",
             "size": 80.0,
             "price": 900.0,

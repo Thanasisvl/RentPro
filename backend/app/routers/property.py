@@ -2,12 +2,13 @@ from datetime import date
 from typing import List
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 
 from app.core.status_sync import sync_overdue_contracts_global, sync_property_status
 from app.core.utils import get_current_user, is_admin
 from app.crud import property as crud_property
 from app.db.session import get_db
+from app.models.area import Area
 from app.models.contract import Contract, ContractStatus
 from app.models.property import Property, PropertyStatus
 from app.models.role import UserRole
@@ -28,6 +29,18 @@ def create_property(
     request: Request, property: PropertyCreate, db: Session = Depends(get_db)
 ):
     user = get_current_user(request, db)
+
+    exists = (
+        db.query(Area.id)
+        .filter(Area.id == property.area_id, Area.is_active)  # noqa: E712
+        .first()
+        is not None
+    )
+    if not exists:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Invalid area_id",
+        )
 
     # OWNER: creates only for self
     if user.role == UserRole.OWNER:
@@ -86,7 +99,7 @@ def list_properties(
     user = get_current_user(request, db)
 
     if user.role == UserRole.ADMIN:
-        q = db.query(Property)
+        q = db.query(Property).options(joinedload(Property.area))
         if owner_id is not None:
             q = q.filter(Property.owner_id == owner_id)
         items = q.order_by(Property.id.desc()).offset(skip).limit(limit).all()
@@ -99,6 +112,7 @@ def list_properties(
             raise HTTPException(status_code=403, detail="owner_id filter is admin-only")
         items = (
             db.query(Property)
+            .options(joinedload(Property.area))
             .filter(Property.owner_id == user.id)
             .offset(skip)
             .limit(limit)
@@ -188,6 +202,19 @@ def update_property(
         raise HTTPException(
             status_code=403, detail="Not authorized to update this property"
         )
+
+    if property.area_id is not None:
+        exists = (
+            db.query(Area.id)
+            .filter(Area.id == property.area_id, Area.is_active)  # noqa: E712
+            .first()
+            is not None
+        )
+        if not exists:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail="Invalid area_id",
+            )
     db_property = crud_property.update_property(db, property_id, property)
     return db_property
 

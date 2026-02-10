@@ -31,8 +31,20 @@ function TenantList() {
       const params = {};
       if (isAdmin && ownerId) params.owner_id = Number(ownerId);
 
-      const res = await api.get("/tenants", { params });
-      setTenants(res.data || []);
+      const res = await api.get("/tenants/", { params });
+      const raw = res.data;
+      const arr = Array.isArray(raw)
+        ? raw
+        : Array.isArray(raw?.items)
+          ? raw.items
+          : [];
+      setTenants(arr);
+
+      // If response shape is unexpected, surface a helpful message.
+      if (!Array.isArray(raw) && !Array.isArray(raw?.items)) {
+        console.warn("Unexpected /tenants response shape", raw);
+        setError("Αποτυχία φόρτωσης ενοικιαστών (μη αναμενόμενη απόκριση).");
+      }
     } catch (err) {
       console.error("Failed to load tenants", err);
       if (err.response && err.response.status === 401) {

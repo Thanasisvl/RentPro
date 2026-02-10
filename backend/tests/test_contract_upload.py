@@ -47,6 +47,7 @@ def test_upload_contract_pdf():
             "title": "Initial Property",
             "description": "Initial property",
             "address": "1 Owner St",
+            "area_id": 11,  # ATHENS (seeded)
             "type": "APARTMENT",
             "size": 50.0,
             "price": 1000.0,
@@ -103,6 +104,7 @@ def test_contract_pdf_upload_edge_cases():
             "title": "Initial Property",
             "description": "Initial property",
             "address": "1 Owner St",
+            "area_id": 11,  # ATHENS (seeded)
             "type": "APARTMENT",
             "size": 50.0,
             "price": 1000.0,
@@ -169,6 +171,7 @@ def test_get_contract_pdf_404_when_missing():
             "title": "Initial Property",
             "description": "Initial property",
             "address": "1 Owner St",
+            "area_id": 11,  # ATHENS (seeded)
             "type": "APARTMENT",
             "size": 50.0,
             "price": 1000.0,
@@ -208,6 +211,7 @@ def test_get_contract_pdf_forbidden_for_other_owner():
             "title": "Initial Property",
             "description": "Initial property",
             "address": "1 Owner St",
+            "area_id": 11,  # ATHENS (seeded)
             "type": "APARTMENT",
             "size": 50.0,
             "price": 1000.0,

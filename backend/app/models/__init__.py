@@ -1,3 +1,4 @@
+from .area import Area as Area
 from .contract import Contract as Contract
 from .criterion import Criterion as Criterion
 from .pairwise_comparison import PairwiseComparison as PairwiseComparison
@@ -11,6 +12,7 @@ from .user import User as User
 
 __all__ = [
     "User",
+    "Area",
     "Property",
     "Tenant",
     "Contract",

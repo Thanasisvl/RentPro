@@ -1,6 +1,7 @@
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from app.core.recommendation_config import PROPERTY_TYPE_ALLOWED
+from app.schemas.area import AreaOut
 from app.models.property import PropertyStatus
 
 
@@ -12,6 +13,9 @@ class PropertyBase(BaseModel):
     size: float = Field(..., gt=0)
     price: float = Field(..., gt=0)
     status: PropertyStatus = PropertyStatus.AVAILABLE
+    area_id: int = Field(
+        ..., gt=0, description="Selected area id from the areas dictionary"
+    )
 
     @field_validator("title", "address", "type", mode="before")
     @classmethod
@@ -42,6 +46,7 @@ class PropertyUpdate(BaseModel):
     size: float | None = Field(default=None, gt=0)
     price: float | None = Field(default=None, gt=0)
     status: PropertyStatus | None = None
+    area_id: int | None = Field(default=None, gt=0)
 
     @field_validator("title", "address", "type", mode="before")
     @classmethod
@@ -59,6 +64,7 @@ class PropertyUpdate(BaseModel):
 class PropertyOut(PropertyBase):
     id: int
     owner_id: int
+    area: AreaOut | None = None
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -69,13 +75,15 @@ class PropertySearchFilters(BaseModel):
     We intentionally exclude owner_id and free-text search.
     """
 
-    area: str | None = Field(
+    address: str | None = Field(
         default=None,
         min_length=1,
-        description=(
-            "Area filter. Supports substring match against address, and also macro areas like "
-            "'Βόρεια Προάστεια', 'Κέντρο Αθήνας', 'Νότια Προάστεια', 'Πειραιάς', 'Δυτικά Προάστεια'."
-        ),
+        description="Substring match against Property.address (free text).",
+    )
+    area_id: int | None = Field(
+        default=None,
+        gt=0,
+        description="Area dictionary filter (exact match on properties.area_id)",
     )
     type: str | None = Field(default=None, min_length=1)
 
@@ -87,7 +95,7 @@ class PropertySearchFilters(BaseModel):
     offset: int = Field(default=0, ge=0)
     limit: int = Field(default=20, ge=1, le=100)
 
-    @field_validator("area", "type", mode="before")
+    @field_validator("address", "type", mode="before")
     @classmethod
     def strip_and_normalize(cls, v, info):
         if v is None:
