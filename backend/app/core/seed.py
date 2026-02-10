@@ -606,7 +606,9 @@ def seed_e2e_fixtures(db: Session, *, password: str = "rentpro-e2e") -> None:
     )
     prop = (
         db.query(Property)
-        .filter(Property.owner_id == owner1.id, Property.title == "E2E Seed Property 02")
+        .filter(
+            Property.owner_id == owner1.id, Property.title == "E2E Seed Property 02"
+        )
         .first()
     )
     if tenant is not None and prop is not None:
