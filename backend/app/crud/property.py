@@ -61,8 +61,6 @@ _AREA_GROUPS: dict[str, dict[str, object]] = {
     },
     "center": {
         "aliases": {
-            "center",
-            "city center",
             "κεντρο",
             "κεντρο αθηνας",
             "αθηνα κεντρο",

@@ -10,7 +10,7 @@ def create_tenant(
     tenant: TenantCreate,
     owner_id: int,
     *,
-    created_by_id: int | None = None
+    created_by_id: int | None = None,
 ) -> Tenant:
     exists = (
         db.query(Tenant)
@@ -52,7 +52,7 @@ def update_tenant(
     tenant_id: int,
     tenant: TenantUpdate,
     *,
-    updated_by_id: int | None = None
+    updated_by_id: int | None = None,
 ):
     db_tenant = db.query(Tenant).filter(Tenant.id == tenant_id).first()
     if not db_tenant:

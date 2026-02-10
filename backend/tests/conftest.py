@@ -1,19 +1,23 @@
 import os
 import sys
 
-# IMPORTANT: set test env BEFORE app/db/session.py is imported anywhere.
-# This prevents the SQLAlchemy engine from being created against the dev DB.
-os.environ.setdefault("RENTPRO_DATABASE_URL", "sqlite:///./test_test.db")
-os.environ.setdefault("ACCESS_TOKEN_EXPIRE_MINUTES", "60")
-
 from dotenv import load_dotenv
 
+# IMPORTANT: set test env BEFORE app/db/session.py is imported anywhere.
+# This prevents the SQLAlchemy engine from being created against the dev DB.
+os.environ["RENTPRO_DATABASE_URL"] = "sqlite:///./test_test.db"
+os.environ.setdefault("ACCESS_TOKEN_EXPIRE_MINUTES", "60")
+
+# Ensure uploads write to a local, writable directory during tests.
+# This prevents accidental use of Docker paths like /data/uploads coming from .env.
+_BACKEND_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+os.environ["RENTPRO_UPLOAD_DIR"] = os.path.join(_BACKEND_DIR, ".test_uploads")
+
 # Optional: load .env without overriding the test defaults above
-load_dotenv()
+load_dotenv(override=False)
 
 
 # Ensure "backend/" is on sys.path so "import app.*" works during pytest collection.
-_BACKEND_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 if _BACKEND_DIR not in sys.path:
     sys.path.insert(0, _BACKEND_DIR)
 

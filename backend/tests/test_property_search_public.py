@@ -129,7 +129,9 @@ def test_public_search_macro_area_group_north_suburbs(owner_headers):
         type="APARTMENT",
     )
 
-    resp = client.get("/properties/search?area=%CE%92%CF%8C%CF%81%CE%B5%CE%B9%CE%B1%20%CE%A0%CF%81%CE%BF%CE%AC%CF%83%CF%84%CE%B5%CE%B9%CE%B1")
+    resp = client.get(
+        "/properties/search?area=%CE%92%CF%8C%CF%81%CE%B5%CE%B9%CE%B1%20%CE%A0%CF%81%CE%BF%CE%AC%CF%83%CF%84%CE%B5%CE%B9%CE%B1"
+    )
     assert resp.status_code == 200
     data = resp.json()
     ids = [x["id"] for x in data["items"]]

@@ -52,6 +52,7 @@ htmlcov/
 .coverage.*
 .pytest_cache/
 backend/.coverage
+.test_uploads/
 
 .idea/
 
