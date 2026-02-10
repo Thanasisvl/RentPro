@@ -74,7 +74,9 @@ test("@p1 OWNER: create/edit property + create contract from property", async ({
     return route.fulfill({ status: 405, body: "Method not allowed" });
   });
 
-  await page.route("**/tenants", async (route) => {
+  // ContractForm/TenantList now call `/tenants/` (with trailing slash).
+  // Match both `/tenants` and `/tenants/` to keep the test robust.
+  await page.route("**/tenants**", async (route) => {
     return route.fulfill({
       status: 200,
       contentType: "application/json",
