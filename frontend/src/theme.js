@@ -34,9 +34,47 @@ export const theme = createTheme({
   typography: {
     fontFamily:
       "Aptos, system-ui, -apple-system, 'Segoe UI', Roboto, Arial, sans-serif",
-    h4: { fontSize: "28px", fontWeight: 700, lineHeight: 1.2 },
-    h5: { fontSize: "22px", fontWeight: 700, lineHeight: 1.25 },
-    h6: { fontSize: "18px", fontWeight: 700, lineHeight: 1.3 },
+    h1: {
+      fontFamily: "'Plus Jakarta Sans', sans-serif",
+      fontWeight: 700,
+      lineHeight: 1.2,
+    },
+    h2: {
+      fontFamily: "'Plus Jakarta Sans', sans-serif",
+      fontWeight: 700,
+      lineHeight: 1.2,
+    },
+    h3: {
+      fontFamily: "'Plus Jakarta Sans', sans-serif",
+      fontWeight: 700,
+      lineHeight: 1.25,
+    },
+    h4: {
+      fontFamily: "'Plus Jakarta Sans', sans-serif",
+      fontSize: "28px",
+      fontWeight: 700,
+      lineHeight: 1.2,
+    },
+    h5: {
+      fontFamily: "'Plus Jakarta Sans', sans-serif",
+      fontSize: "22px",
+      fontWeight: 700,
+      lineHeight: 1.25,
+    },
+    h6: {
+      fontFamily: "'Plus Jakarta Sans', sans-serif",
+      fontSize: "18px",
+      fontWeight: 700,
+      lineHeight: 1.3,
+    },
+    subtitle1: {
+      fontFamily: "'Plus Jakarta Sans', sans-serif",
+      fontWeight: 600,
+    },
+    subtitle2: {
+      fontFamily: "'Plus Jakarta Sans', sans-serif",
+      fontWeight: 600,
+    },
     body1: { fontSize: "16px", lineHeight: 1.6 },
     body2: { fontSize: "14px", lineHeight: 1.6 },
     button: { textTransform: "none", fontWeight: 600 },

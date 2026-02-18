@@ -51,17 +51,17 @@ function OwnerDashboard() {
   return (
     <PageContainer>
       <PageHeader
-        title="Πίνακας (Ιδιοκτήτης)"
-        description="Γρήγορες ενέργειες διαχείρισης (UC‑02 / UC‑05)."
+        title="Ο πίνακας σου"
+        description="Διαχείριση ακινήτων, ενοικιαστών και συμβολαίων."
       />
 
       {stats.error ? (
-        <Alert severity="warning" sx={{ mb: 2 }}>
+        <Alert severity="warning" sx={{ mb: 2.5 }}>
           {stats.error}
         </Alert>
       ) : null}
 
-      <Grid container spacing={2} sx={{ mb: 2 }}>
+      <Grid container spacing={2.5} sx={{ mb: 3 }}>
         <Grid item xs={12} md={4}>
           <StatCard
             title="Ακίνητα"

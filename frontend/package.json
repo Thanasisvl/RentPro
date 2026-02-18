@@ -21,6 +21,7 @@
   "scripts": {
     "start": "react-scripts start",
     "build": "react-scripts build",
+    "download-property-images": "node scripts/download-property-images.js",
     "test": "react-scripts test",
     "test:ci": "react-scripts test --watchAll=false",
     "test:e2e": "node scripts/pw.js test --grep-invert @p3",

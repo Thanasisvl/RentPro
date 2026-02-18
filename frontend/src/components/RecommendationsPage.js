@@ -516,7 +516,7 @@ export default function RecommendationsPage() {
     <PageContainer>
       <PageHeader
         title="Προτάσεις"
-        description="Κατάταξη (TOPSIS score) βάσει βαρών AHP."
+        description="Προτεινόμενα ακίνητα βάσει των προτιμήσεών σου."
       />
 
       <Paper sx={{ p: 3 }}>

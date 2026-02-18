@@ -74,7 +74,7 @@ function TenantList() {
     <PageContainer>
       <PageHeader
         title="Ενοικιαστές"
-        description="Καταχώριση και προβολή ενοικιαστών (UC‑05)."
+        description="Καταχώριση και προβολή ενοικιαστών."
         actions={
           <Button variant="contained" component={RouterLink} to="/tenants/new">
             Νέος Ενοικιαστής

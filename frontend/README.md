@@ -6,6 +6,8 @@ This project was bootstrapped with [Create React App](https://github.com/faceboo
 
 From `frontend/`:
 
+- **Property thumbnails:** The app shows house/building images from `public/img/properties/1.jpg` … `10.jpg`. If that folder is empty (e.g. fresh clone), run once with network: `npm run download-property-images` (downloads house-related photos from Lorem Flickr). Then restart or refresh the app.
+
 - Run component/integration tests once (CI-style):
 
 ```bash

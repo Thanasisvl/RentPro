@@ -360,7 +360,7 @@ export default function PreferencesPage() {
     <PageContainer>
       <PageHeader
         title="Προτιμήσεις"
-        description="Ορισμός προτιμήσεων (AHP) πριν την παραγωγή προτάσεων (TOPSIS)."
+        description="Ορισμός προτιμήσεων για τις προτάσεις ακινήτων."
       />
 
       <Paper sx={{ p: 3 }}>

@@ -46,7 +46,7 @@ function PropertyDetails() {
     <PageContainer>
       <PageHeader
         title="Λεπτομέρειες Ακινήτου"
-        description="Προβολή ακινήτου (UC‑02/UC‑03)."
+        description="Προβολή και διαχείριση ακινήτου."
         actions={
           <Button variant="outlined" onClick={() => navigate("/properties")}>
             Πίσω

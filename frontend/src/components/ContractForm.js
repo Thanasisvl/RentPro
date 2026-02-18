@@ -238,7 +238,7 @@ function ContractForm() {
     <PageContainer>
       <PageHeader
         title="Νέο Συμβόλαιο"
-        description="Δημιουργία νέας μίσθωσης για συγκεκριμένο ακίνητο (UC‑05)."
+        description="Δημιουργία νέου συμβολαίου μίσθωσης."
       />
 
       <Paper sx={{ p: 3, maxWidth: 760, mx: "auto" }}>

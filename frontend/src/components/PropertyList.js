@@ -121,7 +121,7 @@ function PropertyList() {
     <PageContainer>
       <PageHeader
         title="Ιδιοκτησίες"
-        description="Διαχείριση καταχωρημένων ακινήτων (UC‑02)."
+        description="Διαχείριση καταχωρημένων ακινήτων."
         actions={
           <Stack direction="row" spacing={1}>
             <Button variant="outlined" component={RouterLink} to="/app/owner">

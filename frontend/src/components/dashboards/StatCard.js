@@ -3,7 +3,15 @@ import { Card, CardContent, Skeleton, Stack, Typography } from "@mui/material";
 
 function StatCard({ title, value, subtitle, loading = false, actions = null }) {
   return (
-    <Card variant="outlined">
+    <Card
+      variant="outlined"
+      sx={{
+        boxShadow: "0 4px 20px rgba(0,0,0,0.08)",
+        borderRadius: 12,
+        border: "1px solid",
+        borderColor: "divider",
+      }}
+    >
       <CardContent>
         <Typography variant="overline" color="text.secondary">
           {title}

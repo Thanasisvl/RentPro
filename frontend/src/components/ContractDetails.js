@@ -101,7 +101,7 @@ function ContractDetails() {
     <PageContainer>
       <PageHeader
         title={`Συμβόλαιο #${id}`}
-        description="Λεπτομέρειες μίσθωσης (UC‑05)."
+        description="Λεπτομέρειες συμβολαίου μίσθωσης."
         actions={
           <Stack direction="row" spacing={1}>
             <Button variant="outlined" onClick={() => navigate("/contracts")}>

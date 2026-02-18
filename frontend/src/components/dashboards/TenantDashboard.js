@@ -74,20 +74,28 @@ function TenantDashboard() {
     };
   }, [readIds]);
 
+  const cardPaperSx = {
+    p: 2.5,
+    borderRadius: 12,
+    boxShadow: "0 4px 20px rgba(0,0,0,0.08)",
+    border: "1px solid",
+    borderColor: "divider",
+  };
+
   return (
     <PageContainer>
       <PageHeader
-        title="Πίνακας (Ενοικιαστής)"
-        description="Γρήγορες ενέργειες για αναζήτηση και προτάσεις (UC‑03 / UC‑04)."
+        title="Ο πίνακας σου"
+        description="Γρήγορες ενέργειες για αναζήτηση και προτάσεις ακινήτων."
       />
 
       {stats.error ? (
-        <Alert severity="warning" sx={{ mb: 2 }}>
+        <Alert severity="warning" sx={{ mb: 2.5 }}>
           {stats.error}
         </Alert>
       ) : null}
 
-      <Grid container spacing={2} sx={{ mb: 2 }}>
+      <Grid container spacing={2.5} sx={{ mb: 3 }}>
         <Grid item xs={12} md={4}>
           <StatCard
             title="Αποθηκευμένα"
@@ -136,9 +144,9 @@ function TenantDashboard() {
         </Grid>
       </Grid>
 
-      <Paper sx={{ p: 2 }}>
+      <Paper elevation={0} sx={cardPaperSx}>
         <Typography variant="body2" color="text.secondary">
-          Tip: Αν δεν βγαίνουν προτάσεις, ξεκίνα από τις Προτιμήσεις (AHP) και έλεγξε τη συνέπεια (CR).
+          Tip: Αν δεν βγαίνουν προτάσεις, ξεκίνα από τις Προτιμήσεις και έλεγξε τη συνέπεια.
         </Typography>
       </Paper>
     </PageContainer>

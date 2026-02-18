@@ -54,20 +54,28 @@ function AdminDashboard() {
     };
   }, []);
 
+  const cardPaperSx = {
+    p: 2.5,
+    borderRadius: 12,
+    boxShadow: "0 4px 20px rgba(0,0,0,0.08)",
+    border: "1px solid",
+    borderColor: "divider",
+  };
+
   return (
     <PageContainer>
       <PageHeader
-        title="Πίνακας (Διαχειριστής)"
-        description="Εποπτεία / διαχείριση (FR‑20 / FR‑21) — θα ολοκληρωθεί σε επόμενο βήμα."
+        title="Ο πίνακας σου"
+        description="Εποπτεία και διαχείριση χρηστών, ακινήτων και περιοχών."
       />
 
       {stats.error ? (
-        <Alert severity="warning" sx={{ mb: 2 }}>
+        <Alert severity="warning" sx={{ mb: 2.5 }}>
           {stats.error}
         </Alert>
       ) : null}
 
-      <Grid container spacing={2} sx={{ mb: 2 }}>
+      <Grid container spacing={2.5} sx={{ mb: 3 }}>
         <Grid item xs={12} sm={6} md={3}>
           <StatCard
             title="Χρήστες (όλοι)"
@@ -135,10 +143,9 @@ function AdminDashboard() {
         </Grid>
       </Grid>
 
-      <Paper sx={{ p: 2 }}>
+      <Paper elevation={0} sx={cardPaperSx}>
         <Typography variant="body2" color="text.secondary">
-          Το πλήρες admin panel (FR‑20/FR‑21: monitoring/oversight) θα προστεθεί αργότερα. Προς το
-          παρόν, χρησιμοποίησε τις ενότητες διαχείρισης παραπάνω.
+          Χρησιμοποίησε τις ενότητες παραπάνω για διαχείριση χρηστών, ακινήτων και περιοχών.
         </Typography>
       </Paper>
     </PageContainer>

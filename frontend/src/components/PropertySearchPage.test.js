@@ -118,8 +118,8 @@ test("P0: clicking a search result navigates to public property details", async 
 
   await userEvent.click(screen.getByRole("link", { name: "Προβολή" }));
 
-  // Details page header + title
-  expect(await screen.findByText("Λεπτομέρειες Ακινήτου")).toBeInTheDocument();
+  // Details page: title and CTA
   expect(await screen.findByText("Test Apartment")).toBeInTheDocument();
+  expect(await screen.findByRole("link", { name: "Επικοινώνησε" })).toBeInTheDocument();
 });
 

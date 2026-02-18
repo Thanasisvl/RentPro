@@ -1,10 +1,12 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import {
   AlertTitle,
   Box,
   Button,
   Card,
   CardContent,
+  Collapse,
   Grid,
   Paper,
   Slider,
@@ -14,6 +16,7 @@ import {
   Typography,
   CircularProgress,
   FormControl,
+  InputAdornment,
   InputLabel,
   Select,
   MenuItem,
@@ -21,14 +24,15 @@ import {
   Alert,
   Chip,
   Stack,
-  Divider,
 } from "@mui/material";
+import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
+import ExpandLessIcon from "@mui/icons-material/ExpandLess";
 import SearchOffOutlinedIcon from "@mui/icons-material/SearchOffOutlined";
 import ErrorOutlineOutlinedIcon from "@mui/icons-material/ErrorOutlineOutlined";
 import PropertyCard from "./PropertyCard";
 import PageContainer from "./layout/PageContainer";
 import PageHeader from "./layout/PageHeader";
-
+import SiteFooter from "./layout/SiteFooter";
 import { API_BASE_URL } from "../config";
 
 const PROPERTY_TYPE_LABELS = {
@@ -63,6 +67,27 @@ const SORT_OPTIONS = [
 ];
 
 // Areas are loaded from backend (/areas) and selected via area_id.
+
+function parseSearchParamsFromUrl(searchParams) {
+  const area_id = searchParams.get("area_id")?.trim() || "";
+  const address = searchParams.get("address")?.trim() || "";
+  const type = searchParams.get("type")?.trim() || "";
+  const minPrice = parseFloat(searchParams.get("min_price"));
+  const maxPrice = parseFloat(searchParams.get("max_price"));
+  const minSize = parseFloat(searchParams.get("min_size"));
+  const maxSize = parseFloat(searchParams.get("max_size"));
+  return {
+    filters: { area_id, address, type },
+    priceRange: [
+      Number.isFinite(minPrice) && minPrice >= 0 ? minPrice : PRICE_MIN,
+      Number.isFinite(maxPrice) && maxPrice > 0 ? Math.min(maxPrice, PRICE_MAX) : PRICE_MAX,
+    ],
+    sizeRange: [
+      Number.isFinite(minSize) && minSize >= 0 ? minSize : SIZE_MIN,
+      Number.isFinite(maxSize) && maxSize > 0 ? Math.min(maxSize, SIZE_MAX) : SIZE_MAX,
+    ],
+  };
+}
 
 function formatEur(n) {
   const v = Number(n);
@@ -105,8 +130,8 @@ function applySort(items, sort) {
 
 function PropertyCardSkeleton() {
   return (
-    <Card variant="outlined" sx={{ overflow: "hidden" }}>
-      <Skeleton variant="rectangular" height={140} />
+    <Card variant="outlined" sx={{ overflow: "hidden", width: "100%" }}>
+      <Skeleton variant="rectangular" height={180} />
       <CardContent>
         <Skeleton width="70%" />
         <Skeleton width="45%" />
@@ -213,6 +238,12 @@ function parse422(detail) {
 }
 
 function PropertySearchPage() {
+  const [searchParams] = useSearchParams();
+  const initialFromUrl = useMemo(
+    () => parseSearchParamsFromUrl(searchParams),
+    [searchParams]
+  );
+
   const abortRef = useRef(null);
   const firstRenderRef = useRef(true);
   const suppressAutoSearchRef = useRef(false);
@@ -236,11 +267,7 @@ function PropertySearchPage() {
   const [savedIds, setSavedIds] = useState(() => readIds(SAVED_KEY));
   const [compareIds, setCompareIds] = useState(() => readIds(COMPARE_KEY));
 
-  const [filters, setFilters] = useState({
-    area_id: "",
-    address: "",
-    type: "",
-  });
+  const [filters, setFilters] = useState(initialFromUrl.filters);
 
   const [areas, setAreas] = useState([]);
   const areaById = useMemo(() => {
@@ -267,8 +294,8 @@ function PropertySearchPage() {
     };
   }, []);
 
-  const [priceRange, setPriceRange] = useState([PRICE_MIN, PRICE_MAX]);
-  const [sizeRange, setSizeRange] = useState([SIZE_MIN, SIZE_MAX]);
+  const [priceRange, setPriceRange] = useState(initialFromUrl.priceRange);
+  const [sizeRange, setSizeRange] = useState(initialFromUrl.sizeRange);
   const [sort, setSort] = useState("");
 
   const [offset, setOffset] = useState(0);
@@ -492,6 +519,47 @@ function PropertySearchPage() {
     await runSearch({ nextOffset: 0, nextLimit: limit }, { sizeRange: next });
   };
 
+  const handlePriceFromChange = (e) => {
+    const raw = e.target.value;
+    if (raw === "") {
+      setPriceRange((prev) => clampRange([PRICE_MIN, prev[1]], PRICE_MIN, PRICE_MAX));
+      return;
+    }
+    const n = parseFloat(raw);
+    if (!Number.isFinite(n)) return;
+    setPriceRange((prev) => clampRange([n, prev[1]], PRICE_MIN, PRICE_MAX));
+  };
+  const handlePriceToChange = (e) => {
+    const raw = e.target.value;
+    if (raw === "") {
+      setPriceRange((prev) => clampRange([prev[0], PRICE_MAX], PRICE_MIN, PRICE_MAX));
+      return;
+    }
+    const n = parseFloat(raw);
+    if (!Number.isFinite(n)) return;
+    setPriceRange((prev) => clampRange([prev[0], n], PRICE_MIN, PRICE_MAX));
+  };
+  const handleSizeFromChange = (e) => {
+    const raw = e.target.value;
+    if (raw === "") {
+      setSizeRange((prev) => clampRange([SIZE_MIN, prev[1]], SIZE_MIN, SIZE_MAX));
+      return;
+    }
+    const n = parseFloat(raw);
+    if (!Number.isFinite(n)) return;
+    setSizeRange((prev) => clampRange([n, prev[1]], SIZE_MIN, SIZE_MAX));
+  };
+  const handleSizeToChange = (e) => {
+    const raw = e.target.value;
+    if (raw === "") {
+      setSizeRange((prev) => clampRange([prev[0], SIZE_MAX], SIZE_MIN, SIZE_MAX));
+      return;
+    }
+    const n = parseFloat(raw);
+    if (!Number.isFinite(n)) return;
+    setSizeRange((prev) => clampRange([prev[0], n], SIZE_MIN, SIZE_MAX));
+  };
+
   const goToPageNow = async (raw) => {
     if (!pageCount) return;
     const n = Number(raw);
@@ -536,20 +604,28 @@ function PropertySearchPage() {
     });
   };
 
+  const [showMoreFilters, setShowMoreFilters] = useState(false);
+  const breadcrumbAreaName = filters.area_id ? areaById.get(String(filters.area_id))?.name : null;
+
   return (
+    <>
     <PageContainer>
+      {/* Breadcrumb / page context */}
+      <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
+        Ακίνητα προς ενοικίαση
+        {breadcrumbAreaName ? ` · ${breadcrumbAreaName}` : ""}
+      </Typography>
       <PageHeader
-        title="Αναζήτηση Ακινήτου"
-        description="Δημόσια αναζήτηση διαθέσιμων ακινήτων με φίλτρα (UC‑03)."
+        title="Αναζήτηση ακινήτων"
+        description="Διέλεξε περιοχή, τιμή και τύπο για να δεις διαθέσιμα ακίνητα."
       />
 
-      <Paper sx={{ p: { xs: 2, md: 3 }, mb: 3 }}>
-        <Grid container spacing={2.5} alignItems="stretch">
-          <Grid item xs={12} md={3}>
-            <FormControl fullWidth error={!!fieldErrors.area_id}>
-              <InputLabel id="area-label" shrink>
-                Περιοχή
-              </InputLabel>
+      {/* Compact filter bar */}
+      <Paper variant="outlined" sx={{ p: 2.5, mb: 2, borderRadius: 2 }}>
+        <Grid container spacing={2.5} alignItems="center">
+          <Grid item xs={12} sm={6} md={2}>
+            <FormControl size="small" fullWidth error={!!fieldErrors.area_id}>
+              <InputLabel id="area-label" shrink>Περιοχή</InputLabel>
               <Select
                 labelId="area-label"
                 label="Περιοχή"
@@ -558,42 +634,34 @@ function PropertySearchPage() {
                 displayEmpty
                 renderValue={(v) => {
                   const id = String(v ?? "");
-                  if (!id) return "Όλες οι περιοχές";
-                  const a = areaById.get(id);
-                  return a?.name || id;
+                  if (!id) return "Όλες";
+                  return areaById.get(id)?.name || id;
                 }}
               >
                 <MenuItem value="">Όλες οι περιοχές</MenuItem>
                 {areas.map((a) => (
-                  <MenuItem key={a.id} value={String(a.id)}>
-                    {a.name}
-                  </MenuItem>
+                  <MenuItem key={a.id} value={String(a.id)}>{a.name}</MenuItem>
                 ))}
               </Select>
-              {fieldErrors.area_id ? (
-                <Typography variant="caption" color="error">
-                  {fieldErrors.area_id}
-                </Typography>
-              ) : null}
+              {fieldErrors.area_id && (
+                <Typography variant="caption" color="error">{fieldErrors.area_id}</Typography>
+              )}
             </FormControl>
           </Grid>
-
-          <Grid item xs={12} md={3}>
+          <Grid item xs={12} sm={6} md={2}>
             <TextField
+              size="small"
               label="Διεύθυνση"
+              placeholder="π.χ. Μαρούσι"
               value={filters.address}
               onChange={(e) => setFilters((f) => ({ ...f, address: e.target.value }))}
               fullWidth
               error={!!fieldErrors.address}
-              helperText={fieldErrors.address || "Substring match στη διεύθυνση (π.χ. Μαρούσι, Πατησίων)."}
             />
           </Grid>
-
-          <Grid item xs={12} sm={6} md={3}>
-            <FormControl fullWidth error={!!fieldErrors.type}>
-              <InputLabel id="type-label" shrink>
-                Τύπος
-              </InputLabel>
+          <Grid item xs={6} sm={4} md={2}>
+            <FormControl size="small" fullWidth error={!!fieldErrors.type}>
+              <InputLabel id="type-label" shrink>Τύπος</InputLabel>
               <Select
                 labelId="type-label"
                 label="Τύπος"
@@ -601,29 +669,18 @@ function PropertySearchPage() {
                 onChange={(e) => setFilters((f) => ({ ...f, type: e.target.value }))}
                 displayEmpty
                 renderValue={(v) =>
-                  PROPERTY_TYPE_OPTIONS.find((o) => o.value === String(v ?? ""))?.label ||
-                  "Όλοι οι τύποι"
+                  PROPERTY_TYPE_OPTIONS.find((o) => o.value === String(v ?? ""))?.label || "Όλοι"
                 }
               >
                 {PROPERTY_TYPE_OPTIONS.map((o) => (
-                  <MenuItem key={o.value || "<all>"} value={o.value}>
-                    {o.label}
-                  </MenuItem>
+                  <MenuItem key={o.value || "<all>"} value={o.value}>{o.label}</MenuItem>
                 ))}
               </Select>
-              {fieldErrors.type ? (
-                <Typography variant="caption" color="error">
-                  {fieldErrors.type}
-                </Typography>
-              ) : null}
             </FormControl>
           </Grid>
-
-          <Grid item xs={12} sm={6} md={3}>
-            <FormControl fullWidth>
-              <InputLabel id="sort-label" shrink>
-                Ταξινόμηση
-              </InputLabel>
+          <Grid item xs={6} sm={4} md={2}>
+            <FormControl size="small" fullWidth>
+              <InputLabel id="sort-label" shrink>Ταξινόμηση</InputLabel>
               <Select
                 labelId="sort-label"
                 label="Ταξινόμηση"
@@ -631,27 +688,21 @@ function PropertySearchPage() {
                 onChange={(e) => setSort(e.target.value)}
                 displayEmpty
                 renderValue={(v) =>
-                  SORT_OPTIONS.find((o) => o.value === String(v ?? ""))?.label ||
-                  SORT_OPTIONS[0].label
+                  SORT_OPTIONS.find((o) => o.value === String(v ?? ""))?.label || SORT_OPTIONS[0].label
                 }
               >
                 {SORT_OPTIONS.map((o) => (
-                  <MenuItem key={o.value || "<default>"} value={o.value}>
-                    {o.label}
-                  </MenuItem>
+                  <MenuItem key={o.value || "<default>"} value={o.value}>{o.label}</MenuItem>
                 ))}
               </Select>
             </FormControl>
           </Grid>
-
-          <Grid item xs={12} sm={6} md={2}>
-            <FormControl fullWidth error={!!fieldErrors.limit}>
-              <InputLabel id="limit-label" shrink>
-                Ανά σελίδα
-              </InputLabel>
+          <Grid item xs={6} sm={4} md={1}>
+            <FormControl size="small" fullWidth error={!!fieldErrors.limit}>
+              <InputLabel id="limit-label" shrink>Ανά σελ.</InputLabel>
               <Select
                 labelId="limit-label"
-                label="Ανά σελίδα"
+                label="Ανά σελ."
                 value={limit}
                 onChange={(e) => handleLimitChange(Number(e.target.value))}
                 renderValue={(v) => String(v)}
@@ -660,26 +711,16 @@ function PropertySearchPage() {
                 <MenuItem value={20}>20</MenuItem>
                 <MenuItem value={50}>50</MenuItem>
               </Select>
-              {fieldErrors.limit ? (
-                <Typography variant="caption" color="error">
-                  {fieldErrors.limit}
-                </Typography>
-              ) : null}
             </FormControl>
           </Grid>
-
-          <Grid item xs={12}>
-            <Stack
-              direction={{ xs: "column", sm: "row" }}
-              spacing={1}
-              justifyContent="flex-end"
-              alignItems={{ xs: "stretch", sm: "center" }}
-            >
-              <Button variant="outlined" onClick={resetAll} disabled={loading}>
-                Επαναφορά φίλτρων
+          <Grid item xs={6} sm={4} md={3}>
+            <Stack direction="row" spacing={1} justifyContent={{ xs: "flex-end", md: "flex-start" }}>
+              <Button variant="outlined" size="medium" onClick={resetAll} disabled={loading}>
+                Επαναφορά
               </Button>
               <Button
                 variant="contained"
+                size="medium"
                 onClick={() => runSearch({ nextOffset: 0, nextLimit: limit })}
                 disabled={loading}
               >
@@ -687,82 +728,158 @@ function PropertySearchPage() {
               </Button>
             </Stack>
           </Grid>
-
-          <Grid item xs={12} md={6}>
-            <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-              Τιμή / μήνα
-            </Typography>
-            <Slider
-              value={priceRange}
-              min={PRICE_MIN}
-              max={PRICE_MAX}
-              step={PRICE_STEP}
-              onChange={(_, v) => setPriceRange(clampRange(v, PRICE_MIN, PRICE_MAX))}
-              onChangeCommitted={(_, v) => onPriceCommit(v)}
-              valueLabelDisplay="auto"
-              valueLabelFormat={(v) => formatEur(v)}
-              disableSwap
-            />
-            {(fieldErrors.min_price || fieldErrors.max_price) ? (
-              <Typography variant="caption" color="error">
-                {fieldErrors.min_price || fieldErrors.max_price}
-              </Typography>
-            ) : null}
-          </Grid>
-
-          <Grid item xs={12} md={6}>
-            <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-              Εμβαδόν (τ.μ.)
-            </Typography>
-            <Slider
-              value={sizeRange}
-              min={SIZE_MIN}
-              max={SIZE_MAX}
-              step={SIZE_STEP}
-              onChange={(_, v) => setSizeRange(clampRange(v, SIZE_MIN, SIZE_MAX))}
-              onChangeCommitted={(_, v) => onSizeCommit(v)}
-              valueLabelDisplay="auto"
-              valueLabelFormat={(v) => `${v} τ.μ.`}
-              disableSwap
-            />
-            {(fieldErrors.min_size || fieldErrors.max_size) ? (
-              <Typography variant="caption" color="error">
-                {fieldErrors.min_size || fieldErrors.max_size}
-              </Typography>
-            ) : null}
+          <Grid item xs={12}>
+            <Button
+              size="small"
+              startIcon={showMoreFilters ? <ExpandLessIcon /> : <ExpandMoreIcon />}
+              onClick={() => setShowMoreFilters((b) => !b)}
+              sx={{ textTransform: "none", color: "text.secondary" }}
+            >
+              {showMoreFilters ? "Λιγότερα φίλτρα" : "Περισσότερα φίλτρα (τιμή, εμβαδόν)"}
+            </Button>
           </Grid>
         </Grid>
+        <Collapse in={showMoreFilters}>
+          <Grid container spacing={4} sx={{ pt: 1, mt: 1, borderTop: 1, borderColor: "divider" }}>
+            <Grid item xs={12} md={6} sx={{ mb: { xs: 3, md: 0 }, minWidth: 0 }}>
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                Τιμή / μήνα
+              </Typography>
+              <Stack direction="row" spacing={1.5} alignItems="center" sx={{ mb: 1 }}>
+                <TextField
+                  size="small"
+                  label="Από"
+                  type="number"
+                  value={priceRange[0]}
+                  onChange={handlePriceFromChange}
+                  onBlur={() => onPriceCommit(priceRange)}
+                  onKeyDown={(e) => e.key === "Enter" && onPriceCommit(priceRange)}
+                  inputProps={{ min: PRICE_MIN, max: PRICE_MAX, step: PRICE_STEP }}
+                  InputProps={{
+                    endAdornment: <InputAdornment position="end">€</InputAdornment>,
+                  }}
+                  sx={{ width: 110 }}
+                />
+                <TextField
+                  size="small"
+                  label="Έως"
+                  type="number"
+                  value={priceRange[1]}
+                  onChange={handlePriceToChange}
+                  onBlur={() => onPriceCommit(priceRange)}
+                  onKeyDown={(e) => e.key === "Enter" && onPriceCommit(priceRange)}
+                  inputProps={{ min: PRICE_MIN, max: PRICE_MAX, step: PRICE_STEP }}
+                  InputProps={{
+                    endAdornment: <InputAdornment position="end">€</InputAdornment>,
+                  }}
+                  sx={{ width: 110 }}
+                />
+              </Stack>
+              <Box sx={{ width: "100%", px: 0 }}>
+                <Slider
+                  size="small"
+                  value={priceRange}
+                  min={PRICE_MIN}
+                  max={PRICE_MAX}
+                  step={PRICE_STEP}
+                  onChange={(_, v) => setPriceRange(clampRange(v, PRICE_MIN, PRICE_MAX))}
+                  onChangeCommitted={(_, v) => onPriceCommit(v)}
+                  valueLabelDisplay="auto"
+                  valueLabelFormat={(v) => formatEur(v)}
+                  disableSwap
+                  sx={{ width: "100%", mx: 0 }}
+                />
+              </Box>
+              {(fieldErrors.min_price || fieldErrors.max_price) && (
+                <Typography variant="caption" color="error" sx={{ display: "block", mt: 0.5 }}>
+                  {fieldErrors.min_price || fieldErrors.max_price}
+                </Typography>
+              )}
+            </Grid>
+            <Grid item xs={12} md={6} sx={{ minWidth: 0 }}>
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                Εμβαδόν (τ.μ.)
+              </Typography>
+              <Stack direction="row" spacing={1.5} alignItems="center" sx={{ mb: 1 }}>
+                <TextField
+                  size="small"
+                  label="Από"
+                  type="number"
+                  value={sizeRange[0]}
+                  onChange={handleSizeFromChange}
+                  onBlur={() => onSizeCommit(sizeRange)}
+                  onKeyDown={(e) => e.key === "Enter" && onSizeCommit(sizeRange)}
+                  inputProps={{ min: SIZE_MIN, max: SIZE_MAX, step: SIZE_STEP }}
+                  InputProps={{
+                    endAdornment: <InputAdornment position="end">τ.μ.</InputAdornment>,
+                  }}
+                  sx={{ width: 110 }}
+                />
+                <TextField
+                  size="small"
+                  label="Έως"
+                  type="number"
+                  value={sizeRange[1]}
+                  onChange={handleSizeToChange}
+                  onBlur={() => onSizeCommit(sizeRange)}
+                  onKeyDown={(e) => e.key === "Enter" && onSizeCommit(sizeRange)}
+                  inputProps={{ min: SIZE_MIN, max: SIZE_MAX, step: SIZE_STEP }}
+                  InputProps={{
+                    endAdornment: <InputAdornment position="end">τ.μ.</InputAdornment>,
+                  }}
+                  sx={{ width: 110 }}
+                />
+              </Stack>
+              <Box sx={{ width: "100%", px: 0 }}>
+                <Slider
+                  size="small"
+                  value={sizeRange}
+                  min={SIZE_MIN}
+                  max={SIZE_MAX}
+                  step={SIZE_STEP}
+                  onChange={(_, v) => setSizeRange(clampRange(v, SIZE_MIN, SIZE_MAX))}
+                  onChangeCommitted={(_, v) => onSizeCommit(v)}
+                  valueLabelDisplay="auto"
+                  valueLabelFormat={(v) => `${v} τ.μ.`}
+                  disableSwap
+                  sx={{ width: "100%", mx: 0 }}
+                />
+              </Box>
+              {(fieldErrors.min_size || fieldErrors.max_size) && (
+                <Typography variant="caption" color="error" sx={{ display: "block", mt: 0.5 }}>
+                  {fieldErrors.min_size || fieldErrors.max_size}
+                </Typography>
+              )}
+            </Grid>
+          </Grid>
+        </Collapse>
       </Paper>
 
       {activeChips.length > 0 && (
-        <Paper variant="outlined" sx={{ p: 2 }}>
-          <Stack
-            direction="row"
-            spacing={1}
-            useFlexGap
-            flexWrap="wrap"
-            alignItems="center"
-            divider={<Divider orientation="vertical" flexItem />}
-          >
-            <Typography variant="body2" color="text.secondary">
-              Ενεργά φίλτρα
-            </Typography>
-            <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap">
-              {activeChips.map((c) => (
-                <Chip
-                  key={c.key}
-                  label={c.label}
-                  onDelete={() => deleteChip(c.key)}
-                  variant="outlined"
-                />
-              ))}
-            </Stack>
-            <Box sx={{ flexGrow: 1 }} />
-            <Button size="small" variant="text" onClick={resetAll}>
-              Καθαρισμός
-            </Button>
-          </Stack>
-        </Paper>
+        <Stack
+          direction="row"
+          spacing={1}
+          useFlexGap
+          flexWrap="wrap"
+          alignItems="center"
+          sx={{ mb: 2 }}
+        >
+          <Typography variant="body2" color="text.secondary">
+            Ενεργά:
+          </Typography>
+          {activeChips.map((c) => (
+            <Chip
+              key={c.key}
+              label={c.label}
+              onDelete={() => deleteChip(c.key)}
+              variant="outlined"
+              size="small"
+            />
+          ))}
+          <Button size="small" variant="text" onClick={resetAll}>
+            Καθαρισμός
+          </Button>
+        </Stack>
       )}
 
       {errorInfo && (
@@ -804,22 +921,50 @@ function PropertySearchPage() {
             </Typography>
             <CircularProgress size={18} />
           </Box>
-          <Grid container spacing={2}>
-            {Array.from({ length: 4 }).map((_, i) => (
-              <Grid key={i} item xs={12} sm={4} md={4}>
+          <Box
+            sx={{
+              display: "grid",
+              gap: 2,
+              gridTemplateColumns: {
+                xs: "1fr",
+                sm: "repeat(2, minmax(0, 1fr))",
+                md: "repeat(3, minmax(0, 1fr))",
+              },
+            }}
+          >
+            {Array.from({ length: 6 }).map((_, i) => (
+              <Box key={i} sx={{ minWidth: 0 }}>
                 <PropertyCardSkeleton />
-              </Grid>
+              </Box>
             ))}
-          </Grid>
+          </Box>
         </Paper>
       )}
 
       {!loading && data && (
-        <Paper sx={{ p: 2, mt: 2 }}>
-          <Box display="flex" justifyContent="space-between" alignItems="center" sx={{ mb: 1 }}>
-            <Typography variant="subtitle2">
-              {total === 0 ? "Σύνολο: 0" : `Εμφάνιση ${pageStart}-${pageEnd} από ${total}`}
+        <Box sx={{ mt: 3 }}>
+          <Box
+            display="flex"
+            justifyContent="space-between"
+            alignItems="center"
+            flexWrap="wrap"
+            gap={1}
+            sx={{ mb: 2 }}
+          >
+            <Typography variant="h6" sx={{ fontWeight: 700 }}>
+              {total === 0
+                ? "Δεν βρέθηκαν ακίνητα"
+                : total === 1
+                  ? "1 ακίνητο"
+                  : `${total} ακίνητα`}
             </Typography>
+            {total > 0 && (
+              <Typography variant="body2" color="text.secondary">
+                {pageCount > 1
+                  ? `Σελίδα ${currentPage} από ${pageCount} · ${pageStart}–${pageEnd} από ${total}`
+                  : `Εμφάνιση ${total} ακινήτων`}
+              </Typography>
+            )}
 
             {pageCount > 1 ? (
               <Stack direction="row" spacing={1} alignItems="center">
@@ -888,9 +1033,20 @@ function PropertySearchPage() {
               </Stack>
             </Box>
           ) : (
-            <Grid container spacing={2} sx={{ mt: 0.5 }}>
+            <Box
+              sx={{
+                mt: 0.5,
+                display: "grid",
+                gap: 2,
+                gridTemplateColumns: {
+                  xs: "1fr",
+                  sm: "repeat(2, minmax(0, 1fr))",
+                  md: "repeat(3, minmax(0, 1fr))",
+                },
+              }}
+            >
               {itemsSorted.map((p) => (
-                <Grid key={p.id} item xs={12} sm={4} md={4}>
+                <Box key={p.id} sx={{ minWidth: 0, display: "flex" }}>
                   <PropertyCard
                     property={p}
                     viewTo={`/search/properties/${p.id}`}
@@ -899,11 +1055,11 @@ function PropertySearchPage() {
                     onToggleSave={toggleSaved}
                     onToggleCompare={toggleCompare}
                   />
-                </Grid>
+                </Box>
               ))}
-            </Grid>
+            </Box>
           )}
-        </Paper>
+        </Box>
       )}
 
       <Snackbar
@@ -932,6 +1088,8 @@ function PropertySearchPage() {
         ) : null}
       </Snackbar>
     </PageContainer>
+    <SiteFooter />
+    </>
   );
 }
 

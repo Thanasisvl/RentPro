@@ -86,7 +86,7 @@ export default function AdminUsersPage() {
     <PageContainer>
       <PageHeader
         title="Χρήστες"
-        description="Εποπτεία χρηστών (UC‑06)."
+        description="Εποπτεία και διαχείριση χρηστών."
         actions={
           <Button variant="outlined" onClick={() => navigate("/app/admin")}>
             Πίσω

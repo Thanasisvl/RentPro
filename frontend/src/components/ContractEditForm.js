@@ -121,7 +121,7 @@ function ContractEditForm() {
     <PageContainer>
       <PageHeader
         title={`Επεξεργασία Συμβολαίου #${id}`}
-        description="Ενημέρωση στοιχείων συμβολαίου (UC‑05)."
+        description="Ενημέρωση στοιχείων συμβολαίου."
         actions={
           <Button variant="outlined" component={RouterLink} to={`/contracts/${id}`}>
             Πίσω

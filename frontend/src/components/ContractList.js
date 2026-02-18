@@ -187,7 +187,7 @@ function ContractList() {
     <PageContainer>
       <PageHeader
         title="Συμβόλαια"
-        description="Καταχώριση, προβολή και διαχείριση μισθώσεων (UC‑05)."
+        description="Καταχώριση, προβολή και διαχείριση συμβολαίων."
         actions={
           <Button variant="contained" component={RouterLink} to="/contracts/new">
             Νέο Συμβόλαιο

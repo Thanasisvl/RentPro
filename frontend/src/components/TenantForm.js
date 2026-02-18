@@ -57,7 +57,7 @@ function TenantForm() {
     <PageContainer>
       <PageHeader
         title="Νέος Ενοικιαστής"
-        description="Καταχώριση ενοικιαστή (UC‑05)."
+        description="Καταχώριση νέου ενοικιαστή."
       />
 
       <Paper sx={{ p: 3, maxWidth: 720, mx: "auto" }}>

@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import {
   Box,
   Button,
@@ -7,11 +7,15 @@ import {
   CardActions,
   CardContent,
   Chip,
+  Divider,
   Stack,
   Typography,
 } from "@mui/material";
-import HomeWorkOutlinedIcon from "@mui/icons-material/HomeWorkOutlined";
 import { Link as RouterLink } from "react-router-dom";
+import {
+  getPropertyPhotoUrl,
+  getPropertyPlaceholderSvgUrl,
+} from "../utils/propertyPlaceholder";
 
 function formatEur(v) {
   const n = Number(v);
@@ -65,18 +69,24 @@ export default function PropertyCard({
 }) {
   const title = property?.title || `Property #${property?.id ?? "—"}`;
   const address = property?.address || "";
+  const areaName = property?.area?.name || "";
   const type = property?.type || "";
   const status = property?.status || "";
 
   const typeLabel = labelFrom(PROPERTY_TYPE_LABELS, type);
   const statusLabel = labelFrom(PROPERTY_STATUS_LABELS, status);
 
+  const [imgError, setImgError] = useState(false);
+  const thumbUrl = imgError
+    ? getPropertyPlaceholderSvgUrl(property)
+    : getPropertyPhotoUrl(property);
+
   const scorePct =
     typeof score === "number" && Number.isFinite(score)
       ? Math.round(Math.max(0, Math.min(1, score)) * 100)
       : null;
 
-  // NEW: color scale for score
+  // color scale for score
   const scoreColor =
     scorePct == null
       ? "default"
@@ -88,80 +98,136 @@ export default function PropertyCard({
             ? "warning"
             : "error";
 
+  // Thumbnail: 400×280 aspect ratio (matches downloaded images) for consistent dimensions
+  const imageBox = (
+    <Box
+      sx={{
+        width: { xs: "100%", md: "42%" },
+        minWidth: 0,
+        flexShrink: 0,
+        height: { xs: "auto", md: "100%" },
+        aspectRatio: { xs: "400 / 280" },
+        overflow: "hidden",
+        bgcolor: "grey.200",
+        borderBottom: { xs: 1, md: 0 },
+        borderRight: { md: 1 },
+        borderColor: "divider",
+      }}
+    >
+      <img
+        src={thumbUrl}
+        alt=""
+        onError={() => setImgError(true)}
+        style={{
+          width: "100%",
+          height: "100%",
+          objectFit: "cover",
+          display: "block",
+          verticalAlign: "middle",
+        }}
+      />
+    </Box>
+  );
+
+  const contentBox = (
+    <CardContent sx={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", justifyContent: "center", py: { md: 1.5 } }}>
+      <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap">
+        {typeof rank === "number" && Number.isFinite(rank) && rank > 0 ? (
+          <Chip size="small" color="primary" label={`#${rank}`} />
+        ) : null}
+        {typeLabel && <Chip size="small" label={typeLabel} variant="outlined" />}
+        {statusLabel && <Chip size="small" label={statusLabel} variant="outlined" />}
+        {scorePct != null ? (
+          <Chip size="small" color={scoreColor} label={`Σκορ ${scorePct}`} />
+        ) : null}
+      </Stack>
+
+      <Typography
+        variant="h6"
+        sx={{
+          mt: 1,
+          fontWeight: 700,
+          overflow: "hidden",
+          textOverflow: "ellipsis",
+          display: "-webkit-box",
+          WebkitLineClamp: 2,
+          WebkitBoxOrient: "vertical",
+        }}
+      >
+        {title}
+      </Typography>
+
+      {address && (
+        <Typography
+          variant="body2"
+          color="text.secondary"
+          sx={{
+            mt: 0.5,
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+            whiteSpace: "nowrap",
+          }}
+        >
+          {address}
+        </Typography>
+      )}
+      {areaName && (
+        <Typography
+          variant="caption"
+          color="text.secondary"
+          sx={{ mt: 0.25, display: "block", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}
+        >
+          {areaName}
+        </Typography>
+      )}
+
+      <Stack
+        direction="row"
+        spacing={2}
+        alignItems="baseline"
+        sx={{ mt: 1.5 }}
+        divider={<Divider orientation="vertical" flexItem />}
+      >
+        <Typography variant="subtitle1" color="primary" sx={{ fontWeight: 700, fontSize: "1.1rem" }}>
+          {formatEur(property?.price)}
+          <Typography component="span" variant="caption" color="text.secondary" sx={{ ml: 0.5, fontWeight: 500 }}>
+            / μήνα
+          </Typography>
+        </Typography>
+        <Typography variant="body1" sx={{ fontWeight: 600 }}>
+          {formatSize(property?.size)}
+        </Typography>
+      </Stack>
+    </CardContent>
+  );
+
   return (
     <Card
       variant="outlined"
       sx={{
+        width: "100%",
         height: "100%",
+        minWidth: 0,
+        maxWidth: "100%",
         display: "flex",
         flexDirection: "column",
         borderColor: "divider",
+        minHeight: 0,
+        overflow: "hidden",
       }}
     >
       <CardActionArea
         component={RouterLink}
         to={viewTo}
-        sx={{ flexGrow: 1, alignItems: "stretch" }}
+        sx={{
+          flexGrow: 1,
+          display: "flex",
+          flexDirection: { xs: "column", md: "row" },
+          alignItems: "stretch",
+        }}
       >
-        <Box
-          sx={{
-            height: 140,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            bgcolor: "background.default",
-            borderBottom: 1,
-            borderColor: "divider",
-            backgroundImage:
-              "radial-gradient(700px 240px at 20% 0%, rgba(37, 99, 235, 0.12), transparent 60%)," +
-              "radial-gradient(700px 240px at 90% 20%, rgba(14, 165, 164, 0.12), transparent 55%)",
-          }}
-        >
-          <HomeWorkOutlinedIcon sx={{ fontSize: 44, color: "text.disabled" }} />
-        </Box>
-
-        <CardContent>
-          <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap">
-            {typeof rank === "number" && Number.isFinite(rank) && rank > 0 ? (
-              <Chip size="small" color="primary" label={`Κατάταξη #${rank}`} />
-            ) : null}
-
-            {typeLabel && <Chip size="small" label={typeLabel} variant="outlined" />}
-            {statusLabel && <Chip size="small" label={statusLabel} variant="outlined" />}
-
-            {scorePct != null ? (
-              <Chip
-                size="small"
-                color={scoreColor}
-                label={`Σκορ: ${scorePct}/100`}
-              />
-            ) : null}
-          </Stack>
-
-          <Typography variant="h6" sx={{ mt: 1 }}>
-            {title}
-          </Typography>
-
-          {address && (
-            <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-              {address}
-            </Typography>
-          )}
-
-          <Stack
-            direction="row"
-            spacing={2}
-            sx={{ mt: 1 }}
-            divider={<Box sx={{ width: 1, bgcolor: "divider" }} />}
-          >
-            <Typography variant="body2">
-              <b>{formatSize(property?.size)}</b>
-            </Typography>
-            <Typography variant="body2">
-              <b>{formatEur(property?.price)}</b>
-            </Typography>
-          </Stack>
-        </CardContent>
+        {imageBox}
+        {contentBox}
       </CardActionArea>
 
       <CardActions
@@ -178,14 +244,14 @@ export default function PropertyCard({
           <Button
             size="small"
             variant="text"
-            onClick={() => onToggleCompare?.(property)}
+            onClick={(e) => { e.preventDefault(); e.stopPropagation(); onToggleCompare?.(property); }}
           >
             {inCompare ? "Σύγκριση ✓" : "Σύγκριση"}
           </Button>
           <Button
             size="small"
             variant="text"
-            onClick={() => onToggleSave?.(property)}
+            onClick={(e) => { e.preventDefault(); e.stopPropagation(); onToggleSave?.(property); }}
           >
             {saved ? "Αποθήκευση ✓" : "Αποθήκευση"}
           </Button>

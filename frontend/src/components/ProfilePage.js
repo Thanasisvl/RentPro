@@ -89,7 +89,7 @@ function ProfilePage() {
     <PageContainer>
       <PageHeader
         title="Προφίλ"
-        description="Ενημέρωση βασικών στοιχείων προφίλ (FR‑4)."
+        description="Ενημέρωση στοιχείων προφίλ."
       />
 
       <Paper elevation={3} sx={{ p: 4, maxWidth: 560, mx: "auto" }}>

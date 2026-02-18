@@ -174,7 +174,7 @@ function PropertyForm({ mode }) {
     <PageContainer>
       <PageHeader
         title={isEdit ? 'Επεξεργασία Ακινήτου' : 'Νέο Ακίνητο'}
-        description="Δημιουργία/ενημέρωση βασικών στοιχείων ακινήτου (UC‑02)."
+        description="Δημιουργία ή ενημέρωση στοιχείων ακινήτου."
       />
 
       <Paper sx={{ p: 3, maxWidth: 760, mx: 'auto' }}>
