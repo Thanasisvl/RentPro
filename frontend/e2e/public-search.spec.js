@@ -44,14 +44,14 @@ test("@smoke P0: public search loads results and navigates to details", async ({
 
   await page.goto("/search");
 
-  await expect(page.getByRole("heading", { name: "Αναζήτηση Ακινήτου" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Αναζήτηση ακινήτων" })).toBeVisible();
   await expect(page.getByText("Test Apartment")).toBeVisible();
 
   await page.getByRole("link", { name: "Προβολή" }).click();
 
   await expect(page).toHaveURL(/\/search\/properties\/1$/);
-  await expect(page.getByRole("heading", { name: "Λεπτομέρειες Ακινήτου" })).toBeVisible();
-  await expect(page.getByText("Test Apartment")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Test Apartment" })).toBeVisible();
   await expect(page.getByText("Athens")).toBeVisible();
+  await expect(page.getByRole("link", { name: "Επικοινώνησε" })).toBeVisible();
 });
 

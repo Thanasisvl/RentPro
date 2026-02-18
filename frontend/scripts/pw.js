@@ -1,9 +1,9 @@
 /* eslint-disable no-console */
 const { spawn } = require("child_process");
 
-// Force Playwright browsers to a stable, project-local path.
-// This avoids environment/sandbox cache differences.
-process.env.PLAYWRIGHT_BROWSERS_PATH = "0";
+// Use default Playwright browser path so install and test find the same binaries.
+// (Previously PLAYWRIGHT_BROWSERS_PATH=0 caused "Executable doesn't exist" in some environments.)
+// For CI, run: npm run e2e:install:ci  before test:e2e.
 
 const bin = process.platform === "win32" ? "playwright.cmd" : "playwright";
 const args = process.argv.slice(2);

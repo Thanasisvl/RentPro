@@ -10,7 +10,7 @@ import {
   Chip,
   Divider,
 } from "@mui/material";
-import { Link as RouterLink, useNavigate, useParams } from "react-router-dom";
+import { Link as RouterLink, useParams } from "react-router-dom";
 import ArrowBackIosNewRoundedIcon from "@mui/icons-material/ArrowBackIosNewRounded";
 import PageContainer from "./layout/PageContainer";
 import PageHeader from "./layout/PageHeader";
@@ -40,7 +40,6 @@ function formatEur(v) {
 
 function PublicPropertyDetails() {
   const { id } = useParams();
-  const navigate = useNavigate();
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
