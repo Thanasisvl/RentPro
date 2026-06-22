@@ -81,7 +81,7 @@ function LoginForm() {
 
           <form onSubmit={handleSubmit}>
             <TextField
-              label="Όνομα χρήστη"
+              label="Όνομα χρήστη ή email"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
               fullWidth

@@ -20,7 +20,7 @@ import LoginForm from "./components/LoginForm";
 import RegisterForm from "./components/RegisterForm";
 import LogoutButton from "./components/LogoutButton";
 import RequireAuth from "./components/RequireAuth";
-import { getAccessToken, getUserRole } from "./api";
+import { getUserRole } from "./api";
 
 import PreferencesPage from "./components/PreferencesPage";
 import RecommendationsPage from "./components/RecommendationsPage";
@@ -42,16 +42,10 @@ import AdminDashboard from "./components/dashboards/AdminDashboard";
 import AdminUsersPage from "./components/AdminUsersPage";
 import AdminAreasPage from "./components/AdminAreasPage";
 import ForbiddenPage from "./components/ForbiddenPage";
+import { useAuthSession, normalizeRole } from "./hooks/useAuthSession";
 
 // Logo asset
 import logo from "./assets/rentpro_logo_mark.png";
-
-function normalizeRole(raw) {
-  const r = String(raw || "").toUpperCase().trim();
-  if (r === "ADMIN") return "ADMIN";
-  if (r === "OWNER") return "OWNER";
-  return "TENANT";
-}
 
 function roleLabel(role) {
   if (role === "ADMIN") return "Διαχειριστής";
@@ -101,14 +95,21 @@ const navBtnSx = {
 };
 
 function App() {
-  const isAuthenticated = !!getAccessToken();
-  const role = normalizeRole(getUserRole());
+  return (
+    <Router>
+      <AppLayout />
+    </Router>
+  );
+}
+
+function AppLayout() {
+  const { isAuthenticated, role } = useAuthSession();
 
   const homeTo = isAuthenticated ? "/app" : "/";
   const homeLabel = isAuthenticated ? `Πίνακας · ${roleLabel(role)}` : "Αρχική";
 
   return (
-    <Router>
+    <>
       <AppBar
         position="sticky"
         elevation={0}
@@ -122,7 +123,7 @@ function App() {
           zIndex: (t) => t.zIndex.drawer + 1,
         }}
       >
-        <Toolbar sx={{ gap: 2 }}>
+        <Toolbar sx={{ gap: 2, flexWrap: "nowrap" }}>
           {/* Brand / logo (left) */}
           <Stack
             direction="row"
@@ -265,7 +266,7 @@ function App() {
               direction="row"
               spacing={1}
               alignItems="center"
-              sx={{ flexShrink: 0 }}
+              sx={{ flexShrink: 0, ml: "auto" }}
             >
               <Button
                 component={NavLink}
@@ -490,7 +491,7 @@ function App() {
           />
         </Routes>
       </Box>
-    </Router>
+    </>
   );
 }
 

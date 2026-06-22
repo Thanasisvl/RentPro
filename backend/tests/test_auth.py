@@ -105,6 +105,23 @@ def test_login_success():
     assert "access_token" in data
 
 
+def test_login_with_email():
+    client.post(
+        "/users/register",
+        json={
+            "username": "emailuser",
+            "email": "emailuser@example.com",
+            "full_name": "Email User",
+            "password": "mypassword",
+        },
+    )
+    resp = client.post(
+        "/login", json={"username": "emailuser@example.com", "password": "mypassword"}
+    )
+    assert resp.status_code == 200
+    assert "access_token" in resp.json()
+
+
 def test_login_owner_success():
     # register owner
     resp_reg = client.post(

@@ -66,7 +66,10 @@ export default function PropertyCard({
   inCompare = false,
   onToggleSave,
   onToggleCompare,
+  /** "auto" = responsive row on md+; "vertical" = image on top (narrow columns / lists) */
+  layout = "auto",
 }) {
+  const vertical = layout === "vertical";
   const title = property?.title || `Property #${property?.id ?? "—"}`;
   const address = property?.address || "";
   const areaName = property?.area?.name || "";
@@ -102,15 +105,16 @@ export default function PropertyCard({
   const imageBox = (
     <Box
       sx={{
-        width: { xs: "100%", md: "42%" },
+        width: vertical ? "100%" : { xs: "100%", md: "42%" },
         minWidth: 0,
         flexShrink: 0,
-        height: { xs: "auto", md: "100%" },
-        aspectRatio: { xs: "400 / 280" },
+        height: vertical ? "auto" : { xs: "auto", md: "100%" },
+        aspectRatio: "400 / 280",
+        maxHeight: vertical ? 200 : undefined,
         overflow: "hidden",
         bgcolor: "grey.200",
-        borderBottom: { xs: 1, md: 0 },
-        borderRight: { md: 1 },
+        borderBottom: 1,
+        borderRight: vertical ? 0 : { md: 1 },
         borderColor: "divider",
       }}
     >
@@ -130,7 +134,16 @@ export default function PropertyCard({
   );
 
   const contentBox = (
-    <CardContent sx={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", justifyContent: "center", py: { md: 1.5 } }}>
+    <CardContent
+      sx={{
+        flex: 1,
+        minWidth: 0,
+        display: "flex",
+        flexDirection: "column",
+        justifyContent: "center",
+        py: vertical ? 1.5 : { md: 1.5 },
+      }}
+    >
       <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap">
         {typeof rank === "number" && Number.isFinite(rank) && rank > 0 ? (
           <Chip size="small" color="primary" label={`#${rank}`} />
@@ -143,7 +156,7 @@ export default function PropertyCard({
       </Stack>
 
       <Typography
-        variant="h6"
+        variant={vertical ? "subtitle1" : "h6"}
         sx={{
           mt: 1,
           fontWeight: 700,
@@ -152,6 +165,7 @@ export default function PropertyCard({
           display: "-webkit-box",
           WebkitLineClamp: 2,
           WebkitBoxOrient: "vertical",
+          wordBreak: "break-word",
         }}
       >
         {title}
@@ -222,7 +236,7 @@ export default function PropertyCard({
         sx={{
           flexGrow: 1,
           display: "flex",
-          flexDirection: { xs: "column", md: "row" },
+          flexDirection: vertical ? "column" : { xs: "column", md: "row" },
           alignItems: "stretch",
         }}
       >

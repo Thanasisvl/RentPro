@@ -1,13 +1,20 @@
 /**
  * Property images: served from public/img/properties/ (local files).
- * Run once:  npm run download-property-images   to fetch real photos into public/.
- * Then thumbnails and detail page use them without any external requests.
+ * Seed fixtures use 1.jpg … 21.jpg (title "E2E Seed Property" / "E2E Seed Property NN").
+ * Other properties fall back to id-based cycling across the same pool.
  */
-const LOCAL_IMAGE_COUNT = 10;
+const LOCAL_IMAGE_COUNT = 21;
+const SEED_PROPERTY_TITLE = /^E2E Seed Property(?: (\d+))?$/;
 
 function getLocalImageIndex(property) {
+  const title = String(property?.title || "").trim();
+  const seedMatch = title.match(SEED_PROPERTY_TITLE);
+  if (seedMatch) {
+    return seedMatch[1] ? parseInt(seedMatch[1], 10) : 1;
+  }
+
   const id = Number(property?.id) || 0;
-  return (Math.abs(id) % LOCAL_IMAGE_COUNT) + 1;
+  return ((Math.abs(id) - 1) % LOCAL_IMAGE_COUNT) + 1;
 }
 
 /** Returns URL for the property image (local file under public/img/properties/). */

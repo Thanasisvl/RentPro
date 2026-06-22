@@ -1,6 +1,7 @@
 import os
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
+from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
 from app.core.jwt import create_access_token, create_refresh_token, verify_refresh_token
@@ -33,7 +34,12 @@ def _cookie_samesite() -> str:
 
 
 def authenticate_user(db: Session, username: str, password: str):
-    user = db.query(User).filter(User.username == username).first()
+    identifier = username.strip()
+    user = (
+        db.query(User)
+        .filter(or_(User.username == identifier, User.email == identifier))
+        .first()
+    )
     if not user or not verify_password(password, user.hashed_password):
         return None
     return user

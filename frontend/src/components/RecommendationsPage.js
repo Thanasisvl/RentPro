@@ -691,8 +691,8 @@ export default function RecommendationsPage() {
 
         <Divider sx={{ my: 2 }} />
 
-        <Grid container spacing={2}>
-          <Grid item xs={12} md={7}>
+        <Grid container spacing={2} alignItems="flex-start">
+          <Grid size={{ xs: 12, md: 8 }} sx={{ minWidth: 0 }}>
             <Typography variant="subtitle1" gutterBottom>
               Κατάταξη ακινήτων
             </Typography>
@@ -706,7 +706,7 @@ export default function RecommendationsPage() {
                 Δεν υπάρχουν προτάσεις που να ταιριάζουν με τα φίλτρα σου.
               </Alert>
             ) : (
-              <Grid container spacing={2}>
+              <Stack spacing={2}>
                 {filteredRows.map((row, idx) => {
                   const it = row.it;
                   const valuesPresent = !!it?.explain?.topsis?.criteria_values;
@@ -741,16 +741,17 @@ export default function RecommendationsPage() {
                       })();
 
                   return (
-                    <Grid key={it.property?.id ?? idx} item xs={12} sm={6} md={4}>
+                    <Box key={it.property?.id ?? idx} sx={{ minWidth: 0 }}>
                       <PropertyCard
                         property={it.property}
                         viewTo={`/search/properties/${it.property?.id}`}
-                        rank={idx + 1} // NEW
+                        rank={idx + 1}
                         score={Number(row.score)}
                         saved={savedIds.includes(Number(it.property?.id))}
                         inCompare={compareIds.includes(Number(it.property?.id))}
                         onToggleSave={toggleSaved}
                         onToggleCompare={toggleCompare}
+                        layout="vertical"
                       />
 
                       {explainPack && explainPack.bullets ? (
@@ -760,21 +761,35 @@ export default function RecommendationsPage() {
                           </Typography>
                           <List dense sx={{ m: 0, p: 0 }}>
                             {explainPack.bullets.slice(0, 2).map((b, bi) => (
-                              <ListItem key={bi} sx={{ py: 0.25 }}>
-                                <ListItemText primaryTypographyProps={{ variant: "body2" }} primary={b} />
+                              <ListItem key={bi} sx={{ py: 0.25, alignItems: "flex-start" }}>
+                                <ListItemText
+                                  primary={b}
+                                  primaryTypographyProps={{
+                                    variant: "body2",
+                                    sx: { wordBreak: "break-word", whiteSpace: "normal" },
+                                  }}
+                                />
                               </ListItem>
                             ))}
                           </List>
                         </Paper>
                       ) : null}
-                    </Grid>
+                    </Box>
                   );
                 })}
-              </Grid>
+              </Stack>
             )}
           </Grid>
 
-          <Grid item xs={12} md={5}>
+          <Grid
+            size={{ xs: 12, md: 4 }}
+            sx={{
+              minWidth: 0,
+              position: { md: "sticky" },
+              top: { md: 24 },
+              alignSelf: { md: "flex-start" },
+            }}
+          >
             <Typography variant="subtitle1" gutterBottom>
               Επεξήγηση (UC‑04)
             </Typography>
@@ -813,10 +828,10 @@ export default function RecommendationsPage() {
                       return (
                         <Box key={k}>
                           <Stack direction="row" justifyContent="space-between" alignItems="baseline">
-                            <Typography variant="caption" color="text.secondary">
+                            <Typography variant="caption" color="text.secondary" sx={{ pr: 1 }}>
                               {metaC.label}
                             </Typography>
-                            <Typography variant="caption">
+                            <Typography variant="caption" sx={{ flexShrink: 0 }}>
                               <b>{pct}%</b>
                               {showDelta ? (
                                 <Typography component="span" variant="caption" color="text.secondary">

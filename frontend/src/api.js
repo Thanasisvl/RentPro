@@ -4,6 +4,19 @@ import { API_BASE_URL } from "./config";
 
 // Χρησιμοποιούμε localStorage, όπως ήδη κάνεις στο LoginForm
 const ACCESS_TOKEN_KEY = "token";
+const AUTH_CHANGE_EVENT = "rentpro:auth-change";
+
+function emitAuthChange() {
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(new Event(AUTH_CHANGE_EVENT));
+  }
+}
+
+export function subscribeAuthChange(listener) {
+  if (typeof window === "undefined") return () => {};
+  window.addEventListener(AUTH_CHANGE_EVENT, listener);
+  return () => window.removeEventListener(AUTH_CHANGE_EVENT, listener);
+}
 
 export function getAccessToken() {
   return localStorage.getItem(ACCESS_TOKEN_KEY);
@@ -11,10 +24,12 @@ export function getAccessToken() {
 
 export function setAccessToken(token) {
   localStorage.setItem(ACCESS_TOKEN_KEY, token);
+  emitAuthChange();
 }
 
 export function clearAccessToken() {
   localStorage.removeItem(ACCESS_TOKEN_KEY);
+  emitAuthChange();
 }
 
 // NEW: role helper (decode JWT payload)
