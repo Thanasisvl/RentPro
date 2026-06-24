@@ -45,7 +45,8 @@ def list_users(
     _: dict = Depends(require_admin),  # 403 αν δεν είναι admin
     skip: int = Query(default=0, ge=0),
     limit: int = Query(default=100, ge=1, le=500),
-    q: str | None = Query(
+    q: str
+    | None = Query(
         default=None,
         description="Optional search query (username/email/full_name contains, case-insensitive)",
     ),

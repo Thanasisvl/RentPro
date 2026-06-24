@@ -176,9 +176,8 @@ def create_contract(
 def list_contracts(
     request: Request,
     db: Session = Depends(get_db),
-    owner_id: int | None = Query(
-        default=None, description="Admin-only filter by property owner id"
-    ),
+    owner_id: int
+    | None = Query(default=None, description="Admin-only filter by property owner id"),
     property_id: int | None = Query(default=None),
     tenant_id: int | None = Query(default=None),
     status: ContractStatus | None = Query(default=None),

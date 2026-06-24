@@ -23,9 +23,7 @@ def upgrade() -> None:
     if dialect == "postgresql":
         conn.execute(sa.text("ALTER TYPE userrole RENAME VALUE 'USER' TO 'TENANT'"))
     else:
-        conn.execute(
-            sa.text("UPDATE users SET role = 'TENANT' WHERE role = 'USER'")
-        )
+        conn.execute(sa.text("UPDATE users SET role = 'TENANT' WHERE role = 'USER'"))
 
 
 def downgrade() -> None:
@@ -35,6 +33,4 @@ def downgrade() -> None:
     if dialect == "postgresql":
         conn.execute(sa.text("ALTER TYPE userrole RENAME VALUE 'TENANT' TO 'USER'"))
     else:
-        conn.execute(
-            sa.text("UPDATE users SET role = 'USER' WHERE role = 'TENANT'")
-        )
+        conn.execute(sa.text("UPDATE users SET role = 'USER' WHERE role = 'TENANT'"))
