@@ -134,7 +134,7 @@ export default function AdminUsersPage() {
                 <MenuItem value="">ΟΛΟΙ</MenuItem>
                 <MenuItem value="ADMIN">ADMIN</MenuItem>
                 <MenuItem value="OWNER">OWNER</MenuItem>
-                <MenuItem value="USER">USER</MenuItem>
+                <MenuItem value="TENANT">TENANT</MenuItem>
               </TextField>
 
               <TextField

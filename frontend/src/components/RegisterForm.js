@@ -20,7 +20,7 @@ function RegisterForm() {
   const [email, setEmail] = useState("");
   const [fullName, setFullName] = useState("");
   const [password, setPassword] = useState("");
-  const [role, setRole] = useState("USER");
+  const [role, setRole] = useState("TENANT");
   const [error, setError] = useState("");
   const navigate = useNavigate();
 
@@ -125,7 +125,7 @@ function RegisterForm() {
               required
               size="small"
             >
-              <MenuItem value="USER">Ενοικιαστής</MenuItem>
+              <MenuItem value="TENANT">Ενοικιαστής</MenuItem>
               <MenuItem value="OWNER">Ιδιοκτήτης</MenuItem>
             </TextField>
             <TextField

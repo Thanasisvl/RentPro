@@ -493,7 +493,7 @@ def test_update_user_rejects_role_and_username():
             "email": "changed@example.com",
             "full_name": "Changed Name",
             "username": "newusername_should_fail",
-            "role": "USER",
+            "role": "TENANT",
         },
         headers=headers,
     )

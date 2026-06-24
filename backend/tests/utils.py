@@ -25,7 +25,7 @@ def login_headers(client, username: str, password: str):
 def register_and_login(client, username, password, email, is_owner=False):
     from app.models.user import UserRole
 
-    role = UserRole.OWNER if is_owner else UserRole.USER
+    role = UserRole.OWNER if is_owner else UserRole.TENANT
 
     resp = client.post(
         "/users/register",

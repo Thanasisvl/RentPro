@@ -5,6 +5,7 @@ function normalizeRole(raw) {
   const r = String(raw || "").toUpperCase().trim();
   if (r === "ADMIN") return "ADMIN";
   if (r === "OWNER") return "OWNER";
+  if (r === "USER") return "TENANT";
   return "TENANT";
 }
 

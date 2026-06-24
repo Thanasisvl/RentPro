@@ -76,7 +76,7 @@ function TenantDashboard() {
 
   const cardPaperSx = {
     p: 2.5,
-    borderRadius: 12,
+    borderRadius: 0,
     boxShadow: "0 4px 20px rgba(0,0,0,0.08)",
     border: "1px solid",
     borderColor: "divider",

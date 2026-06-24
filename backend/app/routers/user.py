@@ -34,7 +34,7 @@ def register_user(user: UserCreate, db: Session = Depends(get_db)):
             status_code=400, detail="Username or email already registered"
         )
 
-    # Το role (USER ή OWNER) έρχεται από το body.
+    # Το role (TENANT ή OWNER) έρχεται από το body.
     # Ο validator στο UserCreate μπλοκάρει ADMIN.
     return crud_user.create_user(db=db, user=user)
 

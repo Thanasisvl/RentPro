@@ -7,7 +7,7 @@ function StatCard({ title, value, subtitle, loading = false, actions = null }) {
       variant="outlined"
       sx={{
         boxShadow: "0 4px 20px rgba(0,0,0,0.08)",
-        borderRadius: 12,
+        borderRadius: 0,
         border: "1px solid",
         borderColor: "divider",
       }}

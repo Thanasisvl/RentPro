@@ -214,18 +214,17 @@ def seed_e2e_fixtures(db: Session, *, password: str = "rentpro-e2e") -> None:
             "role": UserRole.OWNER,
         },
         {
-            # backend role USER maps to TENANT in the frontend (normalizeRole)
             "username": "tenant1",
             "email": "tenant1@example.com",
             "full_name": "Tenant One",
-            "role": UserRole.USER,
+            "role": UserRole.TENANT,
         },
         {
             # 2nd tenant login account (useful for multi-user manual testing)
             "username": "tenant2",
             "email": "tenant2@example.com",
             "full_name": "Tenant Two",
-            "role": UserRole.USER,
+            "role": UserRole.TENANT,
         },
     ]
 

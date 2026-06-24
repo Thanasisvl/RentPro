@@ -564,7 +564,7 @@ def test_admin_create_property_owner_not_found_returns_404():
 
 
 def test_admin_create_property_owner_id_must_point_to_owner_returns_422():
-    # Create a plain USER (not OWNER)
+    # Create a plain TENANT (not OWNER)
     non_owner, _ = register_and_login(
         client, "plain_user1", "testpassword", "plain_user1@example.com", is_owner=False
     )

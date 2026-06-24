@@ -14,7 +14,7 @@ class User(Base):
     email = Column(String, unique=True, index=True)
     full_name = Column(String, index=True)
     hashed_password = Column(String)
-    role = Column(SqlEnum(UserRole), nullable=False, default=UserRole.USER)
+    role = Column(SqlEnum(UserRole), nullable=False, default=UserRole.TENANT)
 
     properties = relationship("Property", back_populates="owner")
 
