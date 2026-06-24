@@ -33,8 +33,9 @@ def list_tenants(
     db: Session = Depends(get_db),
     skip: int = 0,
     limit: int = 100,
-    owner_id: int
-    | None = Query(default=None, description="Admin-only filter by owner id"),
+    owner_id: int | None = Query(
+        default=None, description="Admin-only filter by owner id"
+    ),
 ):
     user = get_current_user(request, db)
 
